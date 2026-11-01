@@ -364,6 +364,9 @@ async function persistence() {
 async function keyboard() {
   console.log('\nKeyboard');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
+  await page.keyboard.press('Tab');
+  check(await page.evaluate(() => document.activeElement?.classList.contains('play')), 'the first Tab goes to Play',
+    await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || document.activeElement?.tagName));
   const before = await project(page);
   await page.locator('.cell[tabindex="0"]').focus();
   await page.keyboard.press('ArrowRight');
@@ -398,6 +401,8 @@ async function delights() {
   check((await page.evaluate(() => document.body.dataset.mood)) === 'spooky', 'the room takes on the mood');
   await page.click('.btn.undo');
   check((await project(page)) === before, 'looking around changes nothing in the song');
+  const clips = await page.evaluate(() => [...new Set([...document.querySelectorAll('.cell, .row-head')].map((c) => getComputedStyle(c).backgroundClip))]);
+  check(clips.length === 1 && clips[0] === 'padding-box', 'grid cells keep a visible gap between them', clips.join(', '));
   // Messages and badges never get in the way of a tap on the grid.
   await page.evaluate(async () => { const w = await import('/src/ui/widgets.js'); w.toast('', 'Hello there, this is a message'); });
   await page.evaluate(() => { const s = itchy.store; s.change((p) => { s.layer.muted = true; }); });

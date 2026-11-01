@@ -68,7 +68,9 @@ export function songbookPlugin(storage) {
       ...mine.map((m, i) => {
         const current = m.id === store.project.id;
         // Pictures, not names: the song's critters sit under its notes.
-        const faces = h('span', { class: 'song-faces', 'aria-hidden': 'true', html: m.preview.slice(0, 6).map((l) => critterSVG(soundInfo(l.sound).shape, COLORS[l.color])).join('') });
+        const shown = m.preview.length > 5 ? 4 : 5;
+        const faces = h('span', { class: 'song-faces', 'aria-hidden': 'true', html: m.preview.slice(0, shown).map((l) => critterSVG(soundInfo(l.sound).shape, COLORS[l.color])).join('')
+          + (m.preview.length > shown ? `<span class="more">+${m.preview.length - shown}</span>` : '') });
         const content = h('div', { class: 'ex-wrap' }, thumb(m.preview), faces, current ? h('span', { class: 'now-badge', html: ICONS.play }) : null);
         return card(content, current ? `My song ${i + 1} (open now)` : `My song ${i + 1}`, () => choose(() => storage.loadProject(m.id)), current ? 'current' : '');
       }),

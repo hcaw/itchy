@@ -13,14 +13,19 @@ export const TUNE_COLORS = ['#e8590c', '#f08c00', '#f5c400', '#66a80f', '#0ca678
 export const KIT_COLORS = ['#3b5bdb', '#f76707', '#d6336c', '#2f9e44'];
 
 /**
- * The colour for a critter's frame and selection ring. Light colours (yellow) get a darker,
- * richer edge so they still stand out on the cream background; the rest stay soft.
+ * The colour for a critter's frame and selection ring: its own colour, darkened just enough
+ * to stand out against the cream background (at least 3:1), so "which critter am I editing"
+ * is always easy to see, whatever its colour.
  */
 export function edgeColor(hex) {
-  const n = parseInt(hex.slice(1), 16), rgb = [n >> 16, (n >> 8) & 255, n & 255];
-  const lin = rgb.map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
-  const lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-  return lum > 0.5 ? `color-mix(in oklch, ${hex} 72%, #5c3d00)` : `color-mix(in srgb, ${hex} 70%, #fff)`;
+  const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const lum = (c) => { const l = c.map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; };
+  const paper = lum(rgb('#fff8ee')), ink = rgb('#261f3d'), c = rgb(hex);
+  for (let t = 0; t <= 0.7; t += 0.02) {
+    const m = c.map((v, i) => Math.round(v * (1 - t) + ink[i] * t));
+    if ((paper + 0.05) / (lum(m) + 0.05) >= 3) return `rgb(${m.join(' ')})`;
+  }
+  return '#261f3d';
 }
 
 export function rowColor(sound, r) {
@@ -103,7 +108,7 @@ export class Grid {
       const head = h('button', {
         class: 'row-head', type: 'button', tabindex: '-1', 'aria-label': `Play ${label}`, title: label,
         style: { '--rc': color, gridRow: String(gridRow), gridColumn: '1' },
-        html: kind === 'beat' ? KIT_ICONS[r] : `<span class="pip" style="--size:${(0.66 + r * 0.045).toFixed(3)}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
+        html: kind === 'beat' ? `<span class="pip kit">${KIT_ICONS[r]}</span>` : `<span class="pip" style="--size:${(0.66 + r * 0.045).toFixed(3)}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
       });
       head.addEventListener('pointerdown', () => { this.engine.preview(this.store.layer, r); head.animate([{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], 200); });
       head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); this.engine.preview(this.store.layer, r); } });

@@ -5,6 +5,7 @@ import { h, iconButton, instantPress } from './widgets.js';
 import { critterSVG } from './critters.js';
 import { ICONS } from './icons.js';
 import { COLORS, SOUNDS, BEAT_SOUNDS, TUNE_SOUNDS, soundKind } from '../model/sounds.js';
+import { edgeColor } from './grid.js';
 
 export class Panel {
   constructor(root, { store, engine, sections = [] }) {
@@ -17,6 +18,20 @@ export class Panel {
     // Sounds, then tidying up, then the plugins (dice, charms): the same order on screen and for Tab.
     root.append(h('div', { class: 'panel-group' }, this.sounds), this.tools, ...sections);
     this.sig = '';
+    new ResizeObserver(() => this.fit()).observe(root);
+    this.sounds.addEventListener('scroll', () => this.fit(), { passive: true });
+  }
+
+  /**
+   * Layout hints the CSS can't work out alone: whether the sounds tray scrolls (show a fade
+   * on the side with more), and whether the charms have wrapped onto their own row.
+   */
+  fit() {
+    const t = this.sounds;
+    this.root.classList.toggle('more-left', t.scrollLeft > 2);
+    this.root.classList.toggle('more-right', t.scrollLeft + t.clientWidth < t.scrollWidth - 2);
+    const charms = this.root.querySelector('.charms');
+    this.root.classList.toggle('stacked', !!charms && charms.offsetTop > t.offsetTop + 8);
   }
 
   render() {
@@ -32,6 +47,8 @@ export class Panel {
       if (kind === 'tune' && this.extraSounds) this.sounds.append(...this.extraSounds(layer));
     }
     this.root.style.setProperty('--layer', COLORS[layer.color]);
+    this.root.style.setProperty('--edge', edgeColor(COLORS[layer.color]));
+    this.fit();
     this.remove.hidden = this.store.project.layers.length <= 1;
     this.clear.classList.toggle('dim', layer.notes.length === 0);
   }

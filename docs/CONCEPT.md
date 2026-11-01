@@ -132,3 +132,10 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Messages float just above the dock and never block taps** — they never cover the buttons they talk about.
 - **The dock reads in one order everywhere**: sounds, tidy-up (rub out, remove), dice, charms; the same for Tab.
   Charms keep a usable length and move to their own row rather than shrinking.
+- **Selection rings use the critter's colour darkened to at least 3:1 against the background** — computed in
+  `edgeColor()`, so every colour (yellow included) shows clearly which critter you're editing.
+- **The sounds tray scrolls sideways on tablets and phones** (with a fade on the side that has more) instead of
+  wrapping, so the dock never grows an extra row and the dice never ends up alone.
+- **Drum rows stay pad-shaped** (about 1.6 × a column's width, centred), so hits read as taps, not long bars.
+- **The rail scrolls itself to show the chosen critter**, never using `scrollIntoView`, which would also move where the
+  Tab key starts; the first Tab always goes to Play.
