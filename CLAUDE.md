@@ -8,6 +8,7 @@ no build step.
 1. `docs/BRIEF.md`: the goal, audience, design principles, feature vision and constraints. Everything you build serves it.
 2. `docs/CONCEPT.md`: the building blocks (critters, grid, sounds, charms, mood and dice) and the decisions log.
 3. `README.md`: how to run it, the architecture, and the ranked next steps.
+4. `CONTRIBUTING.md`: setup, the rules below in more detail, and what a good pull request looks like.
 
 ## Rules
 
@@ -27,13 +28,31 @@ no build step.
 - **When the brief leaves a choice open**, pick what's most fun and intuitive for a seven-year-old and still rewarding
   for an eleven-year-old. Add it to the decisions log in `docs/CONCEPT.md` with a one-line reason.
 
+## Screenshots and logo
+
+The README's logo and screenshots (`docs/images/`), the favicon (`assets/icon.svg`), the home-screen icons
+(`assets/icon-*.png`) and the link-preview card (`assets/social-card.png`) are rendered from the real app by
+`scripts/screenshots.mjs`. Never edit these images by hand, and never let them fall out of date.
+
+- **When a change alters how the app looks, run `npm run screenshots` and commit the updated pictures in the same
+  commit or PR.** "How it looks" includes layout, spacing, colours, design tokens, fonts, critters, icons, the top bar,
+  the rail, the grid, the dock, charms, the songbook, the example songs, the brand critter and the wordmark. If you're
+  unsure, run it: the output is deterministic, so if nothing visible changed, `git status` stays clean.
+- **Look at every picture the script rewrites** (open the PNGs) before committing, just as with `test-output/`.
+- **When you add a big visible feature or screen**, add a shot to `SHOTS` in `scripts/screenshots.mjs`, show it in
+  `README.md` with descriptive alt text, and update the alt text of any existing shot whose content changed.
+- **When you change the brand critter, its colour or the wordmark**, update the constants at the top of
+  `scripts/screenshots.mjs` to match, then re-run it.
+- `npm test` fails if the README shows a picture that doesn't exist or `docs/images/` holds one the README doesn't use.
+
 ## Commands
 
 ```sh
 npm start        # http://localhost:5173/
 npm test         # unit tests (scheduler timing, model, undo, storage, dice, recording)
 npm run check    # browser checks in headless Chromium; screenshots in test-output/ (look at them)
+npm run screenshots  # re-render the README logo and screenshots, icons and social card from the app
 ```
 
-Run both test commands before committing. When you add an interaction, extend `tests/e2e/check.mjs` so it is checked
+Run both test commands before committing, and `npm run screenshots` too if the look changed. When you add an interaction, extend `tests/e2e/check.mjs` so it is checked
 with mouse and touch, makes a sound, and undoes in one step.

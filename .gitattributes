@@ -1,0 +1,4 @@
+# Normalise line endings, and never diff or merge binary assets as text.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary

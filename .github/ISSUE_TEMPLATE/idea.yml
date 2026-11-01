@@ -1,0 +1,28 @@
+name: An idea
+description: Something that would make Itchy more fun, or let children make more kinds of music.
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Itchy grows depth from a few building blocks (critters, the grid, sounds, charms, mood and dice) rather than
+        adding modes, menus or settings. Have a look at the [brief](https://github.com/hcaw/itchy/blob/main/docs/BRIEF.md)
+        and the [next steps](https://github.com/hcaw/itchy#raising-the-ceiling-next-steps) first: your idea may
+        already be planned.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would a child be able to do?
+      placeholder: Drag the edge of the grid to make one critter's loop shorter than the others…
+    validations:
+      required: true
+  - type: textarea
+    id: gesture
+    attributes:
+      label: How would they do it, without reading?
+      description: Which critter, grid, sound or charm would it belong to, and what would you tap or drag?
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it be fun?
+      description: Who is it for: a six-year-old's first five minutes, or an eleven-year-old's fiftieth hour?

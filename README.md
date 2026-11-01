@@ -1,27 +1,69 @@
-# Itchy
+<p align="center">
+  <a href="https://hcaw.github.io/itchy/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png">
+      <img src="docs/images/logo-light.png" alt="Itchy" width="320">
+    </picture>
+  </a>
+</p>
 
-A music-making toy for children aged 6–11 that runs in the browser. Tap the grid and a critter sings. Press play and
-your loop goes round. Add critters, wear charms, roll the dice, record your own voice. No reading needed.
+<p align="center">
+  <strong>A music-making toy for children aged 6–11, in the browser.</strong><br>
+  Tap the grid and a critter sings. No reading, no sign-up, no tracking.
+</p>
+
+<p align="center">
+  <a href="https://hcaw.github.io/itchy/"><strong>▶&nbsp;Play Itchy now</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#run-it-yourself">Run it yourself</a>
+  &nbsp;·&nbsp;
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/hcaw/itchy/actions/workflows/ci.yml"><img src="https://github.com/hcaw/itchy/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/hcaw/itchy/actions/workflows/pages.yml"><img src="https://github.com/hcaw/itchy/actions/workflows/pages.yml/badge.svg" alt="Deploy"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshot-laptop.png" alt="Itchy on a laptop, playing the Robot Disco example: a drum grid of green, pink, orange and blue pads, with a robot, a blob, a star and a sleeping bell critter down the side." width="860">
+</p>
+
+## What is it?
+
+Press play and your loop goes round. Add critters, give them charms, roll the dice, record your own voice. Itchy is
+a toy before it's a tool: a child makes a sound in the first few seconds and works out the rest by playing. There's
+no tutorial, and no adult needed.
+
+It follows the idea behind Scratch: **low floor, high ceiling, wide walls**. A first beat takes seconds, but a
+curious child who keeps coming back can make music that is complex and genuinely their own: melodies, drum
+patterns, polyrhythms, spooky soundscapes and songs built from their own claps and voice.
+
+- **Made for small hands.** Big targets, touch, mouse or keyboard, on tablets, Chromebooks and laptops.
+- **Sounds good by default.** Every note is in tune with the mood, so random poking makes music.
+- **Nothing can go wrong.** Undo is always one tap away, and work saves itself.
+- **Private by design.** Songs and recordings stay on the device. No accounts, adverts, analytics or tracking.
+- **Light and open.** No dependencies, no build step, MIT licensed. Every sound and picture is made in code.
 
 The goal, audience, design principles and constraints are in [`docs/BRIEF.md`](docs/BRIEF.md). How Itchy meets them,
 and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
 
-## Run it
-
-```sh
-npm start
-```
-
-Then open <http://localhost:5173/>. You need Node 18 or newer. There is nothing to install: Itchy has no
-dependencies and no build step. Any static file server works too, for example `python3 -m http.server`. Opening
-`index.html` straight from disk won't work, because browsers block ES modules on `file://`.
-
-Checks:
-
-```sh
-npm test         # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up
-npm run check    # browser checks in headless Chromium (uses the pre-installed Playwright); screenshots go to test-output/
-```
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshot-tablet.png" alt="Itchy on a tablet held upright, playing the Rainy Day example: a melody of bell notes on a colourful grid, with a drum, a cloud and a bell critter along the top."></td>
+    <td width="50%">
+      <img src="docs/images/screenshot-songbook.png" alt="The songbook: your own songs at the top and three example songs, Robot Disco, Rainy Day and Spooky Clocks, below.">
+      <br><br>
+      <img src="docs/images/screenshot-phone.png" alt="Itchy on a phone on its side, showing the Spooky Clocks example with long held notes.">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Tablets: the critters move to the top</sub></td>
+    <td align="center"><sub>The songbook, and a phone on its side</sub></td>
+  </tr>
+</table>
 
 ## How it plays
 
@@ -42,6 +84,30 @@ npm run check    # browser checks in headless Chromium (uses the pre-installed P
 
 Keyboard: Space plays and stops, arrow keys move around the grid, Enter places a note, Ctrl/⌘+Z undoes, Ctrl/⌘+Y
 redoes, and keys 1–6 pick a critter.
+
+## Run it yourself
+
+```sh
+git clone https://github.com/hcaw/itchy.git
+cd itchy
+npm start
+```
+
+Then open <http://localhost:5173/>. You need Node 18 or newer. There is nothing to install: Itchy has no
+dependencies and no build step. Any static file server works too, for example `python3 -m http.server`. Opening
+`index.html` straight from disk won't work, because browsers block ES modules on `file://`.
+
+To put it on your own site, copy `index.html`, `manifest.webmanifest`, `styles.css`, `src/` and `assets/` to any
+static host. The [Pages workflow](.github/workflows/pages.yml) does exactly this for <https://hcaw.github.io/itchy/>
+on every push to `main`.
+
+Checks:
+
+```sh
+npm test             # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up, docs pictures
+npm run check        # browser checks in headless Chromium (needs Playwright); screenshots go to test-output/
+npm run screenshots  # re-render the logo, icons and README screenshots from the app (see "Screenshots" below)
+```
 
 ## Architecture
 
@@ -69,7 +135,10 @@ src/ui/                     hand-written DOM, no framework
   plugins.js                features that plug into the regions: charms.js, experiments.js (mood, dice), mic.js, songbook.js,
                             delight.js (blinking, eyes that follow you, the mood-tinted room, the Itchy hello)
   critters.js, icons.js, widgets.js         original SVG art and small UI helpers
+scripts/serve.js            the tiny static server behind npm start
+scripts/screenshots.mjs     renders the logo, icons, social card and README screenshots from the real app
 tests/                      unit tests (node --test) and tests/e2e/check.mjs (Playwright)
+docs/                       the brief, the concept and decisions log, and the README's pictures (docs/images/)
 ```
 
 **Timing.** A worker ticks about every 25 ms. On each tick the scheduler queues every 16th-note step that falls in
@@ -119,3 +188,24 @@ because it turns loops into songs.
 - Long notes can only be made by the dice or found in the example songs. You can't stretch a note by hand yet.
 - There is no volume control per critter (sleep, i.e. mute, only).
 - Phones work, but the layout is designed for tablets, Chromebooks and laptops.
+
+## Screenshots
+
+The logo and screenshots above, the favicon (`assets/icon.svg`), the home-screen icons and the link-preview card
+(`assets/social-card.png`) are all rendered from the running app by [`scripts/screenshots.mjs`](scripts/screenshots.mjs).
+When the look of the app changes, run `npm run screenshots` and commit the new pictures with the change. The output
+is deterministic, so if nothing visible changed, no files change. To add a screenshot, add it to `SHOTS` in the script
+and show it here; `npm test` checks that every picture is both present and used.
+
+## Contributing
+
+Ideas, bug reports and pull requests are all welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) first: it
+covers setting up, the project's rules (every action makes a sound, works without reading and can be undone), and
+what a good pull request looks like. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
+Found a security or privacy problem? Please report it privately, as described in [`SECURITY.md`](SECURITY.md).
+
+## Licence
+
+Itchy is [MIT licensed](LICENSE). The bundled [Nunito](https://github.com/googlefonts/nunito) font is under the
+[SIL Open Font License](assets/fonts/OFL.txt). All critters, icons and sounds are original and made in code.
