@@ -127,6 +127,7 @@ export class Engine {
       feedback: ctx.createGain(),
       echoTone: ctx.createBiquadFilter(),
       spaceSend: ctx.createGain(),
+      previewIn: ctx.createGain(), // taps and previews: heard even when the critter is asleep
     };
     c.lowpass.type = 'lowpass';
     c.lowpass.frequency.value = 20000;
@@ -137,6 +138,7 @@ export class Engine {
     c.echoSend.gain.value = 0;
     c.spaceSend.gain.value = 0;
     c.input.connect(c.stopper).connect(c.volume).connect(c.lowpass).connect(c.highpass);
+    c.previewIn.connect(c.lowpass);
     c.highpass.connect(this.master);
     c.highpass.connect(c.echoSend).connect(c.delay).connect(c.echoTone).connect(c.feedback).connect(c.delay);
     c.echoTone.connect(this.master);
@@ -152,6 +154,7 @@ export class Engine {
     const p = this.getProject();
     const tone = layer.fx.tone;
     c.volume.gain.setTargetAtTime(layer.muted ? 0 : layer.volume, t, SMOOTH);
+    c.previewIn.gain.setTargetAtTime(layer.volume, t, SMOOTH);
     // Dark ↔ Bright: below zero closes a resonant lowpass, above zero opens a highpass.
     const lp = tone < 0 ? 180 * Math.pow(2, (1 + tone) * 6.8) : 20000;
     const hp = tone > 0 ? 20 * Math.pow(2, tone * 7.3) : 10;
@@ -175,6 +178,7 @@ export class Engine {
     for (const [id, c] of this.chains) {
       if (!ids.has(id)) {
         c.input.disconnect();
+        c.previewIn.disconnect();
         c.highpass.disconnect();
         c.echoTone.disconnect();
         this.chains.delete(id);
@@ -186,8 +190,9 @@ export class Engine {
   // ------------------------------------------------------------ notes
 
   /** Schedule one note of a layer at audio time t. */
-  voice(layer, note, t, dur) {
-    const out = this.chain(layer).input;
+  voice(layer, note, t, dur, preview = false) {
+    const c = this.chain(layer);
+    const out = preview ? c.previewIn : c.input;
     const p = this.getProject();
     const kind = soundKind(layer.sound);
     const vel = note.vel ?? 1;
@@ -222,7 +227,7 @@ export class Engine {
   preview(layer, row, vel = 0.9) {
     this.ensure();
     const t = this.ctx.currentTime + 0.01;
-    this.voice(layer, { r: row, vel, len: 2 }, t, stepDuration(this.getProject().tempo));
+    this.voice(layer, { r: row, vel, len: 2 }, t, stepDuration(this.getProject().tempo), true);
   }
 
   /** Little interface sounds, so no action is ever silent: pop (rub out), tick, whoosh, bonk. */

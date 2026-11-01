@@ -55,7 +55,7 @@ export class Rail {
         this.engine.preview(layer, soundKind(layer.sound) === 'beat' ? 0 : wasSelected ? 5 : 3);
         this.bounce(l.id);
       });
-      instantPress(mute, () => {
+      mute.addEventListener('click', () => {
         const layer = this.store.project.layers.find((x) => x.id === l.id);
         this.store.change(() => { layer.muted = !layer.muted; });
         this.engine.uiSound(layer.muted ? 'pop' : 'add');

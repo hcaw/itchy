@@ -46,7 +46,7 @@ export function songbookPlugin(storage) {
     };
     const card = (content, label, onPick, cls = '') => {
       const b = h('button', { class: `song-card ${cls}`, type: 'button', 'aria-label': label, title: label }, content);
-      instantPress(b, onPick);
+      b.addEventListener('click', onPick); // click, not pointerdown: scrolling the book must not open a song
       return b;
     };
 

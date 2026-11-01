@@ -89,3 +89,20 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **The songbook keeps every song**; opening an example or a new song never overwrites the current one.
 - **Timer is a Web Worker tick (fallback `setInterval`)** — only *wakes* the scheduler; all note times come from
   the audio clock with 120 ms lookahead.
+- **Up to 6 critters per song** — enough for rich songs, stays calm on screen and light on Chromebooks.
+- **Buttons act on pointer-down** — the sound comes the instant a finger lands. Controls that sit in scrolling
+  areas (sleep buttons, songbook cards) act on click instead, so scrolling never triggers them. A global guard
+  drops "ghost clicks" that land on a different button after the layout changes.
+- **Taps and previews skip mute** — tapping a sleeping critter's grid still makes a sound; only the loop is quiet.
+- **Recording pauses the music** — so the speakers don't leak into the mic; playback resumes afterwards.
+- **Recordings: up to 4 s, trimmed and normalised; row 4 from the bottom plays them at their own pitch** — rows
+  below sing lower, rows above sing higher.
+- **"My sounds" are shared by all songs** (newest four shown) — a recording made for one song is useful in the next.
+- **Synchronous localStorage backup on page hide** — an IndexedDB write started while closing may not finish;
+  boot takes whichever copy is newer.
+- **No song deleting yet** — the safest way to make losing work impossible; a bin with undo can come later.
+- **Long notes are in the model and drawn as bars** — the dice and examples use them; a stretch gesture can come later.
+- **Features are plugins** (mood, dice, charms, mic, songbook) that add controls to existing regions — new depth
+  arrives the same way, without new modes.
+- **Automated checks use full Chromium, not the headless shell** — the shell has no media capture, so the fake
+  microphone can't work there. (With no microphone the app shows a friendly message, which was checked too.)

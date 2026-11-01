@@ -27,16 +27,31 @@ export function iconButton({ icon, label, cls = '', onPress, pressed }) {
  * activation via click. Prevents double firing.
  */
 export function instantPress(el, fn) {
-  let fromPointer = false;
   el.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    fromPointer = true;
     fn(e);
   });
   el.addEventListener('click', (e) => {
-    if (fromPointer) { fromPointer = false; return; }
-    fn(e);
+    // Keyboard and assistive-tech clicks have detail 0. Pointer clicks were already
+    // handled on pointerdown (and may never arrive if the icon was redrawn meanwhile).
+    if (e.detail === 0) fn(e);
   });
+}
+
+/**
+ * Stop "ghost clicks": when a tap changes the layout (a button disappears, a list grows),
+ * the browser's follow-up click can land on a different button under the finger.
+ * A pointer click only counts if it lands on the control the pointer went down on.
+ */
+export function guardGhostClicks(root = document) {
+  let downOn = null;
+  const control = (t) => (t instanceof Element ? t.closest('button, [role=slider], a') : null);
+  root.addEventListener('pointerdown', (e) => { downOn = control(e.target); }, true);
+  root.addEventListener('click', (e) => {
+    if (e.detail === 0) return; // keyboard
+    const c = control(e.target);
+    if (c && c !== downOn) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
 }
 
 /**

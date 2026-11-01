@@ -23,8 +23,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 212, 59, calc(0.12 + var(--glow) * 0.25)), transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(77, 171, 247, calc(0.10 + var(--glow) * 0.2)), transparent 50%),
+    radial-gradient(circle at 20% 15%, rgba(255, 212, 59, 0.14), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(77, 171, 247, 0.12), transparent 50%),
     radial-gradient(rgba(43, 33, 64, 0.06) 1.5px, transparent 1.5px) 0 0 / 22px 22px,
     var(--bg);
   -webkit-tap-highlight-color: transparent;
@@ -99,8 +99,8 @@ svg { display: block; }
   color: #fff;
   padding: 14px;
   box-shadow: 0 6px 0 #1e7b2e, 0 0 0 calc(var(--glow) * 10px) rgba(47, 179, 68, 0.25);
-  animation: breathe 2.2s ease-in-out infinite;
 }
+.btn.play.invite { animation: breathe 2.2s ease-in-out infinite; }
 .btn.play.playing { background: var(--stop); box-shadow: 0 6px 0 #a61e1e, 0 0 0 calc(var(--glow) * 12px) rgba(240, 62, 62, 0.25); animation: none; }
 .btn.play.beat { transform: scale(1.06); }
 .btn.play:active { transform: translateY(4px); }
@@ -424,7 +424,14 @@ svg { display: block; }
   .charms { flex: 1 1 100%; order: 5; flex-wrap: nowrap; }
   .slider.charm { max-width: none; min-width: 0; }
 }
-@media (max-aspect-ratio: 1/1) and (max-width: 560px) {
-  .charms { flex-wrap: wrap; }
-  .slider.charm { flex: 1 1 100%; }
+@media (max-width: 560px) {
+  #top .group.grow { order: 3; flex: 1 1 100%; }
+  #top .group:last-child { margin-left: auto; }
+  .slider.tempo { max-width: none; }
+  .charms { gap: 6px; }
+  .slider.charm { flex: 1 1 0; padding: 0 4px; }
+  .slider.charm .end { display: none; }
+  .slider.charm .track { margin: 0 22px; }
+  #panel { gap: 8px; padding: 8px; }
+  .sound { width: 54px; height: 54px; }
 }

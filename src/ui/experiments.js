@@ -48,7 +48,7 @@ function arpeggio(store, engine) {
   const voice = layer || { id: '__mood', sound: 'bells', octave: 0, steps: 16, muted: false, volume: 0.8, fx: { echo: 0, space: 0, tone: 0 } };
   const rows = [0, 1, 2, 3, 4, 5, 3, 0];
   const t0 = ctx.currentTime + 0.02;
-  rows.forEach((r, i) => engine.voice(voice, { r, vel: 0.8, len: 1 }, t0 + i * 0.09, 0.1));
+  rows.forEach((r, i) => engine.voice(voice, { r, vel: 0.8, len: 1 }, t0 + i * 0.09, 0.1, true));
 }
 
 export function dicePlugin() {
@@ -65,7 +65,7 @@ export function dicePlugin() {
         if (!engine.playing) {
           // Hear the first few notes of the new pattern straight away.
           const ctx = engine.ctx, t0 = ctx.currentTime + 0.05, d = 60 / store.project.tempo / 4;
-          for (const n of layer.notes) if (n.s < 8) engine.voice(layer, n, t0 + n.s * d, d);
+          for (const n of layer.notes) if (n.s < 8) engine.voice(layer, n, t0 + n.s * d, d, true);
         }
       };
       const dice = iconButton({ icon: ICONS.dice, label: 'Surprise me! (make a pattern)', cls: 'dice', onPress: roll });

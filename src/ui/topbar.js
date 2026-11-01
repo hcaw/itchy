@@ -60,6 +60,8 @@ export class TopBar {
     this.play.setAttribute('aria-label', playing ? 'Stop' : 'Play');
     this.play.title = playing ? 'Stop' : 'Play';
     this.play.classList.toggle('playing', playing);
+    if (playing) this.played = true;
+    this.play.classList.toggle('invite', !playing && !this.played);
     this.tempo.set(this.store.project.tempo);
     this.undo.disabled = false;
     this.undo.classList.toggle('dim', !this.store.history.canUndo);

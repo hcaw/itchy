@@ -5,7 +5,7 @@ import { TopBar } from './topbar.js';
 import { Rail } from './rail.js';
 import { Grid } from './grid.js';
 import { Panel } from './panel.js';
-import { h } from './widgets.js';
+import { h, guardGhostClicks } from './widgets.js';
 import { ICONS } from './icons.js';
 
 const HINT_KEY = 'itchy.hinted';
@@ -26,6 +26,7 @@ export class App {
     this.panel = new Panel($('panel'), { store, engine, sections: panel });
     for (const plug of plugins) plug.attach?.(this.ctx);
 
+    guardGhostClicks();
     store.subscribe((what) => this.render(what));
     engine.on((type) => { if (type === 'stop') this.onStop(); });
     this.render('open');
@@ -60,7 +61,7 @@ export class App {
   onStop() {
     this.grid.clearPlayhead();
     for (const l of this.store.project.layers) this.rail.drawMap(l, -1);
-    document.body.style.setProperty('--glow', '0');
+    this.top.play.style.setProperty('--glow', '0');
   }
 
   /** Animation loop: show each step at the moment it is heard. */
@@ -68,7 +69,7 @@ export class App {
     requestAnimationFrame(this.loop);
     const events = this.engine.drainEvents();
     if (!events.length) {
-      if (this.engine.playing) document.body.style.setProperty('--glow', this.engine.level().toFixed(2));
+      if (this.engine.playing) this.top.play.style.setProperty('--glow', this.engine.level().toFixed(2));
       return;
     }
     const p = this.store.project;
@@ -84,7 +85,7 @@ export class App {
     }
     const last = events[events.length - 1];
     for (const l of p.layers) if (last.steps[l.id] !== undefined) this.rail.drawMap(l, last.steps[l.id]);
-    document.body.style.setProperty('--glow', this.engine.level().toFixed(2));
+    this.top.play.style.setProperty('--glow', this.engine.level().toFixed(2));
   }
 
   bindKeys() {

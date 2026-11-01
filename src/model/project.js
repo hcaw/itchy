@@ -43,7 +43,7 @@ export function createLayer(sound = 'bells', { color = 0, notes = [], ...rest } 
     volume: 0.8,
     octave: 0,
     fx: { echo: 0, space: 0, tone: 0 },
-    notes: notes.map((n) => ({ len: 1, vel: 1, ...n })),
+    notes: notes.map((n) => ({ s: n.s, r: n.r, len: n.len ?? 1, vel: n.vel ?? 1 })), // same key order as migrate()
     ...rest,
   };
 }
