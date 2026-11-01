@@ -1,7 +1,7 @@
 // Recording: press the red mic, make a noise, and it becomes the critter's sound —
 // playable at every pitch on the grid. Recordings are kept in "my sounds" for every song.
 
-import { h, instantPress, toast } from './widgets.js';
+import { h, instantPress, scrollSafePress, toast } from './widgets.js';
 import { ICONS } from './icons.js';
 import { critterSVG } from './critters.js';
 import { COLORS, recordingId } from '../model/sounds.js';
@@ -49,11 +49,11 @@ export function micPlugin(storage) {
         html: critterSVG('mic', COLORS[layer.color]) + wave(r.peaks),
       });
       if (on) b.append(h('span', { class: 'tick-badge', html: ICONS.check }));
-      instantPress(b, async () => {
+      scrollSafePress(b, async () => {
         engine.ensure();
         await ensureBuffers([r.id]);
         app.panel.chooseSound(sound);
-      });
+      }, { preview: async () => { engine.ensure(); await ensureBuffers([r.id]); app.panel.previewSound(sound); } });
       out.push(b);
     });
     const micBtn = h('button', {
@@ -61,7 +61,8 @@ export function micPlugin(storage) {
       'aria-label': denied ? 'Microphone is off. Try again?' : 'Record my own sound', title: 'Record my own sound',
       html: denied ? ICONS.micOff : ICONS.mic,
     });
-    instantPress(micBtn, () => record(store.layer));
+    // The mic only ever opens on a clean tap, never at the start of a swipe along the tray.
+    scrollSafePress(micBtn, () => record(store.layer), { preview: () => { engine.ensure(); engine.uiSound('tick'); } });
     out.push(micBtn);
     return out;
   }

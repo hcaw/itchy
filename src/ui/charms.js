@@ -33,6 +33,9 @@ export function charmsPlugin() {
             }
           },
           onCommit: () => store.seal(),
+          format: c.key === 'tone'
+            ? (v) => (v < -0.6 ? 'dark' : v < -0.15 ? 'a bit dark' : v <= 0.15 ? 'in the middle' : v < 0.6 ? 'a bit bright' : 'bright')
+            : (v) => (v < 0.05 ? 'off' : v < 0.4 ? 'a little' : v < 0.75 ? 'some' : 'lots'),
         });
         s.style.setProperty('--sc', c.color);
         sliders[c.key] = s;

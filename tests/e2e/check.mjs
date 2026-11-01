@@ -432,6 +432,62 @@ async function delights() {
   await calm.close();
 }
 
+/** Phones and small landscape screens: the dock stays on screen, and swiping the sounds tray is safe. */
+async function smallScreens() {
+  console.log('\nSmall screens');
+  // A phone whose library already holds four recordings (the most the tray shows).
+  const { ctx, page, errors } = await openPage({ width: 360, height: 640, touch: true });
+  await page.evaluate(async () => {
+    const data = new Float32Array(4000).map((_, i) => Math.sin(i / 8) * 0.5);
+    for (let i = 0; i < 4; i++) await itchy.storage.saveRecording(`rtest${i}`, { data, sampleRate: 22050, peaks: [0.2, 0.6, 1, 0.5, 0.3], created: Date.now() + i });
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
+  await page.waitForSelector('.rec-sound');
+  await instrument(page);
+  await page.waitForTimeout(300);
+  const outside = await page.evaluate(() => [...document.querySelectorAll('#panel .edit-tools .btn, #panel .btn.dice, #panel [role=slider]')]
+    .filter((e) => { const r = e.getBoundingClientRect(); return r.right > innerWidth + 0.5 || r.left < -0.5; }).map((e) => e.getAttribute('aria-label')));
+  check(outside.length === 0, 'with recordings, every dock control stays on a phone screen', outside.join(', '));
+  await page.screenshot({ path: `${OUT}/phone-recordings.png` });
+  // Swipe the tray, starting on a sound and on the mic: nothing is chosen, nothing records.
+  const before = await project(page);
+  const cdp = await ctx.newCDPSession(page);
+  for (const sel of ['.sounds .sound:not(.on):not(.record)', '.sounds .sound.record']) {
+    // Bring the tile fully into the tray's view first (the mic starts past the right edge).
+    await page.evaluate((q) => { const t = document.querySelector('.sounds'); const el = t.querySelector(q.replace('.sounds ', '')); t.scrollLeft = el.offsetLeft - t.clientWidth / 2; }, sel);
+    await page.waitForTimeout(100);
+    const b = await page.locator(sel).first().boundingBox();
+    const y = b.y + b.height / 2;
+    let x = b.x + b.width / 2;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let i = 0; i < 8; i++) { x -= 12; await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] }); }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(150);
+  }
+  const afterSwipe = await project(page);
+  check(afterSwipe === before, 'swiping the sounds tray chooses nothing', afterSwipe === before ? '' : diff(before, afterSwipe));
+  check(await page.locator('.rec-overlay').count() === 0, 'swiping past the mic never starts recording');
+  await page.evaluate(() => { document.querySelector('.sounds').scrollLeft = 0; });
+  await page.waitForTimeout(100);
+  await actionCheck(page, 'a clean tap on a sound in the tray still chooses it', async () => {
+    const b = await page.locator('.sounds .sound:not(.on):not(.record)').first().boundingBox();
+    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+  });
+  check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
+  await ctx.close();
+
+  // A small phone on its side: the charms keep a real track to slide along.
+  const land = await openPage({ width: 667, height: 375, touch: true });
+  const tracks = await land.page.evaluate(() => [...document.querySelectorAll('.charms .track')].map((t) => Math.round(t.getBoundingClientRect().width)));
+  check(tracks.every((w) => w >= 30), 'phone on its side: charms have room to slide', tracks.join(', '));
+  const off = await land.page.evaluate(() => [...document.querySelectorAll('button, [role=slider]')].filter((e) => e.offsetParent && !e.closest('.sounds, #rail'))
+    .filter((e) => { const r = e.getBoundingClientRect(); return r.right > innerWidth + 0.5 || r.bottom > innerHeight + 0.5; }).map((e) => e.getAttribute('aria-label')));
+  check(off.length === 0, 'phone on its side: every control is on screen', off.join(', '));
+  await land.page.screenshot({ path: `${OUT}/phone-landscape.png` });
+  await land.ctx.close();
+}
+
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
@@ -460,6 +516,7 @@ try {
   await persistence();
   await keyboard();
   await delights();
+  await smallScreens();
   await examples();
 } catch (e) {
   failures++;

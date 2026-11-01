@@ -39,6 +39,31 @@ export function instantPress(el, fn) {
 }
 
 /**
+ * Like instantPress, for buttons inside a strip that scrolls sideways (the sounds tray).
+ * A mouse press acts at once. A finger only previews on touch-down (so there's still an
+ * instant sound) and commits on lift, if it didn't move: swiping the strip to scroll it
+ * never chooses anything, and never opens the microphone.
+ */
+export function scrollSafePress(el, fn, { preview } = {}) {
+  let start = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (e.pointerType === 'mouse') { fn(e); return; }
+    const strip = el.parentElement;
+    start = { x: e.clientX, y: e.clientY, scroll: strip?.scrollLeft ?? 0, strip };
+    preview?.(e);
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (!start) return;
+    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8 || Math.abs((start.strip?.scrollLeft ?? 0) - start.scroll) > 2;
+    start = null;
+    if (!moved) fn(e);
+  });
+  el.addEventListener('pointercancel', () => { start = null; }); // the browser took over to scroll
+  el.addEventListener('click', (e) => { if (e.detail === 0) fn(e); });
+}
+
+/**
  * Stop "ghost clicks": when a tap changes the layout (a button disappears, a list grows),
  * the browser's follow-up click can land on a different button under the finger.
  * A pointer click only counts if it lands on the control the pointer went down on.
@@ -82,9 +107,11 @@ export function slider({ label, min = 0, max = 1, value = 0, bipolar = false, le
     el.setAttribute('aria-valuenow', Math.round(v * 100) / 100);
     el.setAttribute('aria-valuetext', format ? format(v) : `${Math.round(f * 100)}%`);
     el.style.setProperty('--amount', f.toFixed(3));
+    if (bipolar) { el.classList.toggle('below', f < 0.5); el.classList.toggle('above', f > 0.5); }
   };
   const setFrom = (clientX) => {
     const r = track.getBoundingClientRect();
+    if (!(r.width > 4)) return; // no room to slide (a squeezed layout): ignore rather than jump
     let f = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
     if (bipolar && Math.abs(f - 0.5) < 0.04) f = 0.5; // a little "detent" in the middle
     const nv = min + f * (max - min);

@@ -96,10 +96,10 @@ svg { display: block; }
   transition: opacity 0.4s var(--ease);
 }
 #app.loading { opacity: 0; }
-#top { grid-area: top; }
-#rail { grid-area: rail; }
+#top { grid-area: top; min-width: 0; }
+#rail { grid-area: rail; min-width: 0; min-height: 0; }
 #stage { grid-area: stage; min-height: 0; min-width: 0; }
-#panel { grid-area: panel; }
+#panel { grid-area: panel; min-width: 0; } /* never wider than the screen, however many sounds */
 
 /* ------------------------------------------------------------------ buttons */
 
@@ -256,11 +256,11 @@ svg { display: block; }
   margin: -7px -14px 0 -7px;
   scrollbar-width: none;
   scroll-padding: 30px 8px;
-  --fa: 0px; --fb: 0px;
-  -webkit-mask-image: linear-gradient(transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
-  mask-image: linear-gradient(transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+  --f0: 0px; --fa: 0px; --fb: 0px;
+  -webkit-mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+  mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
 }
-#rail.more-start { --fa: 26px; }
+#rail.more-start { --f0: 7px; --fa: 34px; }
 #rail.more-end { --fb: 26px; }
 #rail::-webkit-scrollbar { display: none; }
 .card {
@@ -381,7 +381,7 @@ svg { display: block; }
 .grid-frame.asleep .sleep-badge { display: block; animation: pop-in 0.3s var(--spring); }
 .grid {
   --head: 48px;
-  --pip: 34px;
+  --pip: 32px;
   --gap: 5px;
   --spacer: 5px;
   flex: 1;
@@ -400,7 +400,7 @@ svg { display: block; }
   max-height: calc(var(--rows) * var(--rowh) + 16px); height: 100%; margin-block: auto;
 }
 .row-head {
-  border: calc(var(--gap) / 2) solid transparent; background-clip: padding-box; border-radius: calc(var(--r-sm) + var(--gap) / 2); cursor: pointer; padding: 6px;
+  border: calc(var(--gap) / 2) solid transparent; background-clip: padding-box; border-radius: calc(var(--r-sm) + var(--gap) / 2); cursor: pointer; padding: 2px;
   border-right-width: calc(var(--gap) / 2 + 4px); /* the gap to the grid is part of the button */
   background: color-mix(in oklch, var(--rc) 9%, #fffdfa);
   color: var(--rc);
@@ -409,10 +409,10 @@ svg { display: block; }
 }
 @media (hover: hover) { .row-head:hover { background: color-mix(in oklch, var(--rc) 18%, #fffdfa); } }
 .row-head svg { width: 100%; height: 100%; max-width: 36px; max-height: 36px; }
-.row-head .pip.kit { --size: 1.2; padding: 6px; }
+.row-head .pip.kit { --size: 1.05; padding: 5px; }
 .row-head .pip.kit svg { max-width: none; max-height: none; }
 .row-head .pip {
-  width: calc(var(--size) * var(--pip)); height: calc(var(--size) * var(--pip)); border-radius: 50%;
+  width: min(calc(var(--size) * var(--pip)), 100%); aspect-ratio: 1; max-height: 100%; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--rc) 65%, #fff), var(--rc) 70%);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rc) 70%, #261f3d), 0 2px 0 color-mix(in srgb, var(--rc) 70%, #261f3d);
   display: grid; place-items: center; color: #fff; padding: 4px;
@@ -429,7 +429,7 @@ svg { display: block; }
   min-width: 0;
   min-height: 0;
   /* Quick, so the playhead never smears across two columns. */
-  transition: background-color 0.06s linear, transform 0.12s var(--ease), box-shadow 0.06s linear;
+  transition: background-color 0.06s linear; /* the playhead lift comes and goes with the bar, no easing */
 }
 /* With a mouse, an empty cell shows the note it would make. */
 @media (hover: hover) {
@@ -456,18 +456,17 @@ svg { display: block; }
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.62);
 }
-.grid.beat .cell.on::after { border-radius: 4px; transform: translate(-50%, -50%) rotate(45deg); width: 30%; }
+.grid.beat .cell.on::after { border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); width: 30%; min-width: 7px; }
 /* The playhead: a soft bar of light over the column being heard; its notes lift as they play. */
 .playhead {
   position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 15px; pointer-events: none; z-index: 1;
-  background: color-mix(in srgb, var(--layer) 12%, transparent);
+  background: color-mix(in srgb, var(--layer) 20%, transparent);
   box-shadow: inset 0 0 0 2.5px color-mix(in srgb, var(--layer) 55%, transparent);
   opacity: 0; transition: opacity 0.2s var(--ease);
 }
 .playhead.on { opacity: 1; }
-/* The playhead lights its column instantly (and fades out quickly), so it never lags the bar. */
+/* The bar tints the column; a note under it lifts the instant it plays. */
 .cell.now { transition: none; }
-.cell.now:not(.on) { background: color-mix(in oklch, var(--rc) 24%, #fffdfa); }
 .cell.now.on {
   transform: scale(1.06); filter: brightness(1.08) saturate(1.1); z-index: 3;
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 8px -4px color-mix(in srgb, var(--rc) 80%, transparent);
@@ -477,7 +476,7 @@ svg { display: block; }
 .cell.bump { animation: bump 0.22s var(--ease); }
 .cell.hit::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  animation: ring 0.45s var(--ease) forwards;
+  animation: ring 0.3s var(--ease) forwards;
 }
 @keyframes bump { 45% { transform: scale(0.86); } }
 @keyframes ring { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rc) 55%, transparent); } to { box-shadow: 0 0 0 10px color-mix(in srgb, var(--rc) 0%, transparent); } }
@@ -489,7 +488,7 @@ svg { display: block; }
 .cell.beat-start:not([data-s="0"]) { margin-left: calc(-1 * var(--spacer)); border-left-width: calc(var(--gap) / 2 + var(--spacer)); }
 
 /* Beat ruler under the grid. */
-.tick { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #d9d0c2; transition: transform 0.05s linear, background-color 0.05s linear; }
+.tick { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #d9d0c2; }
 .tick.big { width: 8px; height: 8px; background: #c4b8a5; }
 .tick.now { background: var(--layer); transform: scale(1.7); }
 
@@ -532,7 +531,7 @@ svg { display: block; }
 /* Sounds sit together in a well; the chosen one pops up out of it. */
 .sounds {
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
-  background: var(--well); border-radius: 23px; padding: 5px;
+  background: var(--well); border-radius: 25px; padding: 7px;
   box-shadow: inset 0 1px 2px rgba(38, 31, 61, 0.06);
   --fa: 0px; --fb: 0px;
 }
@@ -634,7 +633,8 @@ svg { display: block; }
 .slider.charm-tone .end.left { color: #4c6ef5; transform: none; }
 .slider.charm-tone .end.right { color: #cf6d00; transform: none; }
 .slider.charm-tone .track { background: linear-gradient(90deg, #dbe4ff, #efe8dd 50%, #fff3bf); }
-.slider.charm-tone .fill { background: linear-gradient(90deg, #748ffc, #ffd43b); opacity: 0.85; }
+.slider.charm-tone .fill { background: #ffd43b; opacity: 0.85; }
+.slider.charm-tone.below .fill { background: #748ffc; }
 .tone-face {
   position: relative; width: 26px; height: 26px;
   --m: clamp(0, calc((0.5 - var(--amount, 0.5)) * 3), 1);
@@ -696,6 +696,8 @@ svg { display: block; }
   background: var(--bg); border-radius: 34px; padding: 20px 22px 26px; width: min(760px, 100%); max-height: 100%; overflow: auto;
   box-shadow: var(--e3); animation: sheet-in 0.35s var(--spring);
   scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
 }
 @keyframes sheet-in { from { transform: translateY(24px) scale(0.97); opacity: 0; } }
 .songbook-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
@@ -731,10 +733,13 @@ svg { display: block; }
 
 /* Tablets and small laptops: tighter grid spacing (so cells stay ≥ 44 px), charms on their own row. */
 @media (max-width: 1100px) {
-  .grid { --gap: 4px; --spacer: 2px; }
+  .grid { --gap: 4px; --spacer: 6px; }
+  #top .group.grow { flex: 0 1 auto; }
+  .slider.tempo { flex: 1 1 auto; width: 300px; }
+  #top .brand-slot { margin-left: auto; }
   .grid-frame { padding: 12px 8px 6px 6px; }
   .wordmark { display: none; }
-  #top .brand-slot { margin-inline: 8px 16px; }
+  #top .brand-slot { margin-right: 4px; }
   .panel-group { min-width: 0; flex: 0 1 auto; }
   .sounds {
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%;
@@ -755,9 +760,11 @@ svg { display: block; }
   }
   #rail {
     flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 7px 26px 14px 7px; margin: -7px -7px -6px;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+    mask-image: linear-gradient(90deg, transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
   }
+  /* Tall frames: drum pads may grow taller, so the grid doesn't float in empty space. */
+  .grid.beat { --rowh: clamp(96px, calc((100cqw - 80px) / var(--steps) * 3), 150px); }
   #rail .card { flex: 0 0 120px; }
   #rail.compact .card { flex: 0 0 104px; }
   #rail.compact .minimap { height: 20px; }
@@ -811,6 +818,8 @@ svg { display: block; }
   :root { --tap: 46px; }
   #app { gap: 8px; padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); grid-template-columns: 112px 1fr; }
   #top { min-height: 0; gap: 8px; }
+  #top .group.grow { flex: 1 1 auto; }
+  #top .brand-slot { margin-left: 0; }
   .btn.play { --tap: 50px; padding: 14px 12px 14px 16px; }
   .btn.play.playing { padding: 15px; }
   .card .minimap, .wordmark { display: none; }
@@ -818,12 +827,15 @@ svg { display: block; }
   .card .mute { --tap: 44px; }
   .card.add { min-height: 48px; }
   #panel { padding: 6px; gap: 8px; flex-wrap: nowrap; }
-  .charms { flex: 1 1 0; }
-  .slider.charm { min-width: 0; height: 48px; }
+  .charms { flex: 1 1 0; min-width: 300px; }
+  .panel-group { flex: 0 1 auto; min-width: 0; }
+  .slider.charm { min-width: 0; height: 48px; padding: 0 6px; }
+  .slider.charm .track { margin: 0 18px; }
   .slider.charm .end { display: none; }
   .slider.charm .thumb { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
   .sound { width: 46px; height: 46px; }
-  .grid { --head: 34px; --pip: 24px; --gap: 3px; --spacer: 3px; grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 10px; }
+  .grid { --head: 40px; --pip: 22px; --gap: 3px; --spacer: 4px; grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 10px; }
+  .row-head { padding: 1px; border-right-width: calc(var(--gap) / 2 + 2px); }
   .grid-frame { padding: 8px 8px 4px 6px; }
 }
 

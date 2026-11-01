@@ -26,7 +26,7 @@ export class Rail {
     for (const l of p.layers) {
       const c = this.cards.get(l.id);
       const chosen = l.id === this.store.view.selected;
-      if (chosen && !c.card.classList.contains('selected') && this.built) this.reveal(c.card);
+      if (chosen && !c.card.classList.contains('selected')) this.reveal(c.card, !this.built);
       c.card.classList.toggle('selected', chosen);
       c.card.classList.toggle('asleep', l.muted);
       c.select.setAttribute('aria-pressed', String(l.id === this.store.view.selected));
@@ -47,13 +47,13 @@ export class Rail {
    * Keep the chosen critter (or the focused control) in view in a scrolling rail. Scrolls the
    * rail itself (never scrollIntoView, which would also move where the Tab key starts).
    */
-  reveal(el) {
+  reveal(el, instant = false) {
     requestAnimationFrame(() => {
       const rail = this.root;
       if (!el?.isConnected) return;
       const across = rail.scrollWidth > rail.clientWidth + 1 && getComputedStyle(rail).flexDirection === 'row';
       const r = el.getBoundingClientRect(), box = rail.getBoundingClientRect();
-      const lead = 10, trail = 34; // keep clear of the fade at the far end
+      const lead = across ? 30 : 12, trail = 34; // keep clear of the fades (and let the previous card peek in)
       let by = 0;
       if (across) {
         if (r.left < box.left + lead) by = r.left - box.left - lead;
@@ -63,7 +63,7 @@ export class Rail {
         else if (r.bottom > box.bottom - trail) by = r.bottom - box.bottom + trail;
       }
       if (!by) return;
-      const smooth = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      const smooth = instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
       rail.scrollBy({ [across ? 'left' : 'top']: by, behavior: smooth });
     });
   }

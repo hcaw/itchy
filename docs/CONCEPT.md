@@ -139,3 +139,7 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Drum rows stay pad-shaped** (about 1.6 × a column's width, centred), so hits read as taps, not long bars.
 - **The rail scrolls itself to show the chosen critter**, never using `scrollIntoView`, which would also move where the
   Tab key starts; the first Tab always goes to Play.
+- **In the sounds tray a finger previews on touch-down and chooses on lift** — the tray scrolls sideways on small
+  screens, so a swipe must never choose a sound or open the microphone; a mouse still acts instantly.
+- **The playhead bar alone tints the column** — one moving element can't fall out of step with itself.
+- **Phones on their side get a compact one-row dock** — the grid keeps as much height as possible.

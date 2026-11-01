@@ -23,7 +23,7 @@ export function edgeColor(hex) {
   const paper = lum(rgb('#fff8ee')), ink = rgb('#261f3d'), c = rgb(hex);
   for (let t = 0; t <= 0.7; t += 0.02) {
     const m = c.map((v, i) => Math.round(v * (1 - t) + ink[i] * t));
-    if ((paper + 0.05) / (lum(m) + 0.05) >= 3) return `rgb(${m.join(' ')})`;
+    if ((paper + 0.05) / (lum(m) + 0.05) >= 3.3) return `rgb(${m.join(' ')})`; // 3:1 with room for the tinted room
   }
   return '#261f3d';
 }

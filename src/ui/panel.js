@@ -1,7 +1,7 @@
 // The critter panel under the grid: what the selected critter sounds like, tools to
 // change its pattern, and its charms (effects).
 
-import { h, iconButton, instantPress } from './widgets.js';
+import { h, iconButton, scrollSafePress } from './widgets.js';
 import { critterSVG } from './critters.js';
 import { ICONS } from './icons.js';
 import { COLORS, SOUNDS, BEAT_SOUNDS, TUNE_SOUNDS, soundKind } from '../model/sounds.js';
@@ -19,6 +19,14 @@ export class Panel {
     root.append(h('div', { class: 'panel-group' }, this.sounds), this.tools, ...sections);
     this.sig = '';
     new ResizeObserver(() => this.fit()).observe(root);
+    // Keyboard focus in the scrolling tray: bring the tile clear of the edge fades.
+    this.sounds.addEventListener('focusin', (e) => {
+      const t = this.sounds, r = e.target.getBoundingClientRect(), box = t.getBoundingClientRect(), edge = 26;
+      let by = 0;
+      if (r.left < box.left + edge) by = r.left - box.left - edge;
+      else if (r.right > box.right - edge) by = r.right - box.right + edge;
+      if (by) t.scrollBy({ left: by, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    });
     this.sounds.addEventListener('scroll', () => this.fit(), { passive: true });
   }
 
@@ -58,8 +66,15 @@ export class Panel {
     const on = layer.sound === sound;
     const b = h('button', { class: `sound ${on ? 'on' : ''}`, type: 'button', 'aria-pressed': String(on), 'aria-label': label, title: label, html });
     if (on) b.append(h('span', { class: 'tick-badge', html: ICONS.check }));
-    instantPress(b, () => this.chooseSound(sound));
+    scrollSafePress(b, () => this.chooseSound(sound), { preview: () => this.previewSound(sound) });
     return b;
+  }
+
+  /** Hear a sound without choosing it yet (a finger landing on the tray, before we know it's a tap). */
+  previewSound(sound) {
+    const layer = this.store.layer;
+    this.engine.ensure();
+    this.engine.preview({ ...layer, sound }, soundKind(sound) === 'beat' ? 0 : 3);
   }
 
   chooseSound(sound) {
