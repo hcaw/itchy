@@ -48,7 +48,10 @@ export function songbookPlugin(storage) {
     const { store, engine } = ctxRef;
     await store.flush();
     const mine = await storage.listProjects().catch(() => []);
-    const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); ctxRef.app.top.book.focus(); };
+    // While the book is open, the music screen behind it can't be reached (Tab stays in the book).
+    const app = document.getElementById('app');
+    app.inert = true;
+    const close = () => { app.inert = false; overlay.remove(); document.removeEventListener('keydown', onKey); ctxRef.app.top.book.focus(); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     const choose = async (makeProject) => {
       engine.ensure();
@@ -94,6 +97,7 @@ export function songbookPlugin(storage) {
     const fade = () => body.classList.toggle('more-below', body.scrollTop + body.clientHeight < body.scrollHeight - 2);
     body.addEventListener('scroll', fade, { passive: true });
     requestAnimationFrame(fade);
+    new ResizeObserver(fade).observe(body);
     const overlay = h('div', { class: 'songbook-overlay', role: 'dialog', 'aria-label': 'My songs', 'aria-modal': 'true' },
       h('div', { class: 'songbook' },
         h('div', { class: 'songbook-head' }, h('span', { class: 'big-icon', html: ICONS.book }), closeBtn),

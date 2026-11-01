@@ -89,6 +89,9 @@ export function micPlugin(storage) {
     engine.ensure();
     const wasPlaying = engine.playing;
     if (wasPlaying) engine.stop(); // a clean recording, without the music leaking in
+    // Started from the keyboard? Then focus comes back to the tray afterwards, not to the page.
+    const fromKeys = !!document.activeElement?.closest?.('.sounds') && document.activeElement.matches(':focus-visible');
+    let made = null;
     const ui = bubble();
     let finish;
     const done = new Promise((r) => { finish = r; });
@@ -101,7 +104,7 @@ export function micPlugin(storage) {
       if (status !== 'ok') {
         denied = true;
         engine.uiSound('bonk');
-        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s OK! Try the other sounds.' : 'No microphone found. Try the other sounds!');
+        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s\u00a0OK! Try the other sounds.' : 'No microphone found. Try the other sounds!');
         return;
       }
       denied = false;
@@ -126,6 +129,7 @@ export function micPlugin(storage) {
       await storage.saveRecording(id, { ...clip, created: Date.now() }).catch((e) => console.warn('Itchy: recording not saved', e));
       const target = findLayer(store.project, layer.id) || store.layer;
       store.change(() => { target.sound = `rec:${id}`; });
+      made = `rec:${id}`;
       store.select(target.id);
       await refreshLibrary();
       engine.preview(target, 3);
@@ -141,6 +145,7 @@ export function micPlugin(storage) {
       busy = false;
       app.panel.sig = '';
       app.panel.render();
+      if (fromKeys) (document.querySelector(`.sounds [data-sound="${made}"]`) || document.querySelector('.sounds [data-sound="record"]'))?.focus();
     }
   }
 

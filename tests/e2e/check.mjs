@@ -382,6 +382,15 @@ async function keyboard() {
     check(await page.evaluate(() => !!document.activeElement?.closest('.sounds')), 'choosing a sound with Enter keeps keyboard focus on the sounds');
     await page.keyboard.press('Control+z');
   }
+  {
+    await page.click('.btn.book');
+    await page.waitForSelector('.songbook');
+    for (let i = 0; i < 12; i++) await page.keyboard.press('Tab');
+    check(await page.evaluate(() => !!document.activeElement?.closest('.songbook')), 'Tab stays inside the open songbook');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    check(await page.evaluate(() => !document.getElementById('app').inert && document.activeElement?.classList.contains('book')), 'closing the songbook gives the screen (and focus) back');
+  }
   await page.locator('.charm-space').focus();
   await page.keyboard.press('ArrowRight');
   check((await page.evaluate(() => itchy.store.layer.fx.space)) > 0, 'charms work with arrow keys');

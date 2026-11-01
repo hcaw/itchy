@@ -38,6 +38,7 @@ npm run check    # browser checks in headless Chromium (uses the pre-installed P
 | Turtle ↔ rabbit | drag to change speed | a tick at the new speed |
 | ↶ ↷ | undo or redo anything | a whoosh |
 | Book | every song you've made, plus three examples | — |
+| The Itchy critter (top bar) | tap it | a little hello in the current mood (it changes colour each time) |
 
 Keyboard: Space plays and stops, arrow keys move around the grid, Enter places a note, Ctrl/⌘+Z undoes, Ctrl/⌘+Y
 redoes, and keys 1–6 pick a critter.

@@ -394,9 +394,9 @@ svg { display: block; }
   min-height: 0;
   min-width: 0;
 }
-/* Drum rows stay pad-shaped (about 1.6 × a column's width), centred in the frame. */
+/* Drum rows stay pad-shaped (up to about 2 × a column's width), centred in the frame. */
 .grid.beat {
-  --rowh: clamp(64px, calc((100cqw - 80px) / var(--steps) * 1.6), 150px);
+  --rowh: clamp(64px, calc((100cqw - 80px) / var(--steps) * 2.2), 120px);
   max-height: calc(var(--rows) * var(--rowh) + 16px); height: 100%; margin-block: auto;
 }
 .row-head {
@@ -527,7 +527,7 @@ svg { display: block; }
   box-shadow: var(--e2);
 }
 /* The sounds column keeps one width, so the charms don't jump when you switch critter. */
-.panel-group { display: flex; align-items: center; min-width: 376px; }
+.panel-group { display: flex; align-items: center; min-width: 384px; }
 .tools { display: flex; align-items: center; gap: 8px; }
 /* Sounds sit together in a well; the chosen one pops up out of it. */
 .sounds {
@@ -590,7 +590,7 @@ svg { display: block; }
 #toast {
   position: fixed; left: 16px; right: 16px; bottom: 28px; margin-inline: auto; width: fit-content; z-index: 60;
   background: rgba(38, 31, 61, 0.96); color: #fff; border-radius: 24px; padding: 8px 22px 8px 8px;
-  display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 800; line-height: 1.25; text-wrap: pretty;
+  display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 800; line-height: 1.25; text-wrap: balance;
   box-shadow: var(--e3);
   transform: translateY(24px); opacity: 0;
   transition: transform 0.4s var(--spring), opacity 0.25s var(--ease), visibility 0.4s;
@@ -702,6 +702,7 @@ svg { display: block; }
 .songbook-body {
   min-height: 0; overflow: auto; scrollbar-width: thin;
   padding: 12px 12px 14px; margin: -12px -12px 0;
+  scroll-padding: 12px 0 40px; /* a focused card is never under the fade */
 }
 .songbook-body.more-below {
   -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
@@ -810,6 +811,16 @@ svg { display: block; }
   .slider.charm .thumb { width: 34px; height: 34px; margin: -17px 0 0 -17px; border-width: 3px; }
   .slider.charm .thumb svg, .tone-face { width: 20px; height: 20px; }
   .btn.dice { --tap: 46px; padding: 9px; }
+  .charms { gap: 4px; }
+  .slider.charm { padding: 0 2px; }
+  .slider.charm .track { margin: 0 16px; }
+  .slider.charm .thumb { width: 30px; height: 30px; margin: -15px 0 0 -15px; }
+  .slider.charm .thumb svg, .tone-face { width: 18px; height: 18px; }
+  .sound .tick-badge { width: 16px; height: 16px; padding: 3px; top: 1px; right: 1px; }
+  /* Keep the play button's glow and halo inside the screen edge. */
+  .btn.play::after { inset: -4px; border-width: 4px; }
+  .btn.play { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 4px 0 #11692c, 0 8px 16px -8px rgba(34, 177, 76, 0.55), 0 0 0 calc(var(--glow) * 7px) rgba(34, 177, 76, 0.16); }
+  .btn.play.playing { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 4px 0 #8f1717, 0 8px 16px -8px rgba(239, 68, 68, 0.55), 0 0 0 calc(var(--glow) * 8px) rgba(239, 68, 68, 0.14); }
   #panel { gap: 8px; padding: 8px; border-radius: 24px; }
   .panel-group { flex: 1 1 calc(100% - 100px); max-width: none; }
   .edit-tools .btn { --tap: 44px; padding: 11px; }

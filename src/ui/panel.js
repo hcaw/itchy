@@ -56,7 +56,7 @@ export class Panel {
         this.sounds.append(this.soundButton(sound, critterSVG(SOUNDS[sound].shape, COLORS[layer.color]), SOUNDS[sound].label));
       }
       if (kind === 'tune' && this.extraSounds) this.sounds.append(...this.extraSounds(layer));
-      if (focused) this.sounds.querySelector(`[data-sound="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+      if (focused) (this.sounds.querySelector(`[data-sound="${CSS.escape(focused)}"]`) || this.sounds.querySelector('.sound.on'))?.focus({ preventScroll: true });
       // Keep the chosen sound clear of the tray's fading edges.
       requestAnimationFrame(() => this.showChosen());
     }
@@ -92,7 +92,8 @@ export class Panel {
 
   /** Scroll the tray (not the page) so the chosen sound sits clear of the edge fades. */
   showChosen() {
-    const t = this.sounds, on = t.querySelector('.sound.on');
+    // Keyboard focus in the tray wins: keep the focused tile in view rather than the chosen one.
+    const t = this.sounds, on = t.querySelector(':focus-visible') || t.querySelector('.sound.on');
     if (!on || t.scrollWidth <= t.clientWidth) return;
     const r = on.getBoundingClientRect(), box = t.getBoundingClientRect(), edge = 30;
     if (r.left < box.left + edge) t.scrollLeft += r.left - box.left - edge;
