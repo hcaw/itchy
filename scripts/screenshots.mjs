@@ -70,8 +70,10 @@ async function brandPage({ width = 900, height = 300, scale = 2 } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: scale, reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await page.goto(`${URL_}__blank`); // any page on the server, so the app's modules are same-origin
-  await page.setContent(`<!doctype html><html><head><base href="${URL_}"><link rel="stylesheet" href="styles.css"></head>
-    <body style="overflow:visible;background:transparent"></body></html>`);
+  // The room's glow (body::before/::after) is part of the app, not the brand: keep it out so the logo stays transparent.
+  await page.setContent(`<!doctype html><html><head><base href="${URL_}"><link rel="stylesheet" href="styles.css">
+    <style>html, body { background: transparent !important; } body::before, body::after { display: none !important; }</style></head>
+    <body style="overflow:visible"></body></html>`);
   await page.evaluate(() => document.fonts.load('900 40px Nunito'));
   await page.addScriptTag({ type: 'module', content: `import { critterSVG } from '${URL_}src/ui/critters.js'; window.critterSVG = critterSVG;` });
   await page.waitForFunction(() => window.critterSVG);
@@ -104,16 +106,33 @@ async function icons() {
     const root = document.querySelector('#mark svg');
     // Bake the computed look into attributes, and drop everything that's hidden (closed eyes, zzz…).
     // Read every style first: stripping classes as we go would change what later elements compute.
-    const DEFAULTS = { 'stroke-linecap': 'butt', 'stroke-linejoin': 'miter', opacity: '1' };
+    // color-mix() computes to color(srgb …), which older SVG readers don't know: write rgb()/rgba().
+    const rgb = (v) => v.replace(/color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.]+))?\)/g,
+      (_, r, g, b, a) => { const c = [r, g, b].map((x) => Math.round(x * 255)).join(', '); return a ? `rgba(${c}, ${a})` : `rgb(${c})`; });
+    // Colours mixed in other spaces compute to oklab()/oklch()/lab(): paint each on a canvas and read back sRGB.
+    const cv = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    const srgb = (v) => v.replace(/\b(?:oklab|oklch|lab|lch|color)\([^)]*\)/g, (c) => {
+      const m = c.match(/\s*\/\s*([\d.]+)(%?)\s*\)$/);
+      const alpha = m ? m[1] / (m[2] ? 100 : 1) : 1;
+      cv.clearRect(0, 0, 1, 1);
+      cv.fillStyle = m ? `${c.slice(0, m.index)})` : c; // painted opaque, so the colour reads back exactly
+      cv.fillRect(0, 0, 1, 1);
+      const [r, g, b] = cv.getImageData(0, 0, 1, 1).data;
+      return alpha < 1 ? `rgba(${r}, ${g}, ${b}, ${+alpha.toFixed(3)})` : `rgb(${r}, ${g}, ${b})`;
+    });
+    // Gradient paints compute to url("page#id"): keep just the #id.
+    const url = (v) => v.replace(/url\("?[^#"]*(#[^")]+)"?\)/g, 'url($1)');
+    const DEFAULTS = { 'stroke-linecap': 'butt', 'stroke-linejoin': 'miter', opacity: '1', 'stroke-opacity': '1', 'fill-opacity': '1', 'stop-opacity': '1' };
+    const PAINT = ['fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'opacity'];
+    // Gradient stops take their colours from CSS, so bake those too; leave other <defs> content alone.
     const looks = [...root.querySelectorAll('*')].map((el) => {
       const cs = getComputedStyle(el);
-      if (cs.display === 'none') return [el, null];
-      const props = el.tagName === 'g' ? ['opacity'] : ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'opacity'];
+      const inDefs = !!el.closest('defs');
+      if (!inDefs && cs.display === 'none') return [el, null];
+      const props = el.tagName === 'stop' ? ['stop-color', 'stop-opacity'] : inDefs ? [] : el.tagName === 'g' ? ['opacity'] : PAINT;
       const look = {};
       for (const p of props) {
-        // color-mix() computes to color(srgb …), which older SVG readers don't know: write rgb().
-        const v = cs.getPropertyValue(p).replace(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)\)/g,
-          (_, ...c) => `rgb(${c.slice(0, 3).map((x) => Math.round(x * 255)).join(', ')})`);
+        const v = url(srgb(rgb(cs.getPropertyValue(p))));
         if (DEFAULTS[p] === v) continue;
         if (p.startsWith('stroke-') && cs.stroke === 'none') continue;
         look[p] = v;
@@ -129,9 +148,10 @@ async function icons() {
     const out = root.cloneNode(true);
     for (const a of ['class', 'style', 'aria-hidden', 'focusable', 'role', 'aria-label']) out.removeAttribute(a);
     out.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    // Room for the outline, which sits half outside the body's path.
-    out.setAttribute('viewBox', '4 4 92 92');
-    return out.outerHTML.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ');
+    out.setAttribute('viewBox', '3 3 94 94'); // room for the soft ground shadow
+    // Each critter's ids carry a running number (e.g. "cr2b"): rename them so the file is the same every run.
+    const prefix = out.querySelector('[id]').id.replace(/.$/, '');
+    return out.outerHTML.replaceAll(prefix, 'i').replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ');
   }, BRAND_RED);
   writeFileSync(`${ASSETS}icon.svg`, `${svg}\n`);
   report(`${ASSETS}icon.svg`);

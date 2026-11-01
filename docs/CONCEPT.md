@@ -80,7 +80,7 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   first tap on the grid makes a pretty note.
 - **Mute is "sleep"** (eyes closed + speaker icon) — two cues, not colour alone.
 - **Filter is one Dark↔Bright control with a neutral middle** — one handle, two directions, like a DJ filter.
-- **Echo and Space are shared buses with per-critter send** — cheaper on Chromebooks than one reverb per critter.
+- **Echo and Space are shared buses with per-critter send** — much cheaper than one reverb per critter, and they mix the critters into one shared room.
 - **Recordings are stored as raw PCM in IndexedDB, referenced by id from the project JSON** — keeps the project
   small and serialisable; recordings are immutable so undo just swaps references.
 - **Recorded sounds are tune sounds** (pitched across the grid rows) — one rule that covers singing *and*
@@ -89,7 +89,7 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **The songbook keeps every song**; opening an example or a new song never overwrites the current one.
 - **Timer is a Web Worker tick (fallback `setInterval`)** — only *wakes* the scheduler; all note times come from
   the audio clock with 120 ms lookahead.
-- **Up to 6 critters per song** — enough for rich songs, stays calm on screen and light on Chromebooks.
+- **Up to 6 critters per song** — enough for rich songs, and the screen stays calm.
 - **Buttons act on pointer-down** — the sound comes the instant a finger lands. Controls that sit in scrolling
   areas (sleep buttons, songbook cards) act on click instead, so scrolling never triggers them. A global guard
   drops "ghost clicks" that land on a different button after the layout changes.
@@ -110,9 +110,39 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   was reverted.
 - **The goal lives in `docs/BRIEF.md` and working rules in `CLAUDE.md`** — so work can continue in a new session
   without the original prompt.
-- **Visual language: soft, bright and calm** — warm paper background, white surfaces with a gentle "toy key" lip and a
-  soft shadow, one set of radii and shadows (tokens at the top of `styles.css`). Colour comes from the critters and
-  notes, so the music is the most vivid thing on screen.
+- **Low-end devices are not a target** (owner's call) — Itchy aims at typical modern tablets and laptops, so visual
+  polish comes first; steady audio timing still matters everywhere.
+- **Visual language: luminous glass over a mood-coloured glow** — the room glows softly in the mood's colours, and
+  every surface is translucent glass with a bright rim and soft violet-tinted shadows, with one set of radii and
+  shadows (tokens at the top of `styles.css`). It feels magical to a seven-year-old and polished to an eleven-year-old.
+  Colour comes from the critters and notes (glossy candy pills that glow in their own colour), so the music stays the
+  most vivid thing on screen; the glass adds shine and depth without adding colour.
+- **Real backdrop blur only on layers that float over content** (the songbook's veil, popovers, toast, recording) —
+  over the smooth glow, blur on the always-visible panels changed under 2% of pixels, and the glow drifts slowly, so
+  blurring the top bar, rail, grid and dock every frame would cost tablets GPU time for nothing visible. The playhead
+  is the one small lens on the grid (brighten and saturate, no blur, no tint): each cell under it lights up in its own
+  colour, so a warm row never greys under a cool critter's playhead; the critter's colour lives only in its ring.
+- **Darker shades mix towards black in oklab, never towards violet or in oklch** — notes, row marbles and critter
+  edges keep their hue (lime stays lime, orange stays orange, yellow stays golden), so a six-year-old can still tell
+  the rows apart by colour.
+- **Sparkles belong to things, not the room** — glints sit on the orb's highlight, the critters' gloss and new notes;
+  loose sparkles in the background showed through the glass as smudges and read as dust.
+- **Critters are glossy jelly sweets** — gradient bodies lit from above, a glow through the base, a glassy rim and a
+  crisp highlight, with a tonal edge instead of a dark cartoon outline; asleep critters turn to frosted lavender glass.
+  Every critter blushes the same candy pink (mixing in the body colour made blue cheeks look bruised), and the cheeks
+  are clipped to the body, so a blush never floats outside a narrow shape. The top is only lightly mixed towards white,
+  so a red critter stays candy red rather than salmon; the sheen supplies the shine.
+  They look like premium toys a child wants to touch and match the glossy notes. Still drawn in code from one colour
+  (`--c`), with no SVG filters, so dozens on screen stay light on tablets.
+- **Play is a glass orb (emerald = go, candy red = stop) in a clear bezel, and the triangle morphs into the square** —
+  it is the hero control, so it gets the richest material; shape still carries the meaning for colour-blind children.
+  Slider thumbs are small glass lenses and the other controls (and songbook cards) are glass panes, so the orb and
+  the critters stay the most vivid things on screen. The songbook is a translucent sheet over a frosted veil.
+  With motion reduced, the invitation to press play is two still rings of the orb's light, so it still reads.
+- **No UI, animation or shader library for the new look** — gradients, `color-mix()`, `@property`, `mask-composite`
+  and a little `backdrop-filter` reach it in plain CSS and inline SVG: no dependency or build step, the same look on
+  iPad Safari (SVG-displacement "liquid glass" is Chromium-only), and a still image that is just as rich under reduced
+  motion (a WebGL aurora would vanish from the screenshots and cost GPU time all the time).
 - **Nunito is bundled as a font file (`assets/fonts`, SIL Open Font License)** — a friendly rounded face that looks
   the same on every school machine; it's a static asset, not a dependency, and falls back to the system's rounded font.
 - **Beat groups are shown by spacing, not shading** — a wider gap every four steps and a beat ruler under the grid
