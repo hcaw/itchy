@@ -143,3 +143,8 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   screens, so a swipe must never choose a sound or open the microphone; a mouse still acts instantly.
 - **The playhead bar alone tints the column** — one moving element can't fall out of step with itself.
 - **Phones on their side get a compact one-row dock** — the grid keeps as much height as possible.
+- **The README's logo and screenshots, the favicon and the link-preview card are rendered from the app by a script**
+  (`npm run screenshots`) — hand-made pictures drift from the real thing; a deterministic script means they're
+  refreshed in one command, and a test catches a picture that's missing or unused.
+- **Itchy has a web app manifest and home-screen icons, opening without browser chrome** — on a classroom tablet it
+  then launches like any other app, with nothing around it for a child to tap by accident.

@@ -1,0 +1,43 @@
+name: Something's not working
+description: A sound, a gesture or a screen that doesn't behave.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make Itchy better! Please don't include names, photos, voice recordings or any other
+        personal details of children in this issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: I tapped the dice on the drum critter and nothing played…
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we make it happen again?
+      placeholder: |
+        1. Open an example song
+        2. Press play
+        3. …
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. iPad (10th gen), Safari 18 · school Chromebook, Chrome 131
+    validations:
+      required: true
+  - type: dropdown
+    id: input
+    attributes:
+      label: Touch, mouse or keyboard?
+      multiple: true
+      options: [Touch, Mouse or trackpad, Keyboard]
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: A screenshot or screen recording helps a lot.

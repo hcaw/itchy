@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Play Itchy
+    url: https://hcaw.github.io/itchy/
+    about: Try the latest version in your browser.
+  - name: Report a security problem
+    url: https://github.com/hcaw/itchy/security/advisories/new
+    about: Please report security problems privately, not in a public issue.
