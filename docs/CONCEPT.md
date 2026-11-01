@@ -110,3 +110,15 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   was reverted.
 - **The goal lives in `docs/BRIEF.md` and working rules in `CLAUDE.md`** — so work can continue in a new session
   without the original prompt.
+- **Visual language: soft, bright and calm** — warm paper background, white surfaces with a gentle "toy key" lip and a
+  soft shadow, one set of radii and shadows (tokens at the top of `styles.css`). Colour comes from the critters and
+  notes, so the music is the most vivid thing on screen.
+- **Nunito is bundled as a font file (`assets/fonts`, SIL Open Font License)** — a friendly rounded face that looks
+  the same on every school machine; it's a static asset, not a dependency, and falls back to the system's rounded font.
+- **Beat groups are shown by spacing, not shading** — a wider gap every four steps and a beat ruler under the grid
+  that lights with the playhead; the old alternating tints made the grid look muddy.
+- **Small delights, never in the way** — critters blink and follow your finger with their eyes, notes give off a few
+  sparks as they land, sleeping critters breathe out drifting Zs, the dice lands on a new face, and the background
+  takes on the colour of the mood. None of them change the song, and all are off when the device asks for reduced motion.
+- **The Itchy critter in the top bar says hello** — tapping it sings three notes in the current mood and changes its
+  colour; a harmless thing to poke that teaches "everything here makes a sound". Shown only on wide screens.
