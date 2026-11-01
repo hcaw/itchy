@@ -43,8 +43,7 @@ svg { display: block; }
 
 #app {
   display: grid;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   grid-template-areas: "top top" "rail stage" "panel panel";
   grid-template-columns: 132px 1fr;
   grid-template-rows: auto 1fr auto;

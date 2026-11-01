@@ -121,7 +121,9 @@ export class MemoryStorage {
 
 export async function openStorage() {
   try {
-    if (typeof indexedDB !== 'undefined') return await IDBStorage.open();
+    // Some sandboxed or private views never answer indexedDB.open: don't wait forever.
+    const timeout = new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), 2500));
+    if (typeof indexedDB !== 'undefined') return await Promise.race([IDBStorage.open(), timeout]);
   } catch { /* private mode etc. */ }
   try {
     if (typeof localStorage !== 'undefined') return new MemoryStorage(localStorage);
