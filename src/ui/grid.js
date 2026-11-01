@@ -44,12 +44,16 @@ export class Grid {
     this.frame.style.setProperty('--layer', COLORS[layer.color]);
     for (let s = 0; s < layer.steps; s++) {
       for (let r = 0; r < rows; r++) {
-        const on = !!noteAt(layer, s, r);
+        const note = noteAt(layer, s, r);
+        const on = !!note;
         const c = this.cells[s][r];
         if (c.classList.contains('on') !== on) {
           c.classList.toggle('on', on);
           c.setAttribute('aria-pressed', String(on));
         }
+        // A long note shows as one bar: its first cell has the dot, the rest are "held".
+        c.classList.toggle('held', on && note.s !== s);
+        c.classList.toggle('held-end', on && note.s + (note.len || 1) - 1 !== s);
       }
     }
     this.frame.classList.toggle('asleep', layer.muted);

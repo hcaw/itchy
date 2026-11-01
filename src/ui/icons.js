@@ -45,7 +45,7 @@ const dotEyes = '<circle cx="17" cy="20" r="2.6" fill="currentColor"/><circle cx
 export const MOOD_ICONS = {
   happy: face(dotEyes, '<path d="M15 28 q9 9 18 0"/>'),
   sad: face('<path d="M14 21 q3 2 6 0 M28 21 q3 2 6 0"/>', '<path d="M18 32 q6 -3 12 0"/>'),
-  sunny: face(dotEyes, '<path d="M14 27 q10 14 20 0 Z" fill="currentColor"/>', '<path d="M24 1 V4 M24 44 V47 M1 24 H4 M44 24 H47"/>'),
+  sunny: svg('<circle cx="24" cy="24" r="14" fill="currentColor" opacity=".22"/><circle cx="24" cy="24" r="14"/><circle cx="19" cy="21" r="2.2" fill="currentColor"/><circle cx="29" cy="21" r="2.2" fill="currentColor"/><path d="M17 27 q7 9 14 0 Z" fill="currentColor" stroke-width="2.5"/><path d="M24 2 V6 M24 42 V46 M2 24 H6 M42 24 H46 M8.5 8.5 L11.5 11.5 M36.5 36.5 L39.5 39.5 M8.5 39.5 L11.5 36.5 M36.5 11.5 L39.5 8.5" stroke-width="3.5"/>'),
   bluesy: face('<path d="M11 18 H37 M12 18 q0 7 6 7 q6 0 6 -7 M24 18 q0 7 6 7 q6 0 6 -7" fill="currentColor"/>', '<path d="M18 33 q7 3 13 -2"/>'),
   mystery: face('<circle cx="19" cy="20" r="2.6" fill="currentColor"/><circle cx="33" cy="20" r="2.6" fill="currentColor"/>', '<path d="M18 31 q3 -3 6 0 q3 3 6 0"/>'),
   spooky: svg('<path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z" fill="currentColor" opacity=".22"/><path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z"/><ellipse cx="18" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="30" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="24" cy="31" rx="3" ry="3.5"/>'),

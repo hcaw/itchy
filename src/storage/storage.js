@@ -10,6 +10,7 @@
 //   getCurrentId(): Promise<string|null>,  setCurrentId(id): Promise<void>
 //   saveRecording(id, {sampleRate, data: Float32Array}): Promise<void>
 //   loadRecording(id): Promise<{sampleRate, data}|null>
+//   listRecordings(): Promise<Array<{id, created, peaks}>>     newest first ("my sounds")
 // }
 
 import { migrate } from '../model/project.js';
@@ -70,10 +71,15 @@ export class IDBStorage {
   }
   async saveRecording(id, rec) {
     const s = this.store('recordings', 'readwrite');
-    s.put({ sampleRate: rec.sampleRate, data: rec.data }, id);
+    s.put({ sampleRate: rec.sampleRate, data: rec.data, peaks: rec.peaks || [], created: rec.created || Date.now() }, id);
     await this.done(s);
   }
   async loadRecording(id) { return (await req(this.store('recordings').get(id))) || null; }
+  async listRecordings() {
+    const st = this.store('recordings');
+    const [keys, vals] = await Promise.all([req(st.getAllKeys()), req(st.getAll())]);
+    return keys.map((id, i) => ({ id, created: vals[i].created || 0, peaks: vals[i].peaks || [] })).sort((a, b) => b.created - a.created);
+  }
 }
 
 /** Memory (and optionally localStorage-backed) storage: used where IndexedDB is unavailable, and in tests. */
@@ -106,8 +112,11 @@ export class MemoryStorage {
   async deleteProject(id) { this.projects.delete(id); this.persist(); }
   async getCurrentId() { return this.current; }
   async setCurrentId(id) { this.current = id; this.persist(); }
-  async saveRecording(id, rec) { this.recordings.set(id, rec); }
+  async saveRecording(id, rec) { this.recordings.set(id, { created: Date.now(), peaks: [], ...rec }); }
   async loadRecording(id) { return this.recordings.get(id) || null; }
+  async listRecordings() {
+    return [...this.recordings].map(([id, r]) => ({ id, created: r.created, peaks: r.peaks })).sort((a, b) => b.created - a.created);
+  }
 }
 
 export async function openStorage() {

@@ -39,7 +39,7 @@ export class App {
     document.addEventListener('keydown', unlock, { capture: true, once: true });
 
     // Save when the page is hidden or closed.
-    const flush = () => store.flush();
+    const flush = () => { store.backup(); store.flush(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
     window.addEventListener('pagehide', flush);
 

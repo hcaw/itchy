@@ -2,8 +2,8 @@
 
 import { Engine } from './audio/engine.js';
 import { openStorage } from './storage/storage.js';
-import { createProject } from './model/project.js';
-import { Store } from './ui/store.js';
+import { createProject, migrate } from './model/project.js';
+import { Store, BACKUP_KEY } from './ui/store.js';
 import { App } from './ui/app.js';
 import { plugins } from './ui/plugins.js';
 
@@ -16,6 +16,14 @@ async function boot() {
   } catch (e) {
     console.warn('Itchy: could not load the last song, starting a new one', e);
   }
+  // A newer safety copy from a page that closed mid-save wins.
+  try {
+    const backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
+    if (backup && (!project || (backup.id === project.id && backup.updated > project.updated))) {
+      project = migrate(backup);
+      await storage.saveProject(project);
+    }
+  } catch { /* no backup */ }
   if (!project) {
     project = createProject();
     await storage.saveProject(project).catch(() => {});

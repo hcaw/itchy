@@ -5,6 +5,8 @@
 import { History } from '../model/history.js';
 import { migrate, findLayer } from '../model/project.js';
 
+export const BACKUP_KEY = 'itchy.backup';
+
 export class Store {
   constructor({ project, storage }) {
     this.project = project;
@@ -70,7 +72,15 @@ export class Store {
 
   scheduleSave() {
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.flush(), 300);
+    this.saveTimer = setTimeout(() => this.flush(), 150);
+  }
+
+  /**
+   * Synchronous safety copy for when the page is closing: an IndexedDB write started now
+   * may not finish, but localStorage writes always do. Boot picks whichever is newer.
+   */
+  backup() {
+    try { localStorage.setItem(BACKUP_KEY, JSON.stringify(this.project)); } catch { /* full or blocked */ }
   }
 
   /** Save now (also used on page hide). */
