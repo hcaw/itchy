@@ -12,6 +12,22 @@ import { isHomeRow } from '../model/scales.js';
 export const TUNE_COLORS = ['#e8590c', '#f08c00', '#f5c400', '#66a80f', '#0ca678', '#1c7ed6', '#5f3dc4', '#c2255c', '#e03131', '#f76707', '#fab005', '#37b24d'];
 export const KIT_COLORS = ['#3b5bdb', '#f76707', '#d6336c', '#2f9e44'];
 
+/**
+ * The colour for a critter's frame and selection ring: its own colour, darkened just enough
+ * to stand out against the cream background (at least 3:1), so "which critter am I editing"
+ * is always easy to see, whatever its colour.
+ */
+export function edgeColor(hex) {
+  const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const lum = (c) => { const l = c.map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; };
+  const paper = lum(rgb('#fff8ee')), ink = rgb('#261f3d'), c = rgb(hex);
+  for (let t = 0; t <= 0.7; t += 0.02) {
+    const m = c.map((v, i) => Math.round(v * (1 - t) + ink[i] * t));
+    if ((paper + 0.05) / (lum(m) + 0.05) >= 3.3) return `rgb(${m.join(' ')})`; // 3:1 with room for the tinted room
+  }
+  return '#261f3d';
+}
+
 export function rowColor(sound, r) {
   return soundKind(sound) === 'beat' ? KIT_COLORS[r % 4] : TUNE_COLORS[r % TUNE_COLORS.length];
 }
@@ -26,11 +42,18 @@ export class Grid {
     this.sig = '';
     this.focus = { s: 0, r: 0 };
     this.playStep = -1;
+    this.ruler = [];
     this.el = h('div', { class: 'grid', role: 'grid', 'aria-label': 'Notes' });
-    this.frame = h('div', { class: 'grid-frame' }, this.el);
+    // The playhead is a soft bar of light over the column being heard.
+    this.playhead = h('div', { class: 'playhead', 'aria-hidden': 'true' });
+    // A sleeping critter's grid says so with a picture, not just paler colours.
+    this.sleepBadge = h('div', { class: 'sleep-badge', 'aria-hidden': 'true', html: ICONS.sleep });
+    this.frame = h('div', { class: 'grid-frame' }, this.el, this.playhead, this.sleepBadge);
     root.append(this.frame);
     this.bindPointer();
     this.bindKeys();
+    // Keep the playhead bar on its column when the window changes size mid-song.
+    new ResizeObserver(() => { if (this.playStep >= 0) this.placePlayhead(this.playStep); }).observe(this.el);
   }
 
   /** Rebuild when the layer, its sound kind, length or mood changes; otherwise just refresh. */
@@ -42,6 +65,7 @@ export class Grid {
     if (sig !== this.sig) this.build(layer, rows);
     this.sig = sig;
     this.frame.style.setProperty('--layer', COLORS[layer.color]);
+    this.frame.style.setProperty('--edge', edgeColor(COLORS[layer.color]));
     for (let s = 0; s < layer.steps; s++) {
       for (let r = 0; r < rows; r++) {
         const note = noteAt(layer, s, r);
@@ -65,32 +89,67 @@ export class Grid {
     this.el.innerHTML = '';
     this.el.style.setProperty('--steps', layer.steps);
     this.el.style.setProperty('--rows', rows);
+    // Columns: the row heads, then the steps in groups of four with a wider gap between
+    // groups, so the beat is easy to see without shading cells.
+    const cols = ['var(--head)'];
+    const colOf = [];
+    for (let s = 0; s < layer.steps; s++) {
+      if (s > 0 && s % 4 === 0) cols.push('var(--spacer)');
+      cols.push('minmax(0, 1fr)');
+      colOf.push(cols.length);
+    }
+    this.el.style.gridTemplateColumns = cols.join(' ');
     this.el.classList.toggle('beat', kind === 'beat');
     this.cells = Array.from({ length: layer.steps }, () => []);
     for (let r = rows - 1; r >= 0; r--) {
       const color = rowColor(layer.sound, r);
+      const gridRow = rows - r;
       const label = kind === 'beat' ? KIT_PIECES[r].label : `Note ${r + 1}`;
       const head = h('button', {
         class: 'row-head', type: 'button', tabindex: '-1', 'aria-label': `Play ${label}`, title: label,
-        style: { '--rc': color },
-        html: kind === 'beat' ? KIT_ICONS[r] : `<span class="pip" style="--size:${0.45 + r * 0.06}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
+        style: { '--rc': color, gridRow: String(gridRow), gridColumn: '1' },
+        html: kind === 'beat' ? `<span class="pip kit">${KIT_ICONS[r]}</span>` : `<span class="pip" style="--size:${(0.66 + r * 0.045).toFixed(3)}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
       });
       head.addEventListener('pointerdown', () => { this.engine.preview(this.store.layer, r); head.animate([{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], 200); });
       head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); this.engine.preview(this.store.layer, r); } });
       this.el.append(head);
       for (let s = 0; s < layer.steps; s++) {
         const cell = h('button', {
-          class: `cell ${Math.floor(s / 4) % 2 ? 'alt' : ''} ${s % 4 === 0 ? 'beat-start' : ''}`,
+          class: `cell${s % 4 === 0 ? ' beat-start' : ''}`,
           type: 'button', role: 'gridcell', tabindex: '-1', 'aria-pressed': 'false',
-          'aria-label': `${label}, step ${s + 1}`, 'data-s': s, 'data-r': r, style: { '--rc': color },
+          'aria-label': `${label}, step ${s + 1}`, 'data-s': s, 'data-r': r,
+          style: { '--rc': color, gridRow: String(gridRow), gridColumn: String(colOf[s]) },
         });
         this.cells[s][r] = cell;
         this.el.append(cell);
       }
     }
+    // The beat ruler: one dot per step (bigger on each beat) that lights up as the music passes.
+    this.ruler = [];
+    for (let s = 0; s < layer.steps; s++) {
+      const dot = h('span', { class: `tick${s % 4 === 0 ? ' big' : ''}`, 'aria-hidden': 'true', style: { gridRow: String(rows + 1), gridColumn: String(colOf[s]) } });
+      this.ruler.push(dot);
+      this.el.append(dot);
+    }
     this.focus = { s: Math.min(this.focus.s, layer.steps - 1), r: Math.min(this.focus.r, rows - 1) };
     this.cells[this.focus.s][this.focus.r].tabIndex = 0;
     this.playStep = -1;
+  }
+
+  /** A tiny burst of sparks in the note's colour when a note lands. */
+  sparkle(cell) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const fr = this.frame.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+    const burst = h('span', { class: 'sparks', 'aria-hidden': 'true', style: {
+      left: `${cr.left - fr.left + cr.width / 2}px`, top: `${cr.top - fr.top + cr.height / 2}px`,
+      '--rc': getComputedStyle(cell).getPropertyValue('--rc'),
+      '--reach': `${Math.min(34, Math.max(18, cr.width * 0.55))}px`,
+    } });
+    const turn = Math.random() * 60;
+    for (let i = 0; i < 6; i++) burst.append(h('i', { style: { '--a': `${turn + i * 60}deg` } }));
+    burst.addEventListener('animationend', (e) => { if (e.target === burst.lastChild) burst.remove(); });
+    this.frame.append(burst);
+    setTimeout(() => burst.remove(), 900); // in case animations don't run
   }
 
   cellFromPoint(x, y) {
@@ -107,6 +166,7 @@ export class Grid {
     this.store.change(() => setNote(layer, s, r, mode === 'paint'), key);
     if (mode === 'paint') {
       this.engine.preview(layer, r);
+      this.sparkle(cell);
       this.onFirstNote?.();
     } else {
       this.engine.uiSound('pop');
@@ -177,9 +237,14 @@ export class Grid {
   /** Called by the animation loop when a step is heard. */
   showStep(step, hitRows) {
     if (step !== this.playStep) {
-      if (this.playStep >= 0) for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+      this.placePlayhead(step);
+      if (this.playStep >= 0) {
+        for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+        this.ruler[this.playStep]?.classList.remove('now');
+      }
       this.playStep = step;
       for (const c of this.cells[step] || []) c.classList.add('now');
+      this.ruler[step]?.classList.add('now');
     }
     for (const r of hitRows || []) {
       const c = this.cells[step]?.[r];
@@ -190,8 +255,33 @@ export class Grid {
     }
   }
 
+  placePlayhead(step) {
+    const col = this.cells[step];
+    if (!col?.length) return;
+    // Columns are all the same width; measure one cell that isn't part of a long note (those
+    // reach back over the gap) and centre the bar on this column's ruler dot.
+    const ref = col.find((x) => !x.classList.contains('held')) || this.el.querySelector('.cell:not(.held)');
+    const tick = this.ruler[step];
+    const top = col[col.length - 1], bottom = col[0];
+    // Cells have a transparent border (the gap) around a painted padding box; frame the paint.
+    const pad = 4;
+    const y = top.offsetTop + top.clientTop - pad;
+    const hgt = bottom.offsetTop + bottom.clientTop + bottom.clientHeight - (top.offsetTop + top.clientTop) + pad * 2;
+    const w = ref.clientWidth + pad * 2;
+    const x = tick.offsetLeft + tick.offsetWidth / 2 - w / 2;
+    const ph = this.playhead.style;
+    ph.width = `${w}px`;
+    ph.height = `${hgt}px`;
+    ph.transform = `translate(${x}px, ${y}px)`;
+    this.playhead.classList.add('on');
+  }
+
   clearPlayhead() {
-    if (this.playStep >= 0) for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+    this.playhead?.classList.remove('on');
+    if (this.playStep >= 0) {
+      for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+      this.ruler[this.playStep]?.classList.remove('now');
+    }
     this.playStep = -1;
   }
 

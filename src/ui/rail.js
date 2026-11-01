@@ -6,13 +6,16 @@ import { critterSVG } from './critters.js';
 import { ICONS } from './icons.js';
 import { COLORS, soundInfo, soundKind, rowsForSound, BEAT_SOUNDS, TUNE_SOUNDS, SOUNDS } from '../model/sounds.js';
 import { createLayer, nextColor, MAX_LAYERS } from '../model/project.js';
-import { rowColor } from './grid.js';
+import { rowColor, edgeColor } from './grid.js';
 
 export class Rail {
   constructor(root, { store, engine, onRecordNew }) {
     Object.assign(this, { root, store, engine, onRecordNew });
     this.cards = new Map();
     this.sig = '';
+    root.addEventListener('focusin', (e) => this.reveal(e.target.closest('.card') || e.target));
+    root.addEventListener('scroll', () => this.fades(), { passive: true });
+    new ResizeObserver(() => this.fades()).observe(root);
   }
 
   render() {
@@ -22,7 +25,9 @@ export class Rail {
     this.sig = sig;
     for (const l of p.layers) {
       const c = this.cards.get(l.id);
-      c.card.classList.toggle('selected', l.id === this.store.view.selected);
+      const chosen = l.id === this.store.view.selected;
+      if (chosen && !c.card.classList.contains('selected')) this.reveal(c.card, !this.built);
+      c.card.classList.toggle('selected', chosen);
       c.card.classList.toggle('asleep', l.muted);
       c.select.setAttribute('aria-pressed', String(l.id === this.store.view.selected));
       c.mute.setAttribute('aria-pressed', String(l.muted));
@@ -32,6 +37,45 @@ export class Rail {
       this.drawMap(l, -1);
     }
     this.add.hidden = p.layers.length >= MAX_LAYERS;
+    // With lots of critters the cards get smaller, so they all fit without scrolling.
+    this.root.classList.toggle('compact', p.layers.length > 3);
+    this.built = true;
+    requestAnimationFrame(() => this.fades());
+  }
+
+  /**
+   * Keep the chosen critter (or the focused control) in view in a scrolling rail. Scrolls the
+   * rail itself (never scrollIntoView, which would also move where the Tab key starts).
+   */
+  reveal(el, instant = false) {
+    requestAnimationFrame(() => {
+      const rail = this.root;
+      if (!el?.isConnected) return;
+      const across = rail.scrollWidth > rail.clientWidth + 1 && getComputedStyle(rail).flexDirection === 'row';
+      const r = el.getBoundingClientRect(), box = rail.getBoundingClientRect();
+      const lead = across ? 30 : 12, trail = 34; // keep clear of the fades (and let the previous card peek in)
+      let by = 0;
+      if (across) {
+        if (r.left < box.left + lead) by = r.left - box.left - lead;
+        else if (r.right > box.right - trail) by = r.right - box.right + trail;
+      } else {
+        if (r.top < box.top + lead) by = r.top - box.top - lead;
+        else if (r.bottom > box.bottom - trail) by = r.bottom - box.bottom + trail;
+      }
+      if (!by) return;
+      const smooth = instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      rail.scrollBy({ [across ? 'left' : 'top']: by, behavior: smooth });
+    });
+  }
+
+  /** Fade the rail's ends only where there is more to scroll to. */
+  fades() {
+    const r = this.root;
+    const across = getComputedStyle(r).flexDirection === 'row';
+    const pos = across ? r.scrollLeft : r.scrollTop;
+    const size = across ? r.clientWidth : r.clientHeight, full = across ? r.scrollWidth : r.scrollHeight;
+    r.classList.toggle('more-start', pos > 2);
+    r.classList.toggle('more-end', pos + size < full - 2);
   }
 
   build() {
@@ -45,7 +89,7 @@ export class Rail {
       select.addEventListener('animationend', (e) => e.target.classList?.remove('sing'));
       const mute = h('button', { class: 'btn mute', type: 'button' });
       const map = h('canvas', { class: 'minimap', width: 96, height: 28, 'aria-hidden': 'true' });
-      const card = h('div', { class: 'card', style: { '--c': COLORS[l.color] } }, select, mute, map);
+      const card = h('div', { class: 'card', style: { '--c': COLORS[l.color], '--edge': edgeColor(COLORS[l.color]) } }, select, mute, map);
       instantPress(select, () => {
         this.engine.ensure();
         const wasSelected = this.store.view.selected === l.id;
@@ -107,22 +151,36 @@ export class Rail {
     svg.classList.add('sing');
   }
 
-  /** Mini-map of the layer's notes, with the playhead. */
+  /** Mini-map of the layer's notes, with the playhead. Drawn at the screen's pixel density. */
   drawMap(layer, step) {
     const c = this.cards.get(layer.id);
     if (!c) return;
     const cv = c.map, g = cv.getContext('2d');
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const cssW = cv.clientWidth || 96, cssH = cv.clientHeight || 28;
+    if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+      cv.width = Math.round(cssW * dpr);
+      cv.height = Math.round(cssH * dpr);
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const rows = rowsForSound(layer.sound);
-    const w = cv.width, hgt = cv.height;
-    g.clearRect(0, 0, w, hgt);
+    const pad = 3, w = cssW - pad * 2, hgt = cssH - pad * 2;
+    g.clearRect(0, 0, cssW, cssH);
     const cw = w / layer.steps, rh = hgt / rows;
     if (step >= 0) {
-      g.fillStyle = 'rgba(0,0,0,0.12)';
-      g.fillRect(step * cw, 0, cw, hgt);
+      g.fillStyle = 'rgba(42, 35, 64, 0.10)';
+      roundRect(g, pad + step * cw, 1, cw, cssH - 2, 2);
     }
     for (const n of layer.notes) {
-      g.fillStyle = layer.muted ? '#bbb' : rowColor(layer.sound, n.r);
-      g.fillRect(n.s * cw + 0.5, hgt - (n.r + 1) * rh + 0.5, Math.max(1, cw * (n.len || 1) - 1), Math.max(1, rh - 1));
+      g.fillStyle = layer.muted ? '#c9c3d3' : rowColor(layer.sound, n.r);
+      const x = pad + n.s * cw + 0.5, y = pad + hgt - (n.r + 1) * rh + 0.5;
+      roundRect(g, x, y, Math.max(1.5, cw * (n.len || 1) - 1), Math.max(1.5, rh - 1), Math.min(1.5, rh / 2));
     }
   }
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
+  g.fill();
 }

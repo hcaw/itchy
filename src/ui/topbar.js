@@ -5,7 +5,7 @@ import { ICONS } from './icons.js';
 import { TEMPO_MIN, TEMPO_MAX } from '../model/project.js';
 
 export class TopBar {
-  constructor(root, { store, engine, onSongbook, extras = [] }) {
+  constructor(root, { store, engine, onSongbook, extras = [], brand = [] }) {
     Object.assign(this, { root, store, engine });
     this.play = iconButton({ icon: ICONS.play, label: 'Play', cls: 'play', onPress: () => this.toggle() });
     this.tempo = slider({
@@ -25,7 +25,10 @@ export class TopBar {
     root.append(
       h('div', { class: 'group' }, this.play),
       h('div', { class: 'group grow' }, this.tempo, ...extras),
-      h('div', { class: 'group' }, this.undo, this.redo, this.book),
+      h('div', { class: 'group brand-slot' }, ...brand),
+      h('div', { class: 'group end' },
+        h('div', { class: 'toolbar', role: 'group', 'aria-label': 'Undo and redo' }, this.undo, this.redo),
+        this.book),
     );
     engine.on(() => this.render());
   }

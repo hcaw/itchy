@@ -107,6 +107,9 @@ The basic version is complete and merged. Against the original definition of don
 Decisions the owner made after the build:
 
 - **The iPhone/iPad silent switch may mute Itchy.** The owner is fine with this; an attempted workaround was reverted.
+- **Low-powered devices are a lower priority than the constraints below suggest.** The owner said the Chromebook
+  requirement was overstated: it should run smoothly on typical tablets and laptops, and stay usable on cheaper
+  machines, but polish need not be sacrificed for them. Tight, steady audio timing still matters everywhere.
 - **Itchy is also published as a private Claude web page** (owner's account). Pages there can't use the microphone, so
   recording shows the friendly "no microphone" message. That page was last published with the reverted audio-unlock
   change, so it differs slightly from `main`.

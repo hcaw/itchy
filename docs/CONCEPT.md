@@ -110,3 +110,36 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   was reverted.
 - **The goal lives in `docs/BRIEF.md` and working rules in `CLAUDE.md`** — so work can continue in a new session
   without the original prompt.
+- **Visual language: soft, bright and calm** — warm paper background, white surfaces with a gentle "toy key" lip and a
+  soft shadow, one set of radii and shadows (tokens at the top of `styles.css`). Colour comes from the critters and
+  notes, so the music is the most vivid thing on screen.
+- **Nunito is bundled as a font file (`assets/fonts`, SIL Open Font License)** — a friendly rounded face that looks
+  the same on every school machine; it's a static asset, not a dependency, and falls back to the system's rounded font.
+- **Beat groups are shown by spacing, not shading** — a wider gap every four steps and a beat ruler under the grid
+  that lights with the playhead; the old alternating tints made the grid look muddy.
+- **Small delights, never in the way** — critters blink and follow your finger with their eyes, notes give off a few
+  sparks as they land, a critter that falls asleep breathes out a few drifting Zs, the dice lands on a new face, and the background
+  takes on the colour of the mood. None of them change the song, and all are off when the device asks for reduced motion.
+- **The Itchy critter in the top bar says hello** — tapping it sings three notes in the current mood and changes its
+  colour; a harmless thing to poke that teaches "everything here makes a sound". The wordmark shows on wide screens,
+  the critter at every size. It's left out of the Tab order: it's a toy, not a control anyone needs.
+- **The playhead is a soft bar of light** over the column being heard, plus a beat ruler — clearer than tinting
+  cells, and it works the same for every critter colour.
+- **A sleeping critter's grid has a dashed frame and a sleep badge** — so sleep is never shown by paler colour alone.
+- **Each grid cell's gap is part of its tap area** (a transparent border), so the target is the full column pitch and
+  a painted stroke has no dead strips between cells.
+- **With more than three critters the rail's cards get smaller**, and the chosen or focused card scrolls into view.
+- **Messages float just above the dock and never block taps** — they never cover the buttons they talk about.
+- **The dock reads in one order everywhere**: sounds, tidy-up (rub out, remove), dice, charms; the same for Tab.
+  Charms keep a usable length and move to their own row rather than shrinking.
+- **Selection rings use the critter's colour darkened to at least 3:1 against the background** — computed in
+  `edgeColor()`, so every colour (yellow included) shows clearly which critter you're editing.
+- **The sounds tray scrolls sideways on tablets and phones** (with a fade on the side that has more) instead of
+  wrapping, so the dock never grows an extra row and the dice never ends up alone.
+- **Drum rows stay pad-shaped** (about 1.6 × a column's width, centred), so hits read as taps, not long bars.
+- **The rail scrolls itself to show the chosen critter**, never using `scrollIntoView`, which would also move where the
+  Tab key starts; the first Tab always goes to Play.
+- **In the sounds tray a finger previews on touch-down and chooses on lift** — the tray scrolls sideways on small
+  screens, so a swipe must never choose a sound or open the microphone; a mouse still acts instantly.
+- **The playhead bar alone tints the column** — one moving element can't fall out of step with itself.
+- **Phones on their side get a compact one-row dock** — the grid keeps as much height as possible.

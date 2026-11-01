@@ -38,6 +38,7 @@ npm run check    # browser checks in headless Chromium (uses the pre-installed P
 | Turtle ↔ rabbit | drag to change speed | a tick at the new speed |
 | ↶ ↷ | undo or redo anything | a whoosh |
 | Book | every song you've made, plus three examples | — |
+| The Itchy critter (top bar) | tap it | a little hello in the current mood (it changes colour each time) |
 
 Keyboard: Space plays and stops, arrow keys move around the grid, Enter places a note, Ctrl/⌘+Z undoes, Ctrl/⌘+Y
 redoes, and keys 1–6 pick a critter.
@@ -45,7 +46,8 @@ redoes, and keys 1–6 pick a critter.
 ## Architecture
 
 ```
-index.html, styles.css
+index.html, styles.css      styles.css starts with the design tokens (colours, radii, shadows, motion)
+assets/fonts/               Nunito (SIL Open Font License), bundled so it looks the same on every machine
 src/main.js                 boot: open storage → load the last song → start the app
 src/audio/
   scheduler.js              pure lookahead scheduler (no Web Audio inside it, so it can be tested on a fake clock)
@@ -64,7 +66,8 @@ src/ui/                     hand-written DOM, no framework
   store.js                  current project + undo + autosave; every edit goes through store.change()
   app.js                    layout, animation loop (visuals fire when the audio is heard), keyboard
   topbar.js, rail.js, grid.js, panel.js     the four screen regions
-  plugins.js                features that plug into the regions: charms.js, experiments.js (mood, dice), mic.js, songbook.js
+  plugins.js                features that plug into the regions: charms.js, experiments.js (mood, dice), mic.js, songbook.js,
+                            delight.js (blinking, eyes that follow you, the mood-tinted room, the Itchy hello)
   critters.js, icons.js, widgets.js         original SVG art and small UI helpers
 tests/                      unit tests (node --test) and tests/e2e/check.mjs (Playwright)
 ```

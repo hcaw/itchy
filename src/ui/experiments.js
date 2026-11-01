@@ -3,7 +3,7 @@
 //  - Dice: invent a fresh pattern for the selected critter. Roll again, or undo to go back.
 
 import { h, iconButton, instantPress, popover, closePopovers } from './widgets.js';
-import { ICONS, MOOD_ICONS } from './icons.js';
+import { MOOD_ICONS, diceFace } from './icons.js';
 import { MOODS, MOOD_ORDER } from '../model/scales.js';
 import { soundKind } from '../model/sounds.js';
 import { surpriseNotes } from '../model/surprise.js';
@@ -54,11 +54,15 @@ function arpeggio(store, engine) {
 export function dicePlugin() {
   return {
     init({ store, engine }, { panel }) {
+      let face = 5;
       const roll = () => {
         engine.ensure();
         const layer = store.layer;
         store.change(() => { layer.notes = surpriseNotes(layer); });
         engine.uiSound('whoosh');
+        // Land on a different face each time.
+        face = 1 + ((face + Math.floor(Math.random() * 5)) % 6);
+        dice.innerHTML = diceFace(face);
         dice.classList.remove('rolling');
         void dice.offsetWidth;
         dice.classList.add('rolling');
@@ -68,8 +72,8 @@ export function dicePlugin() {
           for (const n of layer.notes) if (n.s < 8) engine.voice(layer, n, t0 + n.s * d, d, true);
         }
       };
-      const dice = iconButton({ icon: ICONS.dice, label: 'Surprise me! (make a pattern)', cls: 'dice', onPress: roll });
-      panel.push(h('div', { class: 'tools' }, dice));
+      const dice = iconButton({ icon: diceFace(5), label: 'Surprise me! (make a pattern)', cls: 'dice', onPress: roll });
+      panel.push(h('div', { class: 'tools dice-tools' }, dice));
     },
   };
 }

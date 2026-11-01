@@ -7,9 +7,9 @@ import { ICONS } from './icons.js';
 import { soundKind } from '../model/sounds.js';
 
 const CHARMS = [
-  { key: 'echo', label: 'Echo', min: 0, max: 1, left: '', right: ICONS.echo, thumb: ICONS.echo, color: '#20c997' },
-  { key: 'space', label: 'Space', min: 0, max: 1, left: '', right: ICONS.space, thumb: ICONS.space, color: '#7950f2' },
-  { key: 'tone', label: 'Dark or bright', min: -1, max: 1, bipolar: true, left: ICONS.moon, right: ICONS.sun, thumb: '<span class="beat-dot"></span>', color: '#fab005' },
+  { key: 'echo', label: 'Echo', min: 0, max: 1, left: ICONS.echoSoft, right: ICONS.echo, thumb: ICONS.echo, color: '#0ca678' },
+  { key: 'space', label: 'Space', min: 0, max: 1, left: ICONS.spaceFlat, right: ICONS.space, thumb: ICONS.space, color: '#7048e8' },
+  { key: 'tone', label: 'Dark or bright', min: -1, max: 1, bipolar: true, left: ICONS.moon, right: ICONS.sun, thumb: `<span class="tone-face"><span class="dot">${ICONS.halfSun}</span><span class="moon">${ICONS.moon}</span><span class="sun">${ICONS.sun}</span></span>`, color: '#f59f00' },
 ];
 
 export function charmsPlugin() {
@@ -33,6 +33,9 @@ export function charmsPlugin() {
             }
           },
           onCommit: () => store.seal(),
+          format: c.key === 'tone'
+            ? (v) => (v < -0.6 ? 'dark' : v < -0.15 ? 'a bit dark' : v <= 0.15 ? 'in the middle' : v < 0.6 ? 'a bit bright' : 'bright')
+            : (v) => (v < 0.05 ? 'off' : v < 0.4 ? 'a little' : v < 0.75 ? 'some' : 'lots'),
         });
         s.style.setProperty('--sc', c.color);
         sliders[c.key] = s;

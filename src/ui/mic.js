@@ -1,7 +1,7 @@
 // Recording: press the red mic, make a noise, and it becomes the critter's sound —
 // playable at every pitch on the grid. Recordings are kept in "my sounds" for every song.
 
-import { h, instantPress, toast } from './widgets.js';
+import { h, instantPress, scrollSafePress, toast } from './widgets.js';
 import { ICONS } from './icons.js';
 import { critterSVG } from './critters.js';
 import { COLORS, recordingId } from '../model/sounds.js';
@@ -45,23 +45,24 @@ export function micPlugin(storage) {
       const on = layer.sound === sound;
       const b = h('button', {
         class: `sound rec-sound ${on ? 'on' : ''}`, type: 'button', 'aria-pressed': String(on),
-        'aria-label': `My recorded sound ${i + 1}`, title: 'My sound',
+        'aria-label': `My recorded sound ${i + 1}`, title: 'My sound', 'data-sound': sound,
         html: critterSVG('mic', COLORS[layer.color]) + wave(r.peaks),
       });
       if (on) b.append(h('span', { class: 'tick-badge', html: ICONS.check }));
-      instantPress(b, async () => {
+      scrollSafePress(b, async (e, o) => {
         engine.ensure();
         await ensureBuffers([r.id]);
-        app.panel.chooseSound(sound);
-      });
+        app.panel.chooseSound(sound, o?.previewed);
+      }, { preview: async () => { engine.ensure(); await ensureBuffers([r.id]); app.panel.previewSound(sound); } });
       out.push(b);
     });
     const micBtn = h('button', {
       class: `sound record ${denied ? 'denied' : ''}`, type: 'button',
-      'aria-label': denied ? 'Microphone is off. Try again?' : 'Record my own sound', title: 'Record my own sound',
+      'aria-label': denied ? 'Microphone is off. Try again?' : 'Record my own sound', title: 'Record my own sound', 'data-sound': 'record',
       html: denied ? ICONS.micOff : ICONS.mic,
     });
-    instantPress(micBtn, () => record(store.layer));
+    // The mic only ever opens on a clean tap, never at the start of a swipe along the tray.
+    scrollSafePress(micBtn, () => record(store.layer), { preview: () => { engine.ensure(); engine.uiSound('tick'); } });
     out.push(micBtn);
     return out;
   }
@@ -88,6 +89,9 @@ export function micPlugin(storage) {
     engine.ensure();
     const wasPlaying = engine.playing;
     if (wasPlaying) engine.stop(); // a clean recording, without the music leaking in
+    // Started from the keyboard? Then focus comes back to the tray afterwards, not to the page.
+    const fromKeys = !!document.activeElement?.closest?.('.sounds') && document.activeElement.matches(':focus-visible');
+    let made = null;
     const ui = bubble();
     let finish;
     const done = new Promise((r) => { finish = r; });
@@ -100,7 +104,7 @@ export function micPlugin(storage) {
       if (status !== 'ok') {
         denied = true;
         engine.uiSound('bonk');
-        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s OK — try the other sounds!' : 'No microphone found. Try the other sounds!');
+        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s\u00a0OK! Try the other sounds.' : 'No microphone found. Try the other sounds!');
         return;
       }
       denied = false;
@@ -125,6 +129,7 @@ export function micPlugin(storage) {
       await storage.saveRecording(id, { ...clip, created: Date.now() }).catch((e) => console.warn('Itchy: recording not saved', e));
       const target = findLayer(store.project, layer.id) || store.layer;
       store.change(() => { target.sound = `rec:${id}`; });
+      made = `rec:${id}`;
       store.select(target.id);
       await refreshLibrary();
       engine.preview(target, 3);
@@ -140,6 +145,7 @@ export function micPlugin(storage) {
       busy = false;
       app.panel.sig = '';
       app.panel.render();
+      if (fromKeys) (document.querySelector(`.sounds [data-sound="${made}"]`) || document.querySelector('.sounds [data-sound="record"]'))?.focus();
     }
   }
 

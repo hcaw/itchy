@@ -1,43 +1,87 @@
-/* Itchy — bright, chunky, friendly. Everything is a big target. */
+/* Itchy — bright, soft and chunky. Everything is a big target.
+   Design tokens first, then regions top to bottom, then overlays, then responsive tweaks.
+   Performance matters on school Chromebooks: nothing animates forever except the play
+   button's invitation (transform and opacity only), and nothing is blurred behind the UI. */
+
+@font-face {
+  font-family: "Nunito";
+  src: url("assets/fonts/nunito.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Registered (and not inherited) so the room's mood colours fade on the body alone. */
+@property --amb-a { syntax: "<color>"; inherits: false; initial-value: #ffd8a8; }
+@property --amb-b { syntax: "<color>"; inherits: false; initial-value: #a5d8ff; }
+@property --amb-c { syntax: "<color>"; inherits: false; initial-value: #ffc9de; }
 
 :root {
-  --bg: #fff4e0;
-  --bg2: #ffe8c2;
-  --ink: #2b2140;
-  --ink-soft: #6b5f80;
-  --card: #ffffff;
-  --line: #eadfcb;
-  --go: #2fb344;
-  --stop: #f03e3e;
+  /* Surfaces */
+  --bg: #fff8ee;
+  --surface: #ffffff;
+  --surface-2: #faf5ee;
+  --well: #f3ede4;
+  --line: #ebe3d6;
+  /* Ink */
+  --ink: #261f3d;
+  --ink-soft: #625a7c;
+  /* Meaning */
+  --go: #22b14c;
+  --go-deep: #178a3a;
+  --stop: #ef4444;
+  --stop-deep: #b91c1c;
   --rec: #e8384f;
-  --focus: #1971c2;
+  /* Shape */
   --tap: 56px;
-  --radius: 20px;
-  --toy-shadow: 0 5px 0 rgba(43, 33, 64, 0.16);
+  --r-xl: 30px;
+  --r-lg: 24px;
+  --r-md: 18px;
+  --r-sm: 12px;
+  /* Elevation: a soft "toy key" lip plus a gentle ambient shadow. */
+  --e1: 0 1px 2px rgba(38, 31, 61, 0.06), 0 3px 0 rgba(38, 31, 61, 0.06), 0 8px 20px -10px rgba(38, 31, 61, 0.22);
+  --e2: 0 2px 4px rgba(38, 31, 61, 0.05), 0 12px 32px -12px rgba(38, 31, 61, 0.26);
+  --e3: 0 24px 64px -16px rgba(38, 31, 61, 0.38), 0 4px 12px rgba(38, 31, 61, 0.08);
+  --pressed: 0 1px 0 rgba(38, 31, 61, 0.08), 0 2px 6px -4px rgba(38, 31, 61, 0.3);
+  /* Motion */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
   --glow: 0;
-  font-family: ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", "Trebuchet MS", system-ui, sans-serif;
+  font-family: "Nunito", ui-rounded, "SF Pro Rounded", "Varela Round", system-ui, sans-serif;
+  font-weight: 700;
   color: var(--ink);
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
+  /* Mood ambience: the room takes on the mood's colours (set by delight.js). */
+  --amb-a: #ffd8a8;
+  --amb-b: #a5d8ff;
+  --amb-c: #ffc9de;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 212, 59, 0.14), transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(77, 171, 247, 0.12), transparent 50%),
-    radial-gradient(rgba(43, 33, 64, 0.06) 1.5px, transparent 1.5px) 0 0 / 22px 22px,
+    radial-gradient(60vmax 50vmax at 0% 0%, color-mix(in srgb, var(--amb-a) 50%, transparent), transparent 70%),
+    radial-gradient(55vmax 45vmax at 100% 100%, color-mix(in srgb, var(--amb-b) 44%, transparent), transparent 70%),
+    radial-gradient(40vmax 30vmax at 95% 0%, color-mix(in srgb, var(--amb-c) 36%, transparent), transparent 70%),
     var(--bg);
+  transition: --amb-a 1.2s var(--ease), --amb-b 1.2s var(--ease), --amb-c 1.2s var(--ease);
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
 }
+body[data-mood="sad"]     { --amb-a: #bac8ff; --amb-b: #96f2d7; --amb-c: #d0ebff; }
+body[data-mood="sunny"]   { --amb-a: #ffe066; --amb-b: #ffc078; --amb-c: #ffd8e4; }
+body[data-mood="bluesy"]  { --amb-a: #99e9f2; --amb-b: #b7c6ff; --amb-c: #c5f6fa; }
+body[data-mood="mystery"] { --amb-a: #e599f7; --amb-b: #91d5ff; --amb-c: #fcc2d7; }
+body[data-mood="spooky"]  { --amb-a: #b197fc; --amb-b: #8ce0c0; --amb-c: #c8b6ff; }
 button { font: inherit; color: inherit; }
 svg { display: block; }
 
 :focus { outline: none; }
-:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; border-radius: 14px; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
 /* ------------------------------------------------------------------ layout */
 
@@ -45,18 +89,17 @@ svg { display: block; }
   display: grid;
   height: 100%;
   grid-template-areas: "top top" "rail stage" "panel panel";
-  grid-template-columns: 132px 1fr;
+  grid-template-columns: 136px 1fr;
   grid-template-rows: auto 1fr auto;
-  gap: 10px;
-  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
-  transition: opacity 0.3s;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  transition: opacity 0.4s var(--ease);
 }
 #app.loading { opacity: 0; }
-#top { grid-area: top; }
-#rail { grid-area: rail; }
+#top { grid-area: top; min-width: 0; }
+#rail { grid-area: rail; min-width: 0; min-height: 0; }
 #stage { grid-area: stage; min-height: 0; min-width: 0; }
-#panel { grid-area: panel; }
-
+#panel { grid-area: panel; min-width: 0; } /* never wider than the screen, however many sounds */
 
 /* ------------------------------------------------------------------ buttons */
 
@@ -64,21 +107,40 @@ svg { display: block; }
   width: var(--tap);
   height: var(--tap);
   border: 0;
-  border-radius: 18px;
-  background: var(--card);
-  box-shadow: var(--toy-shadow);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--e1);
   display: grid;
   place-items: center;
-  padding: 10px;
+  padding: 14px;
   cursor: pointer;
-  transition: transform 0.08s, box-shadow 0.08s, opacity 0.2s;
+  transition: transform 0.18s var(--spring), box-shadow 0.15s var(--ease), background-color 0.2s;
   flex: 0 0 auto;
   touch-action: manipulation;
+  color: var(--ink);
 }
-.btn svg { width: 100%; height: 100%; }
-.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(43, 33, 64, 0.16); }
-.btn.dim { opacity: 0.45; }
+.btn svg { width: 100%; height: 100%; transition: opacity 0.2s; }
+@media (hover: hover) { .btn:hover { transform: translateY(-1px); } }
+.btn:active { transform: translateY(2px) scale(0.97); box-shadow: var(--pressed); transition-duration: 0.06s; }
+/* Nothing to undo (etc.): the icon fades, the button and its focus ring stay crisp. */
+.btn.dim svg { opacity: 0.3; }
 [hidden] { display: none !important; }
+
+/* A pair of related buttons on one surface, like a segmented button (undo/redo, tidy up). */
+.toolbar, .tools.edit-tools {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--e1);
+}
+.toolbar .btn, .edit-tools .btn { position: relative; background: transparent; box-shadow: none; border-radius: var(--r-md); }
+.toolbar .btn + .btn::before, .edit-tools .btn + .btn::before {
+  content: ""; position: absolute; left: -0.75px; top: 15px; bottom: 15px; width: 1.5px; background: var(--line); border-radius: 1px;
+}
+.toolbar .btn:active, .edit-tools .btn:active { box-shadow: none; background: var(--surface-2); }
+@media (hover: hover) { .toolbar .btn:hover, .edit-tools .btn:hover { transform: none; background: var(--surface-2); } }
 
 /* ------------------------------------------------------------------ top bar */
 
@@ -87,49 +149,98 @@ svg { display: block; }
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  min-height: 72px;
 }
 #top .group { display: flex; align-items: center; gap: 10px; }
 #top .group.grow { flex: 1; min-width: 0; }
 
 .btn.play {
   --tap: 72px;
+  position: relative;
   border-radius: 50%;
-  background: var(--go);
   color: #fff;
-  padding: 14px;
-  box-shadow: 0 6px 0 #1e7b2e, 0 0 0 calc(var(--glow) * 10px) rgba(47, 179, 68, 0.25);
+  padding: 20px 18px 20px 22px;
+  background: radial-gradient(120% 90% at 30% 20%, #4ade80 0%, var(--go) 48%, var(--go-deep) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    0 4px 0 #11692c,
+    0 12px 24px -8px rgba(34, 177, 76, 0.55),
+    0 0 0 calc(var(--glow) * 12px) rgba(34, 177, 76, 0.16);
+  transition: transform 0.2s var(--spring), background 0.2s;
 }
-.btn.play.invite { animation: breathe 2.2s ease-in-out infinite; }
-.btn.play.playing { background: var(--stop); box-shadow: 0 6px 0 #a61e1e, 0 0 0 calc(var(--glow) * 12px) rgba(240, 62, 62, 0.25); animation: none; }
-.btn.play.beat { transform: scale(1.06); }
-.btn.play:active { transform: translateY(4px); }
-@keyframes breathe { 50% { transform: scale(1.06); } }
+/* The invitation to press play: a gentle breath and a soft halo (transform and opacity only). */
+.btn.play::after {
+  content: ""; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none;
+  border: 5px solid rgba(34, 177, 76, 0.2); opacity: 0;
+}
+.btn.play svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18)); }
+.btn.play.invite { animation: breathe 2.4s var(--ease) infinite; }
+.btn.play.invite::after { animation: halo 2.4s var(--ease) infinite; }
+@keyframes breathe { 50% { transform: scale(1.05); } }
+@keyframes halo { 50% { opacity: 1; } }
+.btn.play.playing {
+  padding: 22px;
+  background: radial-gradient(120% 90% at 30% 20%, #fb7185 0%, var(--stop) 48%, var(--stop-deep) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 4px 0 #8f1717,
+    0 12px 24px -8px rgba(239, 68, 68, 0.55),
+    0 0 0 calc(var(--glow) * 14px) rgba(239, 68, 68, 0.14);
+  animation: none;
+}
+.btn.play.beat { transform: scale(1.05); }
+.btn.play:active { transform: translateY(3px) scale(0.97); }
+
+/* Brand: the Itchy critter and a wordmark. Tap it to say hello. */
+#top .brand-slot { flex: 0 0 auto; margin-right: 18px; }
+.brand {
+  display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 6px; border: 0; border-radius: 999px;
+  background: transparent; cursor: pointer; color: var(--ink);
+}
+.brand-mark { width: 42px; height: 42px; display: block; }
+.wordmark { font-size: 27px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; padding-bottom: 3px; }
+.brand.hop .brand-mark { animation: hop 0.6s var(--spring); }
+@keyframes hop { 0% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-10px) rotate(-10deg) scale(1.08, 0.94); } 60% { transform: translateY(0) rotate(6deg) scale(0.94, 1.06); } 100% { transform: none; } }
+
+/* ------------------------------------------------------------------ sliders */
 
 .slider {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: var(--tap);
-  padding: 0 12px;
-  background: var(--card);
+  padding: 0 14px;
+  background: var(--surface);
   border-radius: 999px;
-  box-shadow: var(--toy-shadow);
+  box-shadow: var(--e1);
   touch-action: none;
   cursor: pointer;
   min-width: 180px;
 }
-.slider .end { width: 34px; height: 34px; flex: 0 0 auto; color: var(--ink-soft); }
-.slider .track { position: relative; flex: 1; height: 14px; border-radius: 999px; background: var(--line); margin: 0 16px; }
-.slider .fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--sc, #ffa94d); }
+.slider .end { width: 28px; height: 28px; flex: 0 0 auto; color: var(--ink-soft); transition: transform 0.2s var(--spring); }
+.slider .track {
+  position: relative; flex: 1; height: 12px; border-radius: 999px; margin: 0 18px;
+  background: color-mix(in srgb, var(--sc, #ffa94d) 16%, #efe8dd);
+  box-shadow: inset 0 1px 2px rgba(38, 31, 61, 0.08);
+}
+.slider .fill {
+  position: absolute; top: 0; bottom: 0; border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sc, #ffa94d) 65%, #fff), var(--sc, #ffa94d));
+}
 .slider .thumb {
   position: absolute; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
-  border-radius: 50%; background: #fff; border: 4px solid var(--sc, #ffa94d);
-  box-shadow: 0 3px 0 rgba(43, 33, 64, 0.2);
-  display: grid; place-items: center; transition: transform 0.1s;
+  border-radius: 50%; background: #fff; border: 3.5px solid var(--sc, #ffa94d); color: var(--sc);
+  box-shadow: 0 2px 0 rgba(38, 31, 61, 0.08), 0 6px 14px -4px rgba(38, 31, 61, 0.3);
+  display: grid; place-items: center; transition: transform 0.2s var(--spring), box-shadow 0.2s;
+  z-index: 2;
 }
 .slider .thumb svg { width: 22px; height: 22px; }
-.slider.dragging .thumb { transform: scale(1.18); }
-.slider.tempo { --sc: #ffa94d; max-width: 340px; flex: 1; }
+@media (hover: hover) { .slider:hover .thumb { transform: scale(1.06); } }
+.slider.dragging .thumb { transform: scale(1.16); box-shadow: 0 2px 0 rgba(38, 31, 61, 0.08), 0 10px 22px -6px rgba(38, 31, 61, 0.35), 0 0 0 8px color-mix(in srgb, var(--sc) 18%, transparent); }
+.slider.tempo { --sc: #ff922b; max-width: 360px; flex: 1; }
+.slider.tempo .end.left { color: #2b8a3e; transform: scale(calc(1.1 - var(--amount, 0.5) * 0.2)); }
+.slider.tempo .end.right { color: #d9480f; transform: scale(calc(0.9 + var(--amount, 0.5) * 0.2)); }
 .beat-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sc); }
 
 /* ------------------------------------------------------------------ rail */
@@ -137,300 +248,625 @@ svg { display: block; }
 #rail {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 2px 2px 8px;
-  scrollbar-width: thin;
+  /* Room for the selection notch and focus rings, and a soft fade where cards scroll away. */
+  padding: 7px 14px 28px 7px;
+  margin: -7px -14px 0 -7px;
+  scrollbar-width: none;
+  scroll-padding: 30px 8px;
+  --f0: 0px; --fa: 0px; --fb: 0px;
+  -webkit-mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+  mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
 }
+#rail.more-start { --f0: 12px; --fa: 38px; }
+#rail.more-end { --fb: 26px; }
+#rail::-webkit-scrollbar { display: none; }
 .card {
   position: relative;
   flex: 0 0 auto;
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--toy-shadow);
-  padding: 6px 6px 8px;
-  border: 4px solid transparent;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e1);
+  padding: 8px 8px 9px;
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-rows: auto auto;
-  gap: 4px;
-  transition: border-color 0.15s, transform 0.15s;
+  align-items: center;
+  gap: 6px 4px;
+  transition: box-shadow 0.2s var(--ease), background-color 0.2s;
 }
-.card.selected { border-color: var(--c); transform: translateX(3px); }
+.card.selected {
+  background: color-mix(in srgb, var(--c) 9%, #fff);
+  box-shadow: 0 0 0 3px var(--edge, var(--c)), var(--e2);
+}
+/* A little notch points from the chosen critter to its grid. */
+.card.selected::after {
+  content: ""; position: absolute; right: -12px; top: 32px; width: 10px; height: 16px; background: var(--edge, var(--c));
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
 .card .critter-btn {
-  border: 0; background: none; padding: 0; width: 62px; height: 62px; cursor: pointer; border-radius: 16px;
+  border: 0; background: none; padding: 2px; width: 66px; height: 66px; cursor: pointer; border-radius: var(--r-md);
+  transition: width 0.2s var(--ease), height 0.2s var(--ease);
 }
-.card .mute { --tap: 44px; padding: 7px; align-self: start; border-radius: 14px; background: #f6f0e6; }
-.card .mute[aria-pressed="true"] { background: #e9e3f5; color: #6741d9; }
-.card .minimap { grid-column: 1 / -1; width: 100%; height: 26px; border-radius: 8px; background: #faf6ef; }
+.card .mute {
+  --tap: 44px; padding: 10px; align-self: start; border-radius: 50%; box-shadow: none;
+  background: color-mix(in srgb, var(--c) 16%, #f4efe7); color: var(--ink);
+}
+.card .mute[aria-pressed="true"] { background: #ece6f7; color: #6741d9; }
+.card .minimap { grid-column: 1 / -1; display: block; width: 100%; height: 26px; border-radius: 9px; background: color-mix(in srgb, var(--c) 8%, #f7f2ea); }
+.card.asleep { background: #f8f6fb; }
+.card.asleep.selected { background: #f3f0f8; }
 .card.add {
-  display: grid; place-items: center; min-height: 72px; cursor: pointer; color: var(--ink-soft);
-  border: 4px dashed var(--line); box-shadow: none; background: rgba(255, 255, 255, 0.6);
+  display: grid; place-items: center; min-height: 76px; cursor: pointer; color: var(--ink);
+  border: 2.5px dashed #d6cbba; box-shadow: none; background: rgba(255, 255, 255, 0.5);
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s var(--spring);
 }
-.card.add svg { width: 40px; height: 40px; }
+.card.add svg { width: 44px; height: 44px; padding: 10px; border-radius: 50%; background: #fff; box-shadow: var(--e1); }
+@media (hover: hover) { .card.add:hover { background: rgba(255, 255, 255, 0.85); border-color: #c9bda9; } }
+.card.add:active { transform: scale(0.97); }
+/* Lots of critters: smaller cards so they all fit. */
+#rail.compact { gap: 8px; }
+#rail.compact .card { padding: 5px 6px 6px; gap: 3px 4px; }
+#rail.compact .critter-btn { width: 48px; height: 48px; }
+#rail.compact .minimap { height: 14px; border-radius: 6px; }
+#rail.compact .card.add { min-height: 52px; }
+#rail.compact .card.selected::after { top: 22px; }
 
 /* ------------------------------------------------------------------ critters */
 
-.critter { width: 100%; height: 100%; overflow: visible; }
-.critter .body > * { fill: var(--c); stroke: rgba(43, 33, 64, 0.25); stroke-width: 3; }
-.critter .body .lighter { fill: color-mix(in srgb, var(--c) 55%, white); }
-.critter .body .stripe { fill: none; stroke: rgba(255, 255, 255, 0.75); stroke-width: 4; stroke-linecap: round; }
+.critter { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 90%; }
+.critter .body > * {
+  fill: var(--c);
+  stroke: color-mix(in srgb, var(--c) 62%, #261f3d);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.critter .body .lighter { fill: color-mix(in srgb, var(--c) 50%, white); }
+.critter .body .stripe { fill: none; stroke: rgba(255, 255, 255, 0.7); stroke-width: 4; stroke-linecap: round; }
+.critter .body .stripe.dark { stroke: color-mix(in srgb, var(--c) 62%, #261f3d); stroke-width: 3; }
+.critter .shine > * { fill: rgba(255, 255, 255, 0.45); stroke: none; }
+.critter .shine .shine-line { fill: none; stroke: rgba(255, 255, 255, 0.6); stroke-width: 4; stroke-linecap: round; }
+.critter .cheeks { fill: #ff5c8a; opacity: 0.28; }
 .critter .eyes-closed, .critter .mouth-open, .critter .zzz { display: none; }
+.critter .eyes-open { transform-box: fill-box; transform-origin: center; }
+.critter.blink .eyes-open { animation: blink 0.22s ease-in-out; }
+@keyframes blink { 50% { transform: scaleY(0.1); } }
+.critter .pupils { transition: transform 0.18s var(--ease); }
 .asleep .critter .eyes-open, .asleep .critter .mouth { display: none; }
 .asleep .critter .eyes-closed, .asleep .critter .zzz { display: inline; }
-.asleep .critter .body > * { fill: color-mix(in srgb, var(--c) 45%, #ccc); }
-.critter { transform-origin: 50% 90%; }
-.critter.sing { animation: sing 0.28s ease-out; }
+.asleep .critter .body > * { fill: color-mix(in srgb, var(--c) 40%, #d5d1dc); stroke: color-mix(in srgb, var(--c) 30%, #8f88a3); }
+.asleep .critter .cheeks { opacity: 0.12; }
+/* A few drifting Zs when a critter falls asleep, then they settle. */
+.asleep .critter .zzz text { animation: drift 2.6s ease-in-out 3 backwards; }
+.asleep .critter .zzz .z2 { animation-delay: 0.6s; }
+@keyframes drift { 0% { opacity: 0; transform: translate(-3px, 4px); } 30%, 70% { opacity: 1; } 100% { opacity: 1; transform: translate(0, 0); } }
+.critter.sing { animation: sing 0.3s var(--ease); }
 .critter.sing .mouth { display: none; }
 .critter.sing .mouth-open { display: inline; }
 .asleep .critter.sing { animation: none; }
 .asleep .critter.sing .mouth-open { display: none; }
-@keyframes sing { 0% { transform: scale(1, 1); } 30% { transform: scale(1.12, 0.9); } 60% { transform: scale(0.95, 1.08); } 100% { transform: scale(1, 1); } }
-.critter .pupil { animation: look 7s infinite; }
-@keyframes look { 0%, 40%, 100% { transform: translate(0, 0); } 45%, 60% { transform: translate(2px, -1px); } 65%, 80% { transform: translate(-2px, 1px); } }
+@keyframes sing { 0% { transform: scale(1, 1); } 30% { transform: scale(1.1, 0.9); } 60% { transform: scale(0.96, 1.06); } 100% { transform: scale(1, 1); } }
 
 /* ------------------------------------------------------------------ grid */
 
 #stage { display: flex; }
 .grid-frame {
   --layer: #ff6b6b;
+  position: relative;
   flex: 1;
   display: flex;
   min-width: 0;
   min-height: 0;
-  background: var(--card);
-  border-radius: 26px;
-  border: 5px solid var(--layer);
-  box-shadow: var(--toy-shadow);
-  padding: 10px;
-  transition: border-color 0.2s;
+  background: #fffefb;
+  border-radius: var(--r-xl);
+  box-shadow: 0 0 0 2.5px var(--edge, var(--layer)), var(--e2);
+  padding: 14px 14px 6px 10px;
+  transition: box-shadow 0.3s var(--ease);
+  container-type: size;
 }
-.grid-frame.asleep { border-style: dashed; }
+/* Asleep: a dashed frame and a sleeping badge, not just paler colours. */
+.grid-frame.asleep {
+  background: #fcfbfd;
+  box-shadow: var(--e2);
+  outline: 2.5px dashed color-mix(in srgb, var(--layer) 45%, #8f88a3);
+  outline-offset: 0;
+}
+.grid-frame.asleep .cell.on { opacity: 0.5; }
+.sleep-badge {
+  display: none; position: absolute; top: -20px; right: 22px; width: 32px; height: 32px; padding: 7px; border-radius: 50%; pointer-events: none;
+  background: #ece6f7; color: #6741d9; box-shadow: 0 0 0 3px #fff, var(--e1); z-index: 3;
+}
+.grid-frame.asleep .sleep-badge { display: block; animation: pop-in 0.3s var(--spring); }
 .grid {
+  --head: 48px;
+  --pip: 32px;
+  --gap: 5px;
+  --spacer: 5px;
   flex: 1;
   display: grid;
-  grid-template-columns: 48px repeat(var(--steps), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
-  gap: 5px;
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 16px;
+  /* No gaps between cells: each cell's transparent border is the gap, so a tap anywhere in
+     the column pitch counts (bigger targets, no dead strips when painting a stroke). */
+  gap: 0;
   touch-action: none;
   min-height: 0;
+  min-width: 0;
 }
-.grid.beat { max-height: calc(var(--rows) * 110px); margin: auto 0; height: 100%; }
+/* Drum rows stay pad-shaped (up to about 2 × a column's width), centred in the frame. */
+.grid.beat {
+  --rowh: clamp(64px, calc((100cqw - 80px) / var(--steps) * 2.2), 120px);
+  max-height: calc(var(--rows) * var(--rowh) + 16px); height: 100%; margin-block: auto;
+}
 .row-head {
-  border: 0; border-radius: 12px; cursor: pointer; padding: 6px;
-  background: color-mix(in srgb, var(--rc) 18%, white);
+  border: calc(var(--gap) / 2) solid transparent; background-clip: padding-box; border-radius: calc(var(--r-sm) + var(--gap) / 2); cursor: pointer; padding: 2px;
+  border-right-width: calc(var(--gap) / 2 + 4px); /* the gap to the grid is part of the button */
+  background: color-mix(in oklch, var(--rc) 9%, #fffdfa);
   color: var(--rc);
   display: grid; place-items: center;
+  transition: background-color 0.15s, transform 0.15s var(--spring);
 }
+@media (hover: hover) { .row-head:hover { background: color-mix(in oklch, var(--rc) 18%, #fffdfa); } }
 .row-head svg { width: 100%; height: 100%; max-width: 36px; max-height: 36px; }
+.row-head .pip.kit { --size: 1.05; padding: 5px; }
+.row-head .pip.kit svg { max-width: none; max-height: none; }
 .row-head .pip {
-  width: calc(var(--size) * 36px); height: calc(var(--size) * 36px); border-radius: 50%; background: var(--rc);
-  display: grid; place-items: center; color: #fff; padding: 3px;
+  width: min(calc(var(--size) * var(--pip)), 100%); aspect-ratio: 1; max-height: 100%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--rc) 65%, #fff), var(--rc) 70%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rc) 70%, #261f3d), 0 2px 0 color-mix(in srgb, var(--rc) 70%, #261f3d);
+  display: grid; place-items: center; color: #fff; padding: 4px;
 }
 .row-head .pip svg { width: 100%; height: 100%; }
 .cell {
   position: relative;
-  border: 0;
+  border: calc(var(--gap) / 2) solid transparent;
+  background-clip: padding-box;
   padding: 0;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--rc) 10%, #fbf8f3);
+  border-radius: calc(10px + var(--gap) / 2);
+  background: color-mix(in oklch, var(--rc) 13%, #fffdfa);
   cursor: pointer;
   min-width: 0;
   min-height: 0;
-  transition: background-color 0.12s, transform 0.12s;
+  /* Quick, so the playhead never smears across two columns. */
+  transition: background-color 0.06s linear; /* the playhead lift comes and goes with the bar, no easing */
 }
-.cell.alt { background: color-mix(in srgb, var(--rc) 10%, #f1ebe1); }
+/* With a mouse, an empty cell shows the note it would make. */
+@media (hover: hover) {
+  .cell:not(.on):hover { background: color-mix(in oklch, var(--rc) 22%, #fffdfa); }
+  .cell:not(.on):hover::before {
+    content: ""; position: absolute; inset: 4px; border-radius: 7px; pointer-events: none;
+    border: 2px dashed color-mix(in srgb, var(--rc) 70%, transparent);
+  }
+}
 .cell.on {
-  background: var(--rc);
-  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.18);
+  z-index: 2;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 80%, #fff) 0%, var(--rc) 60%);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .cell.on::after {
   content: "";
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 38%;
-  max-width: 22px;
+  top: 46%;
+  width: 34%;
+  max-width: 18px;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.62);
 }
-.grid.beat .cell.on::after { border-radius: 4px; transform: translate(-50%, -50%) rotate(45deg); width: 34%; }
-.cell.now { background: color-mix(in srgb, var(--rc) 28%, #fff); }
-.cell.now.on { background: var(--rc); filter: brightness(1.15); }
-.cell.bump { animation: bump 0.2s ease-out; }
-.cell.hit { animation: hit 0.32s ease-out; z-index: 1; }
-@keyframes bump { 50% { transform: scale(0.86); } }
-@keyframes hit { 0% { transform: scale(1); } 25% { transform: scale(1.22); box-shadow: 0 0 0 6px color-mix(in srgb, var(--rc) 35%, transparent); } 100% { transform: scale(1); } }
-.cell:focus-visible { outline-offset: 1px; z-index: 2; }
+.grid.beat .cell.on::after { border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); width: 30%; min-width: 7px; }
+/* The playhead: a soft bar of light over the column being heard; its notes lift as they play. */
+.playhead {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 15px; pointer-events: none; z-index: 1;
+  background: color-mix(in srgb, var(--layer) 20%, transparent);
+  box-shadow: inset 0 0 0 2.5px color-mix(in srgb, var(--layer) 55%, transparent);
+  opacity: 0; transition: opacity 0.2s var(--ease);
+}
+.playhead.on { opacity: 1; }
+/* The bar tints the column; a note under it lifts the instant it plays. */
+.cell.now { transition: none; }
+.cell.now.on {
+  transform: scale(1.06); filter: brightness(1.08) saturate(1.1); z-index: 3;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 8px -4px color-mix(in srgb, var(--rc) 80%, transparent);
+}
+/* Long notes stay one bar while they play. */
+.cell.now.on.held, .cell.now.on.held-end { transform: none; filter: none; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.cell.bump { animation: bump 0.22s var(--ease); }
+.cell.hit.held::before, .cell.hit.held-end::before { animation: none; } /* long notes: no ring on one segment */
+.cell.hit::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  animation: ring 0.3s var(--ease) forwards;
+}
+@keyframes bump { 45% { transform: scale(0.86); } }
+@keyframes ring { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rc) 55%, transparent); } to { box-shadow: 0 0 0 10px color-mix(in srgb, var(--rc) 0%, transparent); } }
+.cell:focus-visible { outline-offset: calc(var(--gap) / -2); z-index: 4; }
+/* Cells and row heads paint only inside their transparent border (the gap). Every state sets
+   its colour with the background shorthand, which would reset this, hence !important. */
+.grid .cell, .grid .row-head { background-clip: padding-box !important; }
+/* The wider gap between beat groups is part of the next cell's tap area too. */
+.cell.beat-start:not([data-s="0"]) { margin-left: calc(-1 * var(--spacer)); border-left-width: calc(var(--gap) / 2 + var(--spacer)); }
+
+/* Beat ruler under the grid. */
+.tick { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #d9d0c2; }
+.tick.big { width: 8px; height: 8px; background: #c4b8a5; }
+.tick.now { background: var(--layer); transform: scale(1.7); }
+
+/* Sparks when a note lands. */
+.sparks { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 5; }
+.sparks i {
+  position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--rc);
+  animation: spark 0.5s var(--ease) forwards;
+}
+.sparks i:nth-child(even) { width: 4px; height: 4px; left: -2px; top: -2px; }
+@keyframes spark {
+  from { transform: rotate(var(--a)) translateX(4px) scale(1); opacity: 1; }
+  to { transform: rotate(var(--a)) translateX(var(--reach)) scale(0.3); opacity: 0; }
+}
 
 .hint {
-  position: absolute; left: 30%; top: 35%; width: 52px; height: 52px; pointer-events: none; z-index: 5;
+  position: absolute; left: 30%; top: 35%; width: 52px; height: 52px; pointer-events: none; z-index: 6;
+  filter: drop-shadow(0 4px 6px rgba(38, 31, 61, 0.25));
   animation: tap 1.6s ease-in-out infinite;
 }
-@keyframes tap { 0%, 100% { transform: translate(8px, 14px) scale(1); opacity: 0.9; } 40% { transform: translate(0, 0) scale(1); } 50% { transform: translate(0, 0) scale(0.88); } 60% { transform: translate(0, 0) scale(1); } }
+@keyframes tap { 0%, 100% { transform: translate(8px, 14px) scale(1); opacity: 0.95; } 40% { transform: translate(0, 0) scale(1); } 50% { transform: translate(0, 0) scale(0.88); } 60% { transform: translate(0, 0) scale(1); } }
 
-/* ------------------------------------------------------------------ panel */
+/* ------------------------------------------------------------------ panel (the dock) */
 
 #panel {
   --layer: #ff6b6b;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 26px;
-  padding: 10px 12px;
-  box-shadow: var(--toy-shadow);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #fff;
+  border-radius: var(--r-xl);
+  padding: 10px;
+  box-shadow: var(--e2);
 }
-.panel-group, .sounds, .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* The sounds column keeps one width, so the charms don't jump when you switch critter. */
+.panel-group { display: flex; align-items: center; min-width: 384px; }
+.tools { display: flex; align-items: center; gap: 8px; }
+/* Sounds sit together in a well; the chosen one pops up out of it. */
+.sounds {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  background: var(--well); border-radius: 25px; padding: 7px;
+  box-shadow: inset 0 1px 2px rgba(38, 31, 61, 0.06);
+  --fa: 0px; --fb: 0px;
+}
+#panel.more-left .sounds { --fa: 22px; }
+#panel.more-right .sounds { --fb: 22px; }
+#panel.stacked .edit-tools { margin-left: auto; }
 .sound {
-  position: relative; width: 60px; height: 60px; border: 4px solid transparent; border-radius: 18px; background: var(--card);
-  box-shadow: var(--toy-shadow); padding: 4px; cursor: pointer;
+  position: relative; width: 58px; height: 58px; border: 0; border-radius: var(--r-md); background: transparent;
+  padding: 6px; cursor: pointer; transition: background-color 0.2s, transform 0.2s var(--spring), box-shadow 0.2s;
 }
-.sound.on { border-color: var(--layer); background: color-mix(in srgb, var(--layer) 12%, white); }
-.sound .tick-badge { position: absolute; right: -8px; top: -8px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; padding: 4px; }
-.tools .btn { background: #f6f0e6; }
+@media (hover: hover) { .sound:not(.on):hover { background: rgba(255, 255, 255, 0.65); } }
+.sound:active { transform: scale(0.94); }
+.sound.on { background: var(--surface); box-shadow: 0 0 0 3px var(--edge, var(--layer)), var(--e1); }
+.sound .critter { transition: transform 0.25s var(--spring); }
+.sound:not(.on) .critter { transform: scale(0.88); }
+.sound .tick-badge {
+  position: absolute; right: 2px; top: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--ink); color: #fff; padding: 3.5px;
+  box-shadow: 0 0 0 2px #fff; animation: pop-in 0.25s var(--spring);
+}
 
 /* ------------------------------------------------------------------ popovers, toast */
 
 .popover {
-  position: fixed; z-index: 50; background: var(--card); border-radius: 24px; padding: 12px;
-  box-shadow: 0 12px 40px rgba(43, 33, 64, 0.25), var(--toy-shadow);
-  animation: pop-in 0.16s ease-out;
+  position: fixed; z-index: 50; background: var(--surface); border-radius: 28px; padding: 14px;
+  box-shadow: var(--e3);
+  animation: pop-in 0.22s var(--spring);
 }
-@keyframes pop-in { from { transform: scale(0.85); opacity: 0; } }
-.add-menu { display: grid; grid-template-columns: repeat(3, 76px); gap: 10px; }
+/* The caret points at the button that opened it. */
+.popover::before {
+  content: ""; position: absolute; left: calc(var(--caret, 50%) - 9px); width: 18px; height: 18px;
+  background: var(--surface); border-radius: 4px; transform: rotate(45deg);
+}
+.popover[data-side="below"]::before { top: -7px; }
+.popover[data-side="above"]::before { bottom: -7px; }
+.popover[data-side="right"]::before, .popover[data-side="left"]::before { left: auto; top: calc(var(--caret-y, 50%) - 9px); }
+.popover[data-side="right"]::before { left: -7px; }
+.popover[data-side="left"]::before { right: -7px; }
+@keyframes pop-in { from { transform: scale(0.8); opacity: 0; } }
+.popover button { position: relative; animation: rise 0.3s var(--spring) backwards; }
+.popover button:nth-child(2) { animation-delay: 0.03s; }
+.popover button:nth-child(3) { animation-delay: 0.06s; }
+.popover button:nth-child(4) { animation-delay: 0.09s; }
+.popover button:nth-child(5) { animation-delay: 0.12s; }
+.popover button:nth-child(6) { animation-delay: 0.15s; }
+@keyframes rise { from { transform: translateY(8px) scale(0.85); opacity: 0; } }
+.add-menu { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; }
 .add-menu .choice {
-  width: 76px; height: 76px; border: 0; border-radius: 20px; background: #faf6ef; padding: 8px; cursor: pointer;
-  box-shadow: var(--toy-shadow);
+  width: 80px; height: 80px; border: 0; border-radius: 22px; background: var(--surface-2); padding: 10px; cursor: pointer;
+  transition: transform 0.2s var(--spring), background-color 0.2s;
 }
-.add-menu .choice.mic { color: var(--rec); padding: 16px; }
-.add-menu .choice:active { transform: translateY(3px); }
+@media (hover: hover) { .add-menu .choice:hover { background: var(--well); transform: translateY(-2px); } }
+.add-menu .choice.mic { color: var(--rec); padding: 22px; background: var(--surface); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rec) 70%, #fff); }
+.add-menu .choice:active { transform: scale(0.94); }
 
 #toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 160%); z-index: 60;
-  background: var(--ink); color: #fff; border-radius: 999px; padding: 10px 22px 10px 12px;
-  display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700;
-  transition: transform 0.3s cubic-bezier(.3, 1.4, .6, 1), visibility 0.3s; max-width: calc(100vw - 32px);
+  position: fixed; left: 16px; right: 16px; bottom: 28px; margin-inline: auto; width: fit-content; z-index: 60;
+  background: rgba(38, 31, 61, 0.96); color: #fff; border-radius: 24px; padding: 8px 22px 8px 8px;
+  display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 800; line-height: 1.25; text-wrap: balance;
+  box-shadow: var(--e3);
+  transform: translateY(24px); opacity: 0;
+  transition: transform 0.4s var(--spring), opacity 0.25s var(--ease), visibility 0.4s;
   visibility: hidden;
+  pointer-events: none; /* a message never stops a tap on the grid underneath */
 }
-#toast.show { transform: translate(-50%, 0); visibility: visible; }
-.toast-icon { width: 36px; height: 36px; flex: 0 0 auto; }
+#toast.show { transform: none; opacity: 1; visibility: visible; }
+.toast-icon { width: 40px; height: 40px; flex: 0 0 auto; padding: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); }
 
+/* ------------------------------------------------------------------ mood */
+.btn.mood { padding: 9px; color: #d26a00; }
+.mood-happy { color: #d26a00 !important; }
+.mood-sad { color: #4263eb !important; }
+.mood-sunny { color: #e8590c !important; }
+.mood-bluesy { color: #0c8599 !important; }
+.mood-mystery { color: #ae3ec9 !important; }
+.mood-spooky { color: #5f3dc4 !important; }
+.mood-menu { display: grid; grid-template-columns: repeat(3, 76px); gap: 10px; }
+.mood-choice {
+  width: 76px; height: 76px; border: 0; border-radius: 22px; background: var(--surface-2); padding: 10px; cursor: pointer;
+  transition: transform 0.2s var(--spring), background-color 0.2s, box-shadow 0.2s;
+}
+@media (hover: hover) { .mood-choice:hover { background: var(--well); } }
+.mood-choice.on { background: color-mix(in srgb, currentColor 12%, #fff); box-shadow: 0 0 0 3px currentColor; }
+.mood-choice:active { transform: scale(0.94); }
+
+/* ------------------------------------------------------------------ dice and charms */
+.btn.dice { --tap: 58px; padding: 12px; color: #d9480f; background: linear-gradient(180deg, #fff6cc, #ffe8a3); }
+.btn.dice.rolling svg { animation: roll 0.6s var(--spring); }
+@keyframes roll { 0% { transform: rotate(-270deg) scale(0.5); } 60% { transform: rotate(15deg) scale(1.1); } 100% { transform: none; } }
+.charms { display: flex; gap: 10px; flex: 1 1 560px; min-width: 0; }
+/* Charms never shrink below a usable length; with lots of sounds they move to their own row. */
+.slider.charm { flex: 1 1 0; min-width: 180px; height: 58px; padding: 0 12px; }
+.slider.charm .track { margin: 0 22px; }
+.slider.charm .thumb { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+.slider.charm .thumb svg { width: 26px; height: 26px; transform: scale(calc(0.8 + var(--amount, 0) * 0.4)) rotate(calc(var(--amount, 0) * 20deg)); transition: transform 0.1s; }
+.slider.charm .end { width: 26px; height: 26px; color: var(--sc); }
+.slider.charm .end.right { transform: scale(calc(0.85 + var(--amount, 0) * 0.3)); }
+.slider.charm-echo { --sc: #0ca678; }
+.slider.charm-space { --sc: #7048e8; }
+.slider.charm-tone .end.left { color: #4c6ef5; transform: none; }
+.slider.charm-tone .end.right { color: #cf6d00; transform: none; }
+.slider.charm-tone .track { background: linear-gradient(90deg, #dbe4ff, #efe8dd 50%, #fff3bf); }
+.slider.charm-tone .fill { background: #ffd43b; opacity: 0.85; }
+.slider.charm-tone.below .fill { background: #748ffc; }
+.tone-face {
+  position: relative; width: 26px; height: 26px;
+  --m: clamp(0, calc((0.5 - var(--amount, 0.5)) * 3), 1);
+  --s: clamp(0, calc((var(--amount, 0.5) - 0.5) * 3), 1);
+}
+.tone-face > * { position: absolute; inset: 0; display: grid; place-items: center; }
+.slider.charm .tone-face svg { width: 100%; height: 100%; transform: none; }
+.tone-face .moon { color: #4c6ef5; opacity: var(--m); transform: scale(calc(0.6 + var(--m) * 0.4)); }
+.tone-face .sun { color: #cf6d00; opacity: var(--s); transform: scale(calc(0.6 + var(--s) * 0.4)) rotate(calc(var(--s) * 45deg)); }
+.tone-face .dot { opacity: calc(1 - var(--m) - var(--s)); color: #cf6d00; }
+.slider.bipolar .track::after { content: ""; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 3px; margin-left: -1.5px; background: #d6ccbc; border-radius: 2px; }
+
+/* ------------------------------------------------------------------ recording */
+.sound.record {
+  background: var(--surface); color: var(--rec); padding: 15px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rec) 70%, #fff), var(--e1);
+}
+@media (hover: hover) { .sound.record:hover { background: #fff0f2; } }
+.sound.record.denied { background: #dee2e6; color: #495057; box-shadow: none; }
+.sound.rec-sound { padding: 3px 7px 15px; }
+.sound .wave { position: absolute; left: 8px; bottom: 4px; height: 12px; width: calc(100% - 16px); fill: var(--ink); opacity: 0.55; }
+.rec-overlay {
+  position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
+  background: rgba(38, 31, 61, 0.24);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  --level: 0; --progress: 0;
+  animation: fade-in 0.2s var(--ease);
+}
+@keyframes fade-in { from { opacity: 0; } }
+.rec-bubble {
+  position: relative; width: min(60vmin, 280px); height: min(60vmin, 280px); border-radius: 50%; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 0 60px rgba(255, 255, 255, 0.5), 0 0 0 calc(var(--level) * 30px) rgba(255, 255, 255, 0.28), 0 0 0 calc(var(--level) * 56px) rgba(255, 255, 255, 0.12);
+  transform: scale(calc(1 + var(--level) * 0.06)); transition: transform 0.06s, box-shadow 0.06s;
+  animation: pop-in 0.3s var(--spring);
+}
+.rec-ring { position: absolute; inset: -10px; }
+.rec-ring .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 3; }
+.ring-fg { fill: none; stroke: var(--rec); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--progress) * 100); }
+.rec-face { width: 62%; height: 62%; }
+.rec-face .critter { transform: scale(calc(1 + var(--level) * 0.25), calc(1 - var(--level) * 0.1)); }
+.recording .rec-face .critter .mouth { display: none; }
+.recording .rec-face .critter .mouth-open { display: inline; transform-box: fill-box; transform-origin: center; transform: scale(calc(0.6 + var(--level) * 0.7)); }
+.asking .rec-face { animation: breathe 1s ease-in-out infinite; opacity: 0.7; }
+.btn.rec-stop {
+  --tap: 84px; border-radius: 50%; color: #fff; padding: 26px;
+  background: radial-gradient(120% 90% at 30% 20%, #ff6b81, var(--rec) 60%, #c81e3a);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), 0 5px 0 #8f1427, 0 16px 30px -10px rgba(232, 56, 79, 0.7);
+}
+
+/* ------------------------------------------------------------------ songbook */
+.songbook-overlay {
+  position: fixed; inset: 0; z-index: 45; background: rgba(38, 31, 61, 0.24);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  display: grid; place-items: center; padding: 16px; animation: fade-in 0.2s var(--ease);
+}
+.songbook {
+  background: var(--bg); border-radius: 34px; padding: 20px 22px 16px; width: min(760px, 100%); max-height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: var(--e3); animation: sheet-in 0.35s var(--spring);
+}
+/* The songs scroll inside the sheet (with room for card shadows and badges); a fade shows only
+   while there's more below, so the sheet itself stays crisp. */
+.songbook-body {
+  min-height: 0; overflow: auto; scrollbar-width: thin;
+  padding: 12px 12px 14px; margin: -12px -12px 0;
+  scroll-padding: 12px 0 40px; /* a focused card is never under the fade */
+}
+.songbook-body.more-below {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
+}
+@keyframes sheet-in { from { transform: translateY(24px) scale(0.97); opacity: 0; } }
+.songbook-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.songbook-head .big-icon { width: 56px; height: 56px; padding: 13px; border-radius: 50%; color: #fff; background: linear-gradient(180deg, #9775fa, #7048e8); box-shadow: 0 3px 0 #5f3dc4; }
+.songbook-sub { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; }
+.songbook-sub::after { content: ""; flex: 1; height: 2px; border-radius: 1px; background: var(--line); }
+.songbook-sub svg { width: 34px; height: 34px; color: #f59f00; }
+.song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: 1fr; gap: 16px; }
+.song-card {
+  grid-template-columns: minmax(0, 1fr);
+  position: relative; border: 0; border-radius: var(--r-lg); background: var(--surface); padding: 10px; cursor: pointer; box-shadow: var(--e1);
+  min-height: 124px; display: grid; align-content: start; transition: transform 0.2s var(--spring), box-shadow 0.2s;
+  animation: rise 0.35s var(--spring) backwards;
+}
+.song-card:nth-child(2) { animation-delay: 0.03s; } .song-card:nth-child(3) { animation-delay: 0.06s; } .song-card:nth-child(4) { animation-delay: 0.09s; }
+.song-card:nth-child(5) { animation-delay: 0.12s; } .song-card:nth-child(n+6) { animation-delay: 0.15s; }
+@media (hover: hover) { .song-card:hover { transform: translateY(-3px); box-shadow: var(--e2); } }
+.song-card:active { transform: scale(0.97); }
+.song-card.current { box-shadow: 0 0 0 3px var(--go), var(--e2); }
+.song-card .thumb { width: 100%; height: auto; aspect-ratio: 5 / 3; border-radius: 10px; display: block; }
+.song-card.new { place-items: center; align-content: center; border: 2.5px dashed #d6cbba; background: rgba(255, 255, 255, 0.5); box-shadow: none; color: var(--ink); }
+.new-song { width: 60px; height: 60px; padding: 14px; border-radius: 50%; background: #fff; box-shadow: var(--e1); }
+.ex-wrap { width: 100%; display: grid; gap: 8px; justify-items: start; }
+.ex-star, .now-badge { position: absolute; top: -9px; right: -9px; width: 34px; height: 34px; border-radius: 50%; box-shadow: var(--e1); }
+.ex-star { color: #f59f00; background: #fff; padding: 6px; }
+.now-badge { color: #fff; background: var(--go); padding: 9px 8px 9px 10px; }
+.song-faces { display: flex; align-items: center; gap: 3px; height: 24px; padding: 0 2px; min-width: 0; max-width: 100%; overflow: hidden; }
+.song-faces svg { flex: 0 1 24px; min-width: 0; height: 24px; }
+.song-faces .more { flex: none; font-size: 13px; font-weight: 900; color: var(--ink-soft); background: var(--well); border-radius: 12px; padding: 0 7px; line-height: 22px; }
+.ex-name { font-weight: 800; font-size: 15px; color: var(--ink-soft); padding: 0 2px; }
+
+/* ------------------------------------------------------------------ responsive */
+
+/* Tablets and small laptops: tighter grid spacing (so cells stay ≥ 44 px), charms on their own row. */
+@media (max-width: 1100px) {
+  .grid { --gap: 4px; --spacer: 6px; }
+  #top .group.grow { flex: 0 1 auto; }
+  .slider.tempo { flex: 1 1 auto; width: 300px; }
+  #top .brand-slot { margin-left: auto; }
+  .grid-frame { padding: 12px 8px 6px 6px; }
+  .wordmark { display: none; }
+  #top .brand-slot { margin-right: 4px; }
+  .panel-group { min-width: 0; flex: 0 1 auto; max-width: calc(100% - 200px); /* room for tidy-up and dice */ }
+  .sounds {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+  }
+  .sounds::-webkit-scrollbar { display: none; }
+  .sound { flex: none; }
+  .edit-tools { margin-left: auto; }
+  .charms { flex: 1 1 100%; }
+}
+/* Portrait: the critters become a row under the top bar. */
 @media (max-aspect-ratio: 1/1) {
   #app {
     grid-template-areas: "top" "rail" "stage" "panel";
     grid-template-columns: 1fr;
     grid-template-rows: auto auto 1fr auto;
   }
-  #rail { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
-  #rail .card { flex: 0 0 112px; }
+  #rail {
+    flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 7px 26px 14px 7px; margin: -7px -7px -6px;
+    -webkit-mask-image: linear-gradient(90deg, transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+    mask-image: linear-gradient(90deg, transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
+  }
+  /* Tall frames: drum pads may grow taller, so the grid doesn't float in empty space. */
+  .grid.beat { --rowh: clamp(96px, calc((100cqw - 80px) / var(--steps) * 3), 150px); }
+  #rail .card { flex: 0 0 120px; }
+  #rail.compact .card { flex: 0 0 104px; }
+  #rail.compact .minimap { height: 20px; }
+  .card.selected::after, #rail.compact .card.selected::after { right: auto; left: 50%; top: auto; bottom: -12px; margin-left: -8px; width: 16px; height: 10px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; }
-}
-
-/* Small screens: tighten up but keep targets big. */
 @media (max-width: 720px) {
   :root { --tap: 50px; }
-  #app { gap: 8px; padding: 8px; }
-  .btn.play { --tap: 62px; }
+  #app { gap: 10px; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .btn.play { --tap: 62px; padding: 17px 15px 17px 19px; }
+  .btn.play.playing { padding: 19px; }
   .slider { min-width: 140px; }
-  .grid { grid-template-columns: 34px repeat(var(--steps), minmax(0, 1fr)); gap: 3px; }
+  .grid { --head: 36px; --pip: 26px; --gap: 3px; --spacer: 3px; }
+  .grid-frame { padding: 10px 8px 6px 6px; border-radius: 24px; }
+  .songbook { padding: 16px 16px 20px; border-radius: 28px; }
+  .song-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; }
+}
+/* Phones: play, mood, Itchy, undo/redo and songs on one row; speed gets its own. */
+@media (max-width: 560px) {
+  /* Row 1: play, speed, mood. Row 2: Itchy, then undo/redo and songs (same order as Tab). */
+  #top { gap: 8px; min-height: 0; }
+  #top .group.grow { flex: 1 1 calc(100% - 80px); gap: 8px; }
+  #top .brand-slot { margin: 0; }
+  #top .group.end { margin-left: auto; gap: 8px; }
+  .slider.tempo { max-width: none; min-width: 0; }
+  .brand { padding: 0; min-width: 44px; justify-content: center; }
+  .brand-mark { width: 38px; height: 38px; }
+  #rail .card, #rail.compact .card { flex: 0 0 104px; padding: 6px 6px 7px; }
+  .card .critter-btn, #rail.compact .critter-btn { width: 52px; height: 52px; }
+  .card .mute { --tap: 44px; }
+  /* Dock row 1: sounds and tidy-up; row 2: dice and charms. */
+  .charms { gap: 6px; flex: 1 1 0; }
+  .slider.charm { padding: 0 4px; height: 54px; min-width: 0; }
+  .slider.charm .end { display: none; }
+  .slider.charm .track { margin: 0 20px; }
+  .slider.charm .thumb { width: 34px; height: 34px; margin: -17px 0 0 -17px; border-width: 3px; }
+  .slider.charm .thumb svg, .tone-face { width: 20px; height: 20px; }
+  .btn.dice { --tap: 46px; padding: 9px; }
+  .charms { gap: 4px; }
+  .slider.charm { padding: 0 2px; }
+  .slider.charm .track { margin: 0 16px; }
+  .slider.charm .thumb { width: 30px; height: 30px; margin: -15px 0 0 -15px; }
+  .slider.charm .thumb svg, .tone-face { width: 18px; height: 18px; }
+  .sound .tick-badge { width: 16px; height: 16px; padding: 3px; top: 1px; right: 1px; }
+  /* Keep the play button's glow and halo inside the screen edge. */
+  .btn.play::after { inset: -4px; border-width: 4px; }
+  .btn.play { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 4px 0 #11692c, 0 8px 16px -8px rgba(34, 177, 76, 0.55), 0 0 0 calc(var(--glow) * 7px) rgba(34, 177, 76, 0.16); }
+  .btn.play.playing { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 4px 0 #8f1717, 0 8px 16px -8px rgba(239, 68, 68, 0.55), 0 0 0 calc(var(--glow) * 8px) rgba(239, 68, 68, 0.14); }
+  #panel { gap: 8px; padding: 8px; border-radius: 24px; }
+  .panel-group { flex: 1 1 calc(100% - 100px); max-width: none; }
+  .edit-tools .btn { --tap: 44px; padding: 11px; }
+  .sounds { gap: 3px; }
+  .sound { width: 45px; height: 45px; padding: 5px; }
+  .sound.record { padding: 12px; }
+  .sound.rec-sound { padding: 2px 6px 13px; }
+  .grid { --head: 30px; --pip: 22px; --gap: 2px; --spacer: 3px; }
+  .row-head { padding: 2px; border-right-width: calc(var(--gap) / 2 + 2px); }
+  .cell { border-radius: calc(6px + var(--gap) / 2); }
+}
+
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  :root { --tap: 46px; }
+  #app { gap: 8px; padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); grid-template-columns: 112px 1fr; }
+  #top { min-height: 0; gap: 8px; }
+  #top .group.grow { flex: 1 1 auto; }
+  #top .brand-slot { margin-left: 0; }
+  .btn.play { --tap: 50px; padding: 14px 12px 14px 16px; }
+  .btn.play.playing { padding: 15px; }
+  .card .minimap, .wordmark { display: none; }
+  .card .critter-btn, #rail.compact .critter-btn { width: 44px; height: 44px; }
+  .card .mute { --tap: 44px; }
+  .card.add { min-height: 48px; }
+  #panel { padding: 6px; gap: 8px; flex-wrap: nowrap; }
+  .charms { flex: 1 1 0; min-width: 300px; }
+  .panel-group { flex: 0 1 auto; min-width: 0; }
+  .slider.charm { min-width: 0; height: 48px; padding: 0 6px; }
+  .slider.charm .track { margin: 0 18px; }
+  .slider.charm .end { display: none; }
+  .slider.charm .thumb { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+  .sound { width: 46px; height: 46px; }
+  .grid { --head: 40px; --pip: 22px; --gap: 3px; --spacer: 4px; grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 10px; }
+  .row-head { padding: 1px; border-right-width: calc(var(--gap) / 2 + 2px); }
+  .grid-frame { padding: 8px 8px 4px 6px; }
 }
 
 /* ------------------------------------------------------------------ long notes */
+/* A long note is drawn as one bar: held cells reach back over the gap to join the note. */
 .cell.on.held::after { display: none; }
-.cell.on.held { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -5px; }
-.cell.on.held-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.cell.on.held { border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.cell.on.held.beat-start { margin-left: calc(-1 * var(--spacer)); }
+.cell.on.held-end { border-right-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
-/* ------------------------------------------------------------------ mood */
-.btn.mood { padding: 7px; color: #f08c00; }
-.mood-happy { color: #f08c00 !important; }
-.mood-sad { color: #4c6ef5 !important; }
-.mood-sunny { color: #e8590c !important; }
-.mood-bluesy { color: #1098ad !important; }
-.mood-mystery { color: #ae3ec9 !important; }
-.mood-spooky { color: #495057 !important; }
-.mood-menu { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
-.mood-choice {
-  width: 72px; height: 72px; border: 4px solid transparent; border-radius: 20px; background: #faf6ef; padding: 8px; cursor: pointer;
-  box-shadow: var(--toy-shadow);
-}
-.mood-choice.on { border-color: currentColor; background: #fff; }
-.mood-choice:active { transform: translateY(3px); }
-
-/* ------------------------------------------------------------------ dice and charms */
-.btn.dice { --tap: 60px; background: #fff3bf; color: #e67700; }
-.btn.dice.rolling svg { animation: roll 0.5s cubic-bezier(.3, 1.5, .5, 1); }
-@keyframes roll { from { transform: rotate(-200deg) scale(0.6); } }
-.charms { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; min-width: 0; }
-.slider.charm { flex: 1 1 150px; min-width: 150px; max-width: 280px; height: 60px; padding: 0 10px; }
-.slider.charm .track { margin: 0 20px; }
-.slider.charm .thumb { width: 46px; height: 46px; margin: -23px 0 0 -23px; color: var(--sc); }
-.slider.charm .thumb svg { width: 28px; height: 28px; transform: scale(calc(0.8 + var(--amount, 0) * 0.45)) rotate(calc(var(--amount, 0) * 20deg)); }
-.slider.charm .end { width: 28px; height: 28px; color: var(--sc); }
-.slider.charm-tone .end.left { color: #5c7cfa; }
-.slider.charm-tone .end.right { color: #f59f00; }
-.slider.bipolar .track::after { content: ""; position: absolute; left: 50%; top: -6px; bottom: -6px; width: 4px; margin-left: -2px; background: #d6ccbc; border-radius: 2px; }
-
-/* ------------------------------------------------------------------ recording */
-.sound.record { background: var(--rec); color: #fff; padding: 12px; }
-.sound.record.denied { background: #ced4da; color: #495057; }
-.sound.rec-sound { padding: 2px 6px 14px; }
-.sound .wave { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 12px; width: auto; fill: var(--ink); opacity: 0.6; }
-.rec-overlay {
-  position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
-  background: rgba(43, 33, 64, 0.45); --level: 0; --progress: 0;
-  animation: fade-in 0.15s ease-out;
-}
-@keyframes fade-in { from { opacity: 0; } }
-.rec-bubble { position: relative; width: min(60vmin, 280px); height: min(60vmin, 280px); border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 10px 0 rgba(0,0,0,.15); transform: scale(calc(1 + var(--level) * 0.08)); transition: transform 0.06s; }
-.rec-ring { position: absolute; inset: -10px; }
-.rec-ring .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-bg { fill: none; stroke: #ffe3e3; stroke-width: 6; }
-.ring-fg { fill: none; stroke: var(--rec); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--progress) * 100); }
-.rec-face { width: 62%; height: 62%; }
-.rec-face .critter { transform: scale(calc(1 + var(--level) * 0.25), calc(1 - var(--level) * 0.1)); }
-.recording .rec-face .critter .mouth { display: none; }
-.recording .rec-face .critter .mouth-open { display: inline; transform-box: fill-box; transform-origin: center; transform: scale(calc(0.6 + var(--level) * 0.7)); }
-.asking .rec-face { animation: breathe 1s ease-in-out infinite; opacity: 0.7; }
-.btn.rec-stop { --tap: 84px; border-radius: 50%; background: var(--rec); color: #fff; padding: 22px; box-shadow: 0 6px 0 #a61e1e; }
-
-/* ------------------------------------------------------------------ songbook */
-.songbook-overlay { position: fixed; inset: 0; z-index: 45; background: rgba(43, 33, 64, 0.45); display: grid; place-items: center; padding: 16px; animation: fade-in 0.15s ease-out; }
-.songbook { background: var(--bg); border-radius: 30px; padding: 18px; width: min(900px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-.songbook-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.songbook-head .big-icon { width: 48px; height: 48px; color: var(--ink-soft); }
-.songbook-sub { width: 36px; height: 36px; color: #f59f00; margin: 18px 0 10px; }
-.song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.song-card { position: relative; border: 4px solid transparent; border-radius: 22px; background: #fff; padding: 10px; cursor: pointer; box-shadow: var(--toy-shadow); min-height: 120px; display: grid; place-items: center; }
-.song-card:active { transform: translateY(3px); }
-.song-card.current { border-color: var(--go); }
-.song-card .thumb { width: 100%; height: auto; border-radius: 12px; }
-.song-card.new { border: 4px dashed var(--line); background: rgba(255,255,255,.6); box-shadow: none; color: var(--ink-soft); }
-.new-song { width: 56px; height: 56px; }
-.ex-wrap { width: 100%; display: grid; gap: 6px; justify-items: start; }
-.ex-star { position: absolute; top: -10px; right: -10px; width: 34px; height: 34px; color: #f59f00; background: #fff; border-radius: 50%; padding: 4px; box-shadow: var(--toy-shadow); }
-.ex-name { font-weight: 800; font-size: 15px; color: var(--ink-soft); }
-
-/* ------------------------------------------------------------------ portrait tablets: charms get their own row */
-@media (max-aspect-ratio: 1/1) {
-  .charms { flex: 1 1 100%; order: 5; flex-wrap: nowrap; }
-  .slider.charm { max-width: none; min-width: 0; }
-}
-@media (max-width: 560px) {
-  #top .group.grow { order: 3; flex: 1 1 100%; }
-  #top .group:last-child { margin-left: auto; }
-  .slider.tempo { max-width: none; }
-  .charms { gap: 6px; }
-  .slider.charm { flex: 1 1 0; padding: 0 4px; }
-  .slider.charm .end { display: none; }
-  .slider.charm .track { margin: 0 22px; }
-  #panel { gap: 8px; padding: 8px; }
-  .sound { width: 54px; height: 54px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; }
+  .sparks { display: none; }
+  .cell.now.on, .btn.play.beat, .tick.now { transform: none !important; }
 }
