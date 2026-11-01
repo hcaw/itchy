@@ -225,6 +225,31 @@ export class Engine {
     this.voice(layer, { r: row, vel, len: 2 }, t, stepDuration(this.getProject().tempo));
   }
 
+  /** Little interface sounds, so no action is ever silent: pop (rub out), tick, whoosh, bonk. */
+  uiSound(kind = 'pop') {
+    this.ensure();
+    const ctx = this.ctx, t = ctx.currentTime + 0.005;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const shapes = {
+      pop: [620, 260, 0.08, 0.16, 'sine'],
+      tick: [1400, 1100, 0.03, 0.06, 'triangle'],
+      whoosh: [300, 900, 0.25, 0.1, 'triangle'],
+      bonk: [220, 140, 0.18, 0.18, 'square'],
+      add: [520, 1040, 0.12, 0.12, 'sine'],
+    };
+    const [f1, f2, len, vol, type] = shapes[kind] || shapes.pop;
+    o.type = type;
+    o.frequency.setValueAtTime(f1, t);
+    o.frequency.exponentialRampToValueAtTime(f2, t + len);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g).connect(this.master);
+    o.start(t);
+    o.stop(t + len + 0.02);
+  }
+
   /** Visual events whose sound is now reaching the speakers. */
   drainEvents() {
     if (!this.ctx || !this.events.length) return [];

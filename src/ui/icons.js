@@ -1,0 +1,52 @@
+// Hand-drawn style icons as inline SVG (original artwork). They inherit currentColor.
+
+const svg = (body, vb = '0 0 48 48') =>
+  `<svg viewBox="${vb}" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+
+export const ICONS = {
+  play: svg('<path d="M16 10 L38 24 L16 38 Z" fill="currentColor"/>'),
+  stop: svg('<rect x="13" y="13" width="22" height="22" rx="4" fill="currentColor"/>'),
+  undo: svg('<path d="M14 20 H30 a9 9 0 0 1 0 18 H22"/><path d="M20 12 L12 20 L20 28"/>'),
+  redo: svg('<path d="M34 20 H18 a9 9 0 0 0 0 18 H26"/><path d="M28 12 L36 20 L28 28"/>'),
+  book: svg('<path d="M8 10 C14 8 20 8 24 12 C28 8 34 8 40 10 V38 C34 36 28 36 24 40 C20 36 14 36 8 38 Z"/><path d="M24 12 V40"/>'),
+  plus: svg('<path d="M24 10 V38 M10 24 H38"/>'),
+  close: svg('<path d="M13 13 L35 35 M35 13 L13 35"/>'),
+  dice: svg('<rect x="8" y="8" width="32" height="32" rx="8"/><circle cx="17" cy="17" r="3" fill="currentColor"/><circle cx="31" cy="31" r="3" fill="currentColor"/><circle cx="24" cy="24" r="3" fill="currentColor"/><circle cx="31" cy="17" r="3" fill="currentColor"/><circle cx="17" cy="31" r="3" fill="currentColor"/>'),
+  trash: svg('<path d="M10 14 H38 M18 14 V9 H30 V14 M14 14 L16 40 H32 L34 14"/><path d="M21 21 V33 M27 21 V33"/>'),
+  eraser: svg('<path d="M8 32 L26 12 L40 26 L26 40 H14 Z"/><path d="M18 22 L32 36 M26 40 H40"/>'),
+  mic: svg('<rect x="17" y="6" width="14" height="24" rx="7" fill="currentColor"/><path d="M11 22 a13 13 0 0 0 26 0 M24 35 V42 M17 42 H31"/>'),
+  micOff: svg('<rect x="17" y="6" width="14" height="24" rx="7"/><path d="M11 22 a13 13 0 0 0 26 0 M24 35 V42 M17 42 H31 M8 8 L40 40"/>'),
+  speaker: svg('<path d="M8 19 H15 L25 10 V38 L15 29 H8 Z" fill="currentColor"/><path d="M31 18 a8 8 0 0 1 0 12 M35 13 a14 14 0 0 1 0 22"/>'),
+  sleep: svg('<path d="M8 19 H15 L25 10 V38 L15 29 H8 Z" fill="currentColor"/><path d="M31 18 L41 30 M41 18 L31 30"/>'),
+  turtle: svg('<path d="M10 30 C10 18 18 14 24 14 C30 14 38 18 38 30 Z" fill="currentColor" stroke-width="3"/><path d="M38 28 C42 28 44 24 44 22 C44 20 41 20 39 22 M14 30 L12 36 M34 30 L36 36 M6 30 H42"/>'),
+  rabbit: svg('<ellipse cx="22" cy="30" rx="12" ry="9" fill="currentColor"/><circle cx="34" cy="24" r="6" fill="currentColor"/><path d="M33 18 C31 10 32 6 34 6 C36 6 37 12 36 18 M37 19 C39 12 41 10 42 11 C43 13 41 17 39 20"/><path d="M10 30 a3 3 0 1 0 0.1 0"/>'),
+  echo: svg('<circle cx="12" cy="24" r="4" fill="currentColor"/><path d="M20 16 a11 11 0 0 1 0 16 M27 11 a18 18 0 0 1 0 26 M34 6 a25 25 0 0 1 0 36"/>'),
+  space: svg('<path d="M6 40 L18 16 L26 28 L32 20 L42 40 Z"/><path d="M34 8 l1.5 3.5 3.5 1.5 -3.5 1.5 -1.5 3.5 -1.5 -3.5 -3.5 -1.5 3.5 -1.5 Z" fill="currentColor" stroke-width="1.5"/><circle cx="12" cy="9" r="1.8" fill="currentColor"/>'),
+  moon: svg('<path d="M30 8 a16 16 0 1 0 10 26 a13 13 0 0 1 -10 -26 Z" fill="currentColor"/>'),
+  sun: svg('<circle cx="24" cy="24" r="8" fill="currentColor"/><path d="M24 5 V10 M24 38 V43 M5 24 H10 M38 24 H43 M10.5 10.5 L14 14 M34 34 L37.5 37.5 M10.5 37.5 L14 34 M34 14 L37.5 10.5"/>'),
+  hand: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 44 C12 38 8 32 8 28 C8 25 11 24 13 26 L17 30 V10 C17 7 21 7 21 10 V22 V8 C21 5 25 5 25 8 V22 V10 C25 7 29 7 29 10 V23 V13 C29 10 33 10 33 13 V30 C33 38 30 42 28 44 Z" fill="#fff" stroke="#333" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+  star: svg('<path d="M24 6 L29 18 L42 19 L32 28 L35 41 L24 34 L13 41 L16 28 L6 19 L19 18 Z" fill="currentColor" stroke-width="2"/>'),
+  check: svg('<path d="M10 25 L20 35 L38 13"/>'),
+  sad: svg('<circle cx="24" cy="24" r="18"/><circle cx="17" cy="20" r="2.5" fill="currentColor"/><circle cx="31" cy="20" r="2.5" fill="currentColor"/><path d="M16 34 q8 -7 16 0"/>'),
+};
+
+// Kit pieces, bottom row first: kick, snare, clap, hat.
+export const KIT_ICONS = [
+  svg('<ellipse cx="24" cy="24" rx="17" ry="17" fill="currentColor" opacity=".25"/><circle cx="24" cy="24" r="17"/><circle cx="24" cy="24" r="5" fill="currentColor"/>'),
+  svg('<ellipse cx="24" cy="16" rx="16" ry="6"/><path d="M8 16 V32 C8 36 40 36 40 32 V16"/><path d="M12 22 L20 32 L28 22 L36 32"/>'),
+  svg('<path d="M14 40 L10 22 C9 18 14 17 15 21 L17 28 L15 12 C15 9 19 9 19 12 L21 26 L21 9 C21 6 25 6 25 9 L25 26 L27 12 C27 9 31 9 31 12 L29 32 C28 37 25 40 20 40 Z" fill="currentColor" opacity=".3"/><path d="M36 10 L40 6 M38 18 L44 17 M34 4 L35 0"/>', '0 0 48 48'),
+  svg('<path d="M6 18 C14 12 34 12 42 18 C34 22 14 22 6 18 Z" fill="currentColor" opacity=".3"/><path d="M6 18 C14 12 34 12 42 18 C34 22 14 22 6 18 Z M24 20 V42 M18 42 H30"/>'),
+];
+
+// Mood faces: shape and expression carry the meaning, not just colour.
+const face = (eyes, mouth, extra = '') =>
+  svg(`<circle cx="24" cy="24" r="19" fill="currentColor" opacity=".22"/><circle cx="24" cy="24" r="19"/>${eyes}${mouth}${extra}`);
+const dotEyes = '<circle cx="17" cy="20" r="2.6" fill="currentColor"/><circle cx="31" cy="20" r="2.6" fill="currentColor"/>';
+export const MOOD_ICONS = {
+  happy: face(dotEyes, '<path d="M15 28 q9 9 18 0"/>'),
+  sad: face('<path d="M14 21 q3 2 6 0 M28 21 q3 2 6 0"/>', '<path d="M18 32 q6 -3 12 0"/>'),
+  sunny: face(dotEyes, '<path d="M14 27 q10 14 20 0 Z" fill="currentColor"/>', '<path d="M24 1 V4 M24 44 V47 M1 24 H4 M44 24 H47"/>'),
+  bluesy: face('<path d="M11 18 H37 M12 18 q0 7 6 7 q6 0 6 -7 M24 18 q0 7 6 7 q6 0 6 -7" fill="currentColor"/>', '<path d="M18 33 q7 3 13 -2"/>'),
+  mystery: face('<circle cx="19" cy="20" r="2.6" fill="currentColor"/><circle cx="33" cy="20" r="2.6" fill="currentColor"/>', '<path d="M18 31 q3 -3 6 0 q3 3 6 0"/>'),
+  spooky: svg('<path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z" fill="currentColor" opacity=".22"/><path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z"/><ellipse cx="18" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="30" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="24" cy="31" rx="3" ry="3.5"/>'),
+};
