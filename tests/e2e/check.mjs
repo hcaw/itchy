@@ -12,7 +12,7 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
 
-const { chromium } = createRequire(import.meta.url)('playwright');
+const { chromium, webkit } = createRequire(import.meta.url)('playwright');
 const OUT = fileURLToPath(new URL('../../test-output/', import.meta.url));
 mkdirSync(OUT, { recursive: true });
 const PORT = 5179;
@@ -104,6 +104,14 @@ function input(page, touch) {
   };
 }
 
+/** Row labels whose icon spills out of the button (it ends up hidden under the first cell). */
+function spilledRowIcons(page) {
+  return page.evaluate(() => [...document.querySelectorAll('.row-head')].filter((hd) => {
+    const r = hd.getBoundingClientRect(), p = hd.querySelector('.pip').getBoundingClientRect();
+    return p.left < r.left - 0.5 || p.right > r.right + 0.5 || p.top < r.top - 0.5 || p.bottom > r.bottom + 0.5;
+  }).map((hd) => hd.title));
+}
+
 /** Do an action; it must change the project, make a sound, and undo back exactly. */
 async function actionCheck(page, name, act, { changes = true } = {}) {
   const before = await project(page);
@@ -175,6 +183,8 @@ async function interactions(label, { width, height, touch }) {
     await page.keyboard.press('Escape');
   });
   await actionCheck(page, 'select the drum critter', () => io.tap('#rail .card >> nth=0 >> .critter-btn'), { changes: false });
+  const spilled = await spilledRowIcons(page);
+  check(spilled.length === 0, 'drum row icons sit inside their labels', spilled.join(', '));
   await actionCheck(page, 'put a critter to sleep', () => io.tap('#rail .card >> nth=0 >> .mute'));
   await actionCheck(page, 'add a critter', async () => {
     await io.tap('.card.add');
@@ -511,6 +521,28 @@ async function smallScreens() {
   await land.ctx.close();
 }
 
+/** Safari lays out some things differently; check those in WebKit when it is installed. */
+async function safariLayout() {
+  let wk;
+  try { wk = await webkit.launch(); } catch { console.log('\nSafari layout (skipped: WebKit not installed)'); return; }
+  console.log('\nSafari layout (WebKit)');
+  try {
+    const ctx = await wk.newContext({ viewport: { width: 430, height: 800 }, hasTouch: true });
+    const page = await ctx.newPage();
+    await page.goto(URL_);
+    await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
+    for (const [i, what] of [[0, 'drum'], [1, 'tune']]) {
+      await page.locator('#rail .critter-btn').nth(i).tap();
+      await page.waitForTimeout(150);
+      const spilled = await spilledRowIcons(page);
+      check(spilled.length === 0, `phone: ${what} row icons sit inside their labels`, spilled.join(', '));
+    }
+    await page.locator('#rail .critter-btn').nth(0).tap();
+    await page.waitForTimeout(150);
+    await page.locator('.grid-frame').screenshot({ path: `${OUT}/safari-phone-drums.png` });
+  } finally { await wk.close(); }
+}
+
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
@@ -541,6 +573,7 @@ try {
   await delights();
   await smallScreens();
   await examples();
+  await safariLayout();
 } catch (e) {
   failures++;
   console.error('\nCheck crashed:', e);
