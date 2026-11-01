@@ -106,3 +106,7 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   arrives the same way, without new modes.
 - **Automated checks use full Chromium, not the headless shell** — the shell has no media capture, so the fake
   microphone can't work there. (With no microphone the app shows a friendly message, which was checked too.)
+- **The iPhone/iPad silent switch may mute Itchy** — the owner accepted this; an attempted workaround didn't help and
+  was reverted.
+- **The goal lives in `docs/BRIEF.md` and working rules in `CLAUDE.md`** — so work can continue in a new session
+  without the original prompt.

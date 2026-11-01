@@ -3,6 +3,9 @@
 A music-making toy for children aged 6–11 that runs in the browser. Tap the grid and a critter sings. Press play and
 your loop goes round. Add critters, wear charms, roll the dice, record your own voice. No reading needed.
 
+The goal, audience, design principles and constraints are in [`docs/BRIEF.md`](docs/BRIEF.md). How Itchy meets them,
+and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
+
 ## Run it
 
 ```sh
