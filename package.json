@@ -1,0 +1,13 @@
+{
+  "name": "itchy",
+  "version": "0.1.0",
+  "description": "A music-making toy for children, in the browser.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node tests/e2e/check.mjs"
+  },
+  "license": "MIT"
+}
