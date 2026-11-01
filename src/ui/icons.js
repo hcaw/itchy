@@ -11,7 +11,6 @@ export const ICONS = {
   book: svg('<path d="M8 10 C14 8 20 8 24 12 C28 8 34 8 40 10 V38 C34 36 28 36 24 40 C20 36 14 36 8 38 Z"/><path d="M24 12 V40"/>'),
   plus: svg('<path d="M24 10 V38 M10 24 H38"/>'),
   close: svg('<path d="M13 13 L35 35 M35 13 L13 35"/>'),
-  dice: svg('<rect x="8" y="8" width="32" height="32" rx="8"/><circle cx="17" cy="17" r="3" fill="currentColor"/><circle cx="31" cy="31" r="3" fill="currentColor"/><circle cx="24" cy="24" r="3" fill="currentColor"/><circle cx="31" cy="17" r="3" fill="currentColor"/><circle cx="17" cy="31" r="3" fill="currentColor"/>'),
   trash: svg('<path d="M10 14 H38 M18 14 V9 H30 V14 M14 14 L16 40 H32 L34 14"/><path d="M21 21 V33 M27 21 V33"/>'),
   eraser: svg('<path d="M8 32 L26 12 L40 26 L26 40 H14 Z"/><path d="M18 22 L32 36 M26 40 H40"/>'),
   mic: svg('<rect x="17" y="6" width="14" height="24" rx="7" fill="currentColor"/><path d="M11 22 a13 13 0 0 0 26 0 M24 35 V42 M17 42 H31"/>'),
@@ -50,3 +49,11 @@ export const MOOD_ICONS = {
   mystery: face('<circle cx="19" cy="20" r="2.6" fill="currentColor"/><circle cx="33" cy="20" r="2.6" fill="currentColor"/>', '<path d="M18 31 q3 -3 6 0 q3 3 6 0"/>'),
   spooky: svg('<path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z" fill="currentColor" opacity=".22"/><path d="M8 42 V22 a16 16 0 0 1 32 0 V42 l-5 -4 -5 4 -6 -4 -6 4 -5 -4 Z"/><ellipse cx="18" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="30" cy="21" rx="3" ry="4.5" fill="currentColor"/><ellipse cx="24" cy="31" rx="3" ry="3.5"/>'),
 };
+
+// A die showing 1–6 pips; the dice button lands on a different face after each roll.
+const PIPS = { 1: [[24, 24]], 2: [[17, 17], [31, 31]], 3: [[16, 16], [24, 24], [32, 32]], 4: [[17, 17], [31, 17], [17, 31], [31, 31]],
+  5: [[16, 16], [32, 16], [24, 24], [16, 32], [32, 32]], 6: [[17, 15], [31, 15], [17, 24], [31, 24], [17, 33], [31, 33]] };
+export function diceFace(n) {
+  const pips = (PIPS[n] || PIPS[5]).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="currentColor" stroke="none"/>`).join('');
+  return svg(`<rect x="7" y="7" width="34" height="34" rx="9" fill="currentColor" fill-opacity=".14"/><rect x="7" y="7" width="34" height="34" rx="9"/>${pips}`);
+}

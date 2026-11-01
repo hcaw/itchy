@@ -107,22 +107,36 @@ export class Rail {
     svg.classList.add('sing');
   }
 
-  /** Mini-map of the layer's notes, with the playhead. */
+  /** Mini-map of the layer's notes, with the playhead. Drawn at the screen's pixel density. */
   drawMap(layer, step) {
     const c = this.cards.get(layer.id);
     if (!c) return;
     const cv = c.map, g = cv.getContext('2d');
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const cssW = cv.clientWidth || 96, cssH = cv.clientHeight || 28;
+    if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+      cv.width = Math.round(cssW * dpr);
+      cv.height = Math.round(cssH * dpr);
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const rows = rowsForSound(layer.sound);
-    const w = cv.width, hgt = cv.height;
-    g.clearRect(0, 0, w, hgt);
+    const pad = 3, w = cssW - pad * 2, hgt = cssH - pad * 2;
+    g.clearRect(0, 0, cssW, cssH);
     const cw = w / layer.steps, rh = hgt / rows;
     if (step >= 0) {
-      g.fillStyle = 'rgba(0,0,0,0.12)';
-      g.fillRect(step * cw, 0, cw, hgt);
+      g.fillStyle = 'rgba(42, 35, 64, 0.10)';
+      roundRect(g, pad + step * cw, 1, cw, cssH - 2, 2);
     }
     for (const n of layer.notes) {
-      g.fillStyle = layer.muted ? '#bbb' : rowColor(layer.sound, n.r);
-      g.fillRect(n.s * cw + 0.5, hgt - (n.r + 1) * rh + 0.5, Math.max(1, cw * (n.len || 1) - 1), Math.max(1, rh - 1));
+      g.fillStyle = layer.muted ? '#c9c3d3' : rowColor(layer.sound, n.r);
+      const x = pad + n.s * cw + 0.5, y = pad + hgt - (n.r + 1) * rh + 0.5;
+      roundRect(g, x, y, Math.max(1.5, cw * (n.len || 1) - 1), Math.max(1.5, rh - 1), Math.min(1.5, rh / 2));
     }
   }
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
+  g.fill();
 }

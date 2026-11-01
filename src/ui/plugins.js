@@ -6,7 +6,8 @@ import { moodPlugin, dicePlugin } from './experiments.js';
 import { charmsPlugin } from './charms.js';
 import { micPlugin } from './mic.js';
 import { songbookPlugin } from './songbook.js';
+import { delightPlugin } from './delight.js';
 
 export function plugins(storage) {
-  return [moodPlugin(), dicePlugin(), charmsPlugin(), micPlugin(storage), songbookPlugin(storage)];
+  return [delightPlugin(), moodPlugin(), dicePlugin(), charmsPlugin(), micPlugin(storage), songbookPlugin(storage)];
 }

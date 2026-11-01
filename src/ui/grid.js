@@ -26,6 +26,7 @@ export class Grid {
     this.sig = '';
     this.focus = { s: 0, r: 0 };
     this.playStep = -1;
+    this.ruler = [];
     this.el = h('div', { class: 'grid', role: 'grid', 'aria-label': 'Notes' });
     this.frame = h('div', { class: 'grid-frame' }, this.el);
     root.append(this.frame);
@@ -65,14 +66,25 @@ export class Grid {
     this.el.innerHTML = '';
     this.el.style.setProperty('--steps', layer.steps);
     this.el.style.setProperty('--rows', rows);
+    // Columns: the row heads, then the steps in groups of four with a wider gap between
+    // groups, so the beat is easy to see without shading cells.
+    const cols = ['var(--head)'];
+    const colOf = [];
+    for (let s = 0; s < layer.steps; s++) {
+      if (s > 0 && s % 4 === 0) cols.push('var(--spacer)');
+      cols.push('minmax(0, 1fr)');
+      colOf.push(cols.length);
+    }
+    this.el.style.gridTemplateColumns = cols.join(' ');
     this.el.classList.toggle('beat', kind === 'beat');
     this.cells = Array.from({ length: layer.steps }, () => []);
     for (let r = rows - 1; r >= 0; r--) {
       const color = rowColor(layer.sound, r);
+      const gridRow = rows - r;
       const label = kind === 'beat' ? KIT_PIECES[r].label : `Note ${r + 1}`;
       const head = h('button', {
         class: 'row-head', type: 'button', tabindex: '-1', 'aria-label': `Play ${label}`, title: label,
-        style: { '--rc': color },
+        style: { '--rc': color, gridRow: String(gridRow), gridColumn: '1' },
         html: kind === 'beat' ? KIT_ICONS[r] : `<span class="pip" style="--size:${0.45 + r * 0.06}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
       });
       head.addEventListener('pointerdown', () => { this.engine.preview(this.store.layer, r); head.animate([{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], 200); });
@@ -80,17 +92,41 @@ export class Grid {
       this.el.append(head);
       for (let s = 0; s < layer.steps; s++) {
         const cell = h('button', {
-          class: `cell ${Math.floor(s / 4) % 2 ? 'alt' : ''} ${s % 4 === 0 ? 'beat-start' : ''}`,
+          class: `cell${s % 4 === 0 ? ' beat-start' : ''}`,
           type: 'button', role: 'gridcell', tabindex: '-1', 'aria-pressed': 'false',
-          'aria-label': `${label}, step ${s + 1}`, 'data-s': s, 'data-r': r, style: { '--rc': color },
+          'aria-label': `${label}, step ${s + 1}`, 'data-s': s, 'data-r': r,
+          style: { '--rc': color, gridRow: String(gridRow), gridColumn: String(colOf[s]) },
         });
         this.cells[s][r] = cell;
         this.el.append(cell);
       }
     }
+    // The beat ruler: one dot per step (bigger on each beat) that lights up as the music passes.
+    this.ruler = [];
+    for (let s = 0; s < layer.steps; s++) {
+      const dot = h('span', { class: `tick${s % 4 === 0 ? ' big' : ''}`, 'aria-hidden': 'true', style: { gridRow: String(rows + 1), gridColumn: String(colOf[s]) } });
+      this.ruler.push(dot);
+      this.el.append(dot);
+    }
     this.focus = { s: Math.min(this.focus.s, layer.steps - 1), r: Math.min(this.focus.r, rows - 1) };
     this.cells[this.focus.s][this.focus.r].tabIndex = 0;
     this.playStep = -1;
+  }
+
+  /** A tiny burst of sparks in the note's colour when a note lands. */
+  sparkle(cell) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const fr = this.frame.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+    const burst = h('span', { class: 'sparks', 'aria-hidden': 'true', style: {
+      left: `${cr.left - fr.left + cr.width / 2}px`, top: `${cr.top - fr.top + cr.height / 2}px`,
+      '--rc': getComputedStyle(cell).getPropertyValue('--rc'),
+      '--reach': `${Math.min(34, Math.max(18, cr.width * 0.55))}px`,
+    } });
+    const turn = Math.random() * 60;
+    for (let i = 0; i < 6; i++) burst.append(h('i', { style: { '--a': `${turn + i * 60}deg` } }));
+    burst.addEventListener('animationend', (e) => { if (e.target === burst.lastChild) burst.remove(); });
+    this.frame.append(burst);
+    setTimeout(() => burst.remove(), 900); // in case animations don't run
   }
 
   cellFromPoint(x, y) {
@@ -107,6 +143,7 @@ export class Grid {
     this.store.change(() => setNote(layer, s, r, mode === 'paint'), key);
     if (mode === 'paint') {
       this.engine.preview(layer, r);
+      this.sparkle(cell);
       this.onFirstNote?.();
     } else {
       this.engine.uiSound('pop');
@@ -177,9 +214,13 @@ export class Grid {
   /** Called by the animation loop when a step is heard. */
   showStep(step, hitRows) {
     if (step !== this.playStep) {
-      if (this.playStep >= 0) for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+      if (this.playStep >= 0) {
+        for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+        this.ruler[this.playStep]?.classList.remove('now');
+      }
       this.playStep = step;
       for (const c of this.cells[step] || []) c.classList.add('now');
+      this.ruler[step]?.classList.add('now');
     }
     for (const r of hitRows || []) {
       const c = this.cells[step]?.[r];
@@ -191,7 +232,10 @@ export class Grid {
   }
 
   clearPlayhead() {
-    if (this.playStep >= 0) for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+    if (this.playStep >= 0) {
+      for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
+      this.ruler[this.playStep]?.classList.remove('now');
+    }
     this.playStep = -1;
   }
 

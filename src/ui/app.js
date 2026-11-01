@@ -17,10 +17,10 @@ export class App {
     const $ = (id) => document.getElementById(id);
     this.ctx = { store, engine, app: this };
     // Plugins (effects, recorder, moods, songbook…) add their own pieces to regions.
-    const top = [], panel = [];
-    for (const plug of plugins) plug.init?.(this.ctx, { top, panel });
+    const top = [], panel = [], brand = [];
+    for (const plug of plugins) plug.init?.(this.ctx, { top, panel, brand });
     this.plugins = plugins;
-    this.top = new TopBar($('top'), { store, engine, extras: top, onSongbook: () => this.ctx.openSongbook?.() });
+    this.top = new TopBar($('top'), { store, engine, extras: top, brand, onSongbook: () => this.ctx.openSongbook?.() });
     this.rail = new Rail($('rail'), { store, engine, onRecordNew: (layer) => this.ctx.recordInto?.(layer) });
     this.grid = new Grid($('stage'), { store, engine, onFirstNote: () => this.hideHint() });
     this.panel = new Panel($('panel'), { store, engine, sections: panel });

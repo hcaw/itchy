@@ -10,19 +10,22 @@ import { EXAMPLES } from '../model/examples.js';
 import { rowColor } from './grid.js';
 
 function thumb(preview) {
-  const cv = h('canvas', { class: 'thumb', width: 160, height: 96, 'aria-hidden': 'true' });
+  const W = 160, H = 96, k = 2; // drawn at 2× so it stays sharp on high-density screens
+  const cv = h('canvas', { class: 'thumb', width: W * k, height: H * k, 'aria-hidden': 'true' });
   const g = cv.getContext('2d');
+  g.scale(k, k);
+  const box = (x, y, w, hh, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, hh, r); else g.rect(x, y, w, hh); g.fill(); };
   const lanes = Math.max(1, preview.length);
-  const laneH = 96 / lanes;
+  const laneH = H / lanes;
   preview.forEach((l, i) => {
     const y0 = i * laneH;
-    g.fillStyle = COLORS[l.color] + '22';
-    g.fillRect(0, y0 + 1, 160, laneH - 2);
+    g.fillStyle = COLORS[l.color] + '24';
+    box(0, y0 + 1, W, laneH - 2, 5);
     const rows = l.sound === 'kit' || l.sound === 'tinykit' ? 4 : 8;
-    const cw = 160 / (l.steps || 16), rh = (laneH - 4) / rows;
+    const cw = W / (l.steps || 16), rh = (laneH - 6) / rows;
     for (const [s, r] of l.notes) {
       g.fillStyle = rowColor(l.sound, r);
-      g.fillRect(s * cw + 1, y0 + 2 + (rows - 1 - r) * rh, Math.max(2, cw - 2), Math.max(2, rh - 1));
+      box(s * cw + 1.5, y0 + 3 + (rows - 1 - r) * rh, Math.max(2, cw - 3), Math.max(2, rh - 1), 1.5);
     }
   });
   return cv;
