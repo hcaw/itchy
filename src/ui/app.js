@@ -5,7 +5,7 @@ import { TopBar } from './topbar.js';
 import { Rail } from './rail.js';
 import { Grid } from './grid.js';
 import { Panel } from './panel.js';
-import { h, guardGhostClicks } from './widgets.js';
+import { h, guardGhostClicks, toast } from './widgets.js';
 import { ICONS } from './icons.js';
 
 const HINT_KEY = 'itchy.hinted';
@@ -34,10 +34,24 @@ export class App {
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
 
-    // Unlock audio on the very first touch anywhere, so the first sound is instant.
-    const unlock = () => engine.ensure();
-    document.addEventListener('pointerdown', unlock, { capture: true, once: true });
-    document.addEventListener('keydown', unlock, { capture: true, once: true });
+    // Unlock audio. Different browsers accept different events as the "gesture" that may start
+    // sound (Chrome: touch-down or mouse-down; Safari: finger lifted or click), so listen to
+    // all of them until the sound is actually running.
+    const events = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'click', 'keydown'];
+    let warned = false;
+    const unlock = (e) => {
+      engine.ensure();
+      if (engine.audible) { for (const t of events) document.removeEventListener(t, unlock, true); return; }
+      if (e.type === 'click' && !warned) {
+        // Still silent after a full tap: say so, rather than leave a child wondering.
+        setTimeout(() => {
+          if (engine.audible || warned) return;
+          warned = true;
+          toast(ICONS.speaker, 'Tap again to turn the sound on');
+        }, 600);
+      }
+    };
+    for (const t of events) document.addEventListener(t, unlock, { capture: true, passive: true });
 
     // Save when the page is hidden or closed.
     const flush = () => { store.backup(); store.flush(); };

@@ -353,6 +353,41 @@ async function keyboard() {
   await ctx.close();
 }
 
+/**
+ * Imitate Safari's rule inside Chromium: audio starts suspended and may only start during a
+ * finger-lift or click, never on touch-down. (Chromium alone is more lenient, which once hid
+ * a bug where iPads stayed silent.)
+ */
+async function safariUnlock() {
+  console.log('\nSound unlock with Safari-style rules (touch)');
+  const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });
+  await ctx.addInitScript(() => {
+    const allowed = new Set(['touchend', 'click', 'keydown', 'mouseup', 'pointerup']);
+    let current = null;
+    for (const t of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup', 'click', 'keydown']) {
+      window.addEventListener(t, () => { current = t; setTimeout(() => { current = null; }); }, true);
+    }
+    const AC = window.AudioContext;
+    const resume = AC.prototype.resume;
+    window.AudioContext = class extends AC {
+      constructor(...a) { super(...a); AC.prototype.suspend.call(this); }
+      resume() { return allowed.has(current) ? resume.call(this) : Promise.resolve(); }
+    };
+  });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL_);
+  await page.waitForSelector('.cell');
+  await page.tap('.cell[data-s="2"][data-r="3"]');
+  await page.waitForTimeout(400);
+  check(await page.evaluate(() => itchy.engine.ctx?.state === 'running'), 'the first tap turns the sound on', await page.evaluate(() => itchy.engine.ctx?.state));
+  await page.tap('.btn.play', { force: true });
+  check((await peakLevel(page)) > 0.01, 'music is heard after pressing play');
+  check(errors.length === 0, 'no page errors', errors.join(' | '));
+  await ctx.close();
+}
+
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
@@ -380,6 +415,7 @@ try {
   await recording();
   await persistence();
   await keyboard();
+  await safariUnlock();
   await examples();
 } catch (e) {
   failures++;

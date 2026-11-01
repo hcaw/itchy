@@ -30,18 +30,27 @@ export class Engine {
   /** Create or wake the audio context. Must be called from a user gesture the first time. */
   ensure() {
     if (!this.ctx) {
+      // On iPhone and iPad, web audio obeys the silent switch unless the page says it plays media.
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC({ latencyHint: 'interactive' });
       this.build();
-      // iOS Safari only unlocks after a sound has started inside the gesture.
+    }
+    if (this.ctx.state !== 'running') {
+      // Browsers only let sound start inside a real gesture, and they disagree on which events
+      // count (Safari ignores touch-down; it wants the finger lifted or a click). So this is
+      // called from several events; whichever counts wins. Notes already queued play on resume.
+      this.ctx.resume().catch(() => {});
+      // iOS also wants a sound started inside that gesture.
       const s = this.ctx.createBufferSource();
       s.buffer = this.ctx.createBuffer(1, 1, 22050);
       s.connect(this.ctx.destination);
       s.start(0);
     }
-    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     return this.ctx;
   }
+
+  get audible() { return !!this.ctx && this.ctx.state === 'running'; }
 
   build() {
     const ctx = this.ctx;
