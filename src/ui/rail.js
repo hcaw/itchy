@@ -62,6 +62,12 @@ export class Rail {
         if (r.top < box.top + lead) by = r.top - box.top - lead;
         else if (r.bottom > box.bottom - trail) by = r.bottom - box.bottom + trail;
       }
+      // The last critter brings the add card with it, so the rail never rests on a half-cut '+'.
+      const card = el.closest?.('.card');
+      if (by > 0 && card?.nextElementSibling === this.add && !this.add.hidden) {
+        const end = across ? rail.scrollWidth - rail.clientWidth - rail.scrollLeft : rail.scrollHeight - rail.clientHeight - rail.scrollTop;
+        by = Math.max(by, Math.min(end, across ? r.left - box.left - lead : r.top - box.top - lead)); // but never past the critter itself
+      }
       if (!by) return;
       const smooth = instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
       rail.scrollBy({ [across ? 'left' : 'top']: by, behavior: smooth });

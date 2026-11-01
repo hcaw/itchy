@@ -33,6 +33,14 @@ export const ICONS = {
   sad: svg('<circle cx="24" cy="24" r="18"/><circle cx="17" cy="20" r="2.5" fill="currentColor"/><circle cx="31" cy="20" r="2.5" fill="currentColor"/><path d="M16 34 q8 -7 16 0"/>'),
 };
 
+// The play button's glass orb: a light sweep, plus play and stop in one drawing.
+// The button's .playing class shows one shape and morphs between them (see styles.css).
+// No SVG ids, so any number can sit on a page.
+export const PLAY_ORB = '<span class="orb-glint" aria-hidden="true"></span>'
+  + '<svg class="orb-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">'
+  + '<path class="i-play" d="M20 14.5 L36 24 L20 33.5 Z" fill="currentColor" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/>'
+  + '<rect class="i-stop" x="13" y="13" width="22" height="22" rx="6.5" fill="currentColor"/></svg>';
+
 // Kit pieces, bottom row first: kick, snare, clap, hat. One family: round 4-unit strokes, a light fill.
 export const KIT_ICONS = [
   // kick: a big drum seen from the front

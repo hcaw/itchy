@@ -1,13 +1,13 @@
 // Top bar: play/stop, tempo (turtle ↔ rabbit), mood, undo/redo, songbook.
 
 import { h, iconButton, slider } from './widgets.js';
-import { ICONS } from './icons.js';
+import { ICONS, PLAY_ORB } from './icons.js';
 import { TEMPO_MIN, TEMPO_MAX } from '../model/project.js';
 
 export class TopBar {
   constructor(root, { store, engine, onSongbook, extras = [], brand = [] }) {
     Object.assign(this, { root, store, engine });
-    this.play = iconButton({ icon: ICONS.play, label: 'Play', cls: 'play', onPress: () => this.toggle() });
+    this.play = iconButton({ icon: PLAY_ORB, label: 'Play', cls: 'play', onPress: () => this.toggle() });
     this.tempo = slider({
       label: 'Speed', min: TEMPO_MIN, max: TEMPO_MAX, value: store.project.tempo, cls: 'tempo',
       left: ICONS.turtle, right: ICONS.rabbit, thumb: '<span class="beat-dot"></span>',
@@ -59,7 +59,7 @@ export class TopBar {
 
   render() {
     const playing = this.engine.playing;
-    this.play.innerHTML = playing ? ICONS.stop : ICONS.play;
+    // The orb's drawing stays put; .playing morphs the triangle into the square (styles.css).
     this.play.setAttribute('aria-label', playing ? 'Stop' : 'Play');
     this.play.title = playing ? 'Stop' : 'Play';
     this.play.classList.toggle('playing', playing);
