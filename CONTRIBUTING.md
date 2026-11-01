@@ -101,6 +101,8 @@ isn't used.
 
 - Keep each pull request to one idea.
 - Fill in the template: what a child can do now, and why.
+- Try the preview: Vercel posts a link on the pull request. Use the branch link, not a single commit's, so songs you
+  save there are still there after your next push. Pull requests from forks get a preview once a maintainer approves.
 - Make sure CI is green. If the browser checks fail, the screenshots from the run are attached to it as an artifact.
 
 ## Licence
