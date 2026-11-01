@@ -14,7 +14,8 @@ export class Panel {
     this.clear = iconButton({ icon: ICONS.eraser, label: 'Rub out all notes', cls: 'tool', onPress: () => this.clearNotes() });
     this.remove = iconButton({ icon: ICONS.trash, label: 'Remove this critter', cls: 'tool', onPress: () => this.removeLayer() });
     this.tools = h('div', { class: 'tools edit-tools', role: 'group', 'aria-label': 'Tidy up' }, this.clear, this.remove);
-    root.append(h('div', { class: 'panel-group' }, this.sounds), ...sections, this.tools);
+    // Sounds, then tidying up, then the plugins (dice, charms): the same order on screen and for Tab.
+    root.append(h('div', { class: 'panel-group' }, this.sounds), this.tools, ...sections);
     this.sig = '';
   }
 

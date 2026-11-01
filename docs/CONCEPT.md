@@ -118,7 +118,17 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Beat groups are shown by spacing, not shading** — a wider gap every four steps and a beat ruler under the grid
   that lights with the playhead; the old alternating tints made the grid look muddy.
 - **Small delights, never in the way** — critters blink and follow your finger with their eyes, notes give off a few
-  sparks as they land, sleeping critters breathe out drifting Zs, the dice lands on a new face, and the background
+  sparks as they land, a critter that falls asleep breathes out a few drifting Zs, the dice lands on a new face, and the background
   takes on the colour of the mood. None of them change the song, and all are off when the device asks for reduced motion.
 - **The Itchy critter in the top bar says hello** — tapping it sings three notes in the current mood and changes its
-  colour; a harmless thing to poke that teaches "everything here makes a sound". Shown only on wide screens.
+  colour; a harmless thing to poke that teaches "everything here makes a sound". The wordmark shows on wide screens,
+  the critter at every size. It's left out of the Tab order: it's a toy, not a control anyone needs.
+- **The playhead is a soft bar of light** over the column being heard, plus a beat ruler — clearer than tinting
+  cells, and it works the same for every critter colour.
+- **A sleeping critter's grid has a dashed frame and a sleep badge** — so sleep is never shown by paler colour alone.
+- **Each grid cell's gap is part of its tap area** (a transparent border), so the target is the full column pitch and
+  a painted stroke has no dead strips between cells.
+- **With more than three critters the rail's cards get smaller**, and the chosen or focused card scrolls into view.
+- **Messages float just above the dock and never block taps** — they never cover the buttons they talk about.
+- **The dock reads in one order everywhere**: sounds, tidy-up (rub out, remove), dice, charms; the same for Tab.
+  Charms keep a usable length and move to their own row rather than shrinking.

@@ -3,7 +3,8 @@
 
 import { h, instantPress } from './widgets.js';
 import { ICONS } from './icons.js';
-import { COLORS } from '../model/sounds.js';
+import { COLORS, soundInfo } from '../model/sounds.js';
+import { critterSVG } from './critters.js';
 import { createProject, migrate, makeId, clone } from '../model/project.js';
 import { previewOf } from '../storage/storage.js';
 import { EXAMPLES } from '../model/examples.js';
@@ -66,7 +67,9 @@ export function songbookPlugin(storage) {
       card(h('div', { class: 'new-song', html: ICONS.plus }), 'New song', () => choose(() => createProject()), 'new'),
       ...mine.map((m, i) => {
         const current = m.id === store.project.id;
-        const content = h('div', { class: 'ex-wrap' }, thumb(m.preview), current ? h('span', { class: 'now-badge', html: ICONS.play }) : null);
+        // Pictures, not names: the song's critters sit under its notes.
+        const faces = h('span', { class: 'song-faces', 'aria-hidden': 'true', html: m.preview.slice(0, 6).map((l) => critterSVG(soundInfo(l.sound).shape, COLORS[l.color])).join('') });
+        const content = h('div', { class: 'ex-wrap' }, thumb(m.preview), faces, current ? h('span', { class: 'now-badge', html: ICONS.play }) : null);
         return card(content, current ? `My song ${i + 1} (open now)` : `My song ${i + 1}`, () => choose(() => storage.loadProject(m.id)), current ? 'current' : '');
       }),
     );

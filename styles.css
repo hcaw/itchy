@@ -233,6 +233,7 @@ svg { display: block; }
   border-radius: 50%; background: #fff; border: 3.5px solid var(--sc, #ffa94d); color: var(--sc);
   box-shadow: 0 2px 0 rgba(38, 31, 61, 0.08), 0 6px 14px -4px rgba(38, 31, 61, 0.3);
   display: grid; place-items: center; transition: transform 0.2s var(--spring), box-shadow 0.2s;
+  z-index: 2;
 }
 .slider .thumb svg { width: 22px; height: 22px; }
 @media (hover: hover) { .slider:hover .thumb { transform: scale(1.06); } }
@@ -254,6 +255,7 @@ svg { display: block; }
   padding: 7px 14px 28px 7px;
   margin: -7px -14px 0 -7px;
   scrollbar-width: none;
+  scroll-padding: 30px 8px;
   -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent);
   mask-image: linear-gradient(#000 calc(100% - 26px), transparent);
 }
@@ -274,11 +276,11 @@ svg { display: block; }
 }
 .card.selected {
   background: color-mix(in srgb, var(--c) 9%, #fff);
-  box-shadow: 0 0 0 3px var(--c), var(--e2);
+  box-shadow: 0 0 0 3px var(--edge, var(--c)), var(--e2);
 }
 /* A little notch points from the chosen critter to its grid. */
 .card.selected::after {
-  content: ""; position: absolute; right: -12px; top: 32px; width: 10px; height: 16px; background: var(--c);
+  content: ""; position: absolute; right: -12px; top: 32px; width: 10px; height: 16px; background: var(--edge, var(--c));
   clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 .card .critter-btn {
@@ -302,12 +304,12 @@ svg { display: block; }
 @media (hover: hover) { .card.add:hover { background: rgba(255, 255, 255, 0.85); border-color: #c9bda9; } }
 .card.add:active { transform: scale(0.97); }
 /* Lots of critters: smaller cards so they all fit. */
-#rail.compact { gap: 10px; }
-#rail.compact .card { padding: 6px 6px 7px; gap: 4px; }
-#rail.compact .critter-btn { width: 54px; height: 54px; }
-#rail.compact .minimap { height: 18px; border-radius: 7px; }
-#rail.compact .card.add { min-height: 60px; }
-#rail.compact .card.selected::after { top: 26px; }
+#rail.compact { gap: 8px; }
+#rail.compact .card { padding: 5px 6px 6px; gap: 3px 4px; }
+#rail.compact .critter-btn { width: 48px; height: 48px; }
+#rail.compact .minimap { height: 14px; border-radius: 6px; }
+#rail.compact .card.add { min-height: 52px; }
+#rail.compact .card.selected::after { top: 22px; }
 
 /* ------------------------------------------------------------------ critters */
 
@@ -334,8 +336,8 @@ svg { display: block; }
 .asleep .critter .body > * { fill: color-mix(in srgb, var(--c) 40%, #d5d1dc); stroke: color-mix(in srgb, var(--c) 30%, #8f88a3); }
 .asleep .critter .cheeks { opacity: 0.12; }
 /* A few drifting Zs when a critter falls asleep, then they settle. */
-.critter .zzz text { animation: drift 2.6s ease-in-out 3 backwards; }
-.critter .zzz .z2 { animation-delay: 0.6s; }
+.asleep .critter .zzz text { animation: drift 2.6s ease-in-out 3 backwards; }
+.asleep .critter .zzz .z2 { animation-delay: 0.6s; }
 @keyframes drift { 0% { opacity: 0; transform: translate(-3px, 4px); } 30%, 70% { opacity: 1; } 100% { opacity: 1; transform: translate(0, 0); } }
 .critter.sing { animation: sing 0.3s var(--ease); }
 .critter.sing .mouth { display: none; }
@@ -356,8 +358,8 @@ svg { display: block; }
   min-height: 0;
   background: #fffefb;
   border-radius: var(--r-xl);
-  box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--layer) 60%, #fff), var(--e2);
-  padding: 14px 14px 8px 10px;
+  box-shadow: 0 0 0 2.5px var(--edge, var(--layer)), var(--e2);
+  padding: 14px 14px 6px 10px;
   transition: box-shadow 0.3s var(--ease);
 }
 /* Asleep: a dashed frame and a sleeping badge, not just paler colours. */
@@ -369,7 +371,7 @@ svg { display: block; }
 }
 .grid-frame.asleep .cell.on { opacity: 0.5; }
 .sleep-badge {
-  display: none; position: absolute; top: -16px; right: 20px; width: 36px; height: 36px; padding: 8px; border-radius: 50%;
+  display: none; position: absolute; top: -20px; right: 22px; width: 32px; height: 32px; padding: 7px; border-radius: 50%; pointer-events: none;
   background: #ece6f7; color: #6741d9; box-shadow: 0 0 0 3px #fff, var(--e1); z-index: 3;
 }
 .grid-frame.asleep .sleep-badge { display: block; animation: pop-in 0.3s var(--spring); }
@@ -380,15 +382,17 @@ svg { display: block; }
   --spacer: 5px;
   flex: 1;
   display: grid;
-  grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 14px;
-  gap: var(--gap);
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr)) 16px;
+  /* No gaps between cells: each cell's transparent border is the gap, so a tap anywhere in
+     the column pitch counts (bigger targets, no dead strips when painting a stroke). */
+  gap: 0;
   touch-action: none;
   min-height: 0;
   min-width: 0;
 }
-.grid.beat { max-height: calc(var(--rows) * 116px + 14px); margin: auto 0; height: 100%; }
+.grid.beat { max-height: calc(var(--rows) * 150px + 16px); height: 100%; }
 .row-head {
-  border: 0; border-radius: var(--r-sm); cursor: pointer; padding: 6px; margin-right: 4px;
+  border: calc(var(--gap) / 2) solid transparent; background-clip: padding-box; border-radius: calc(var(--r-sm) + var(--gap) / 2); cursor: pointer; padding: 6px; margin-right: 4px;
   background: color-mix(in oklch, var(--rc) 9%, #fffdfa);
   color: var(--rc);
   display: grid; place-items: center;
@@ -396,23 +400,26 @@ svg { display: block; }
 }
 @media (hover: hover) { .row-head:hover { background: color-mix(in oklch, var(--rc) 18%, #fffdfa); } }
 .row-head svg { width: 100%; height: 100%; max-width: 36px; max-height: 36px; }
+.grid.beat .row-head { color: color-mix(in oklch, var(--rc) 80%, #261f3d); }
 .row-head .pip {
   width: calc(var(--size) * var(--pip)); height: calc(var(--size) * var(--pip)); border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--rc) 65%, #fff), var(--rc) 70%);
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--rc) 70%, #261f3d);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rc) 70%, #261f3d), 0 2px 0 color-mix(in srgb, var(--rc) 70%, #261f3d);
   display: grid; place-items: center; color: #fff; padding: 4px;
 }
 .row-head .pip svg { width: 100%; height: 100%; }
 .cell {
   position: relative;
-  border: 0;
+  border: calc(var(--gap) / 2) solid transparent;
+  background-clip: padding-box;
   padding: 0;
-  border-radius: 10px;
+  border-radius: calc(10px + var(--gap) / 2);
   background: color-mix(in oklch, var(--rc) 13%, #fffdfa);
   cursor: pointer;
   min-width: 0;
   min-height: 0;
-  transition: background-color 0.15s var(--ease), transform 0.18s var(--spring), box-shadow 0.15s;
+  /* Quick, so the playhead never smears across two columns. */
+  transition: background-color 0.06s linear, transform 0.12s var(--ease), box-shadow 0.06s linear;
 }
 /* With a mouse, an empty cell shows the note it would make. */
 @media (hover: hover) {
@@ -453,7 +460,7 @@ svg { display: block; }
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), 0 6px 16px -4px color-mix(in srgb, var(--rc) 70%, transparent);
 }
 /* Long notes stay one bar while they play. */
-.cell.now.on.held, .cell.now.on.held-end { transform: none; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16); }
+.cell.now.on.held, .cell.now.on.held-end { transform: none; filter: none; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16); }
 .cell.bump { animation: bump 0.22s var(--ease); }
 .cell.hit::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -464,7 +471,7 @@ svg { display: block; }
 .cell:focus-visible { outline-offset: 2px; z-index: 3; }
 
 /* Beat ruler under the grid. */
-.tick { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #ddd5c8; transition: transform 0.12s var(--ease), background-color 0.12s; }
+.tick { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #d9d0c2; transition: transform 0.05s linear, background-color 0.05s linear; }
 .tick.big { width: 8px; height: 8px; background: #c4b8a5; }
 .tick.now { background: var(--layer); transform: scale(1.7); }
 
@@ -504,7 +511,6 @@ svg { display: block; }
 /* The sounds column keeps one width, so the charms don't jump when you switch critter. */
 .panel-group { display: flex; align-items: center; min-width: 376px; }
 .tools { display: flex; align-items: center; gap: 8px; }
-.edit-tools { margin-left: auto; }
 /* Sounds sit together in a well; the chosen one pops up out of it. */
 .sounds {
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
@@ -539,6 +545,9 @@ svg { display: block; }
 }
 .popover[data-side="below"]::before { top: -7px; }
 .popover[data-side="above"]::before { bottom: -7px; }
+.popover[data-side="right"]::before, .popover[data-side="left"]::before { left: auto; top: calc(var(--caret-y, 50%) - 9px); }
+.popover[data-side="right"]::before { left: -7px; }
+.popover[data-side="left"]::before { right: -7px; }
 @keyframes pop-in { from { transform: scale(0.8); opacity: 0; } }
 .popover button { position: relative; animation: rise 0.3s var(--spring) backwards; }
 .popover button:nth-child(2) { animation-delay: 0.03s; }
@@ -553,7 +562,7 @@ svg { display: block; }
   transition: transform 0.2s var(--spring), background-color 0.2s;
 }
 @media (hover: hover) { .add-menu .choice:hover { background: var(--well); transform: translateY(-2px); } }
-.add-menu .choice.mic { color: #fff; padding: 22px; background: radial-gradient(120% 90% at 30% 20%, #ff6b81, var(--rec) 60%, #c81e3a); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25); }
+.add-menu .choice.mic { color: var(--rec); padding: 22px; background: var(--surface); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rec) 70%, #fff); }
 .add-menu .choice:active { transform: scale(0.94); }
 
 #toast {
@@ -564,13 +573,14 @@ svg { display: block; }
   transform: translateY(24px); opacity: 0;
   transition: transform 0.4s var(--spring), opacity 0.25s var(--ease), visibility 0.4s;
   visibility: hidden;
+  pointer-events: none; /* a message never stops a tap on the grid underneath */
 }
 #toast.show { transform: none; opacity: 1; visibility: visible; }
 .toast-icon { width: 40px; height: 40px; flex: 0 0 auto; padding: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); }
 
 /* ------------------------------------------------------------------ mood */
-.btn.mood { padding: 9px; color: #f08c00; }
-.mood-happy { color: #e67700 !important; }
+.btn.mood { padding: 9px; color: #d26a00; }
+.mood-happy { color: #d26a00 !important; }
 .mood-sad { color: #4263eb !important; }
 .mood-sunny { color: #e8590c !important; }
 .mood-bluesy { color: #0c8599 !important; }
@@ -589,8 +599,9 @@ svg { display: block; }
 .btn.dice { --tap: 58px; padding: 12px; color: #d9480f; background: linear-gradient(180deg, #fff6cc, #ffe8a3); }
 .btn.dice.rolling svg { animation: roll 0.6s var(--spring); }
 @keyframes roll { 0% { transform: rotate(-270deg) scale(0.5); } 60% { transform: rotate(15deg) scale(1.1); } 100% { transform: none; } }
-.charms { display: flex; gap: 10px; flex: 1 1 0; min-width: 0; }
-.slider.charm { flex: 1 1 0; min-width: 0; height: 58px; padding: 0 12px; }
+.charms { display: flex; gap: 10px; flex: 1 1 560px; min-width: 0; }
+/* Charms never shrink below a usable length; with lots of sounds they move to their own row. */
+.slider.charm { flex: 1 1 0; min-width: 180px; height: 58px; padding: 0 12px; }
 .slider.charm .track { margin: 0 22px; }
 .slider.charm .thumb { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
 .slider.charm .thumb svg { width: 26px; height: 26px; transform: scale(calc(0.8 + var(--amount, 0) * 0.4)) rotate(calc(var(--amount, 0) * 20deg)); transition: transform 0.1s; }
@@ -599,18 +610,17 @@ svg { display: block; }
 .slider.charm-echo { --sc: #0ca678; }
 .slider.charm-space { --sc: #7048e8; }
 .slider.charm-tone .end.left { color: #4c6ef5; transform: none; }
-.slider.charm-tone .end.right { color: #f08c00; transform: none; }
+.slider.charm-tone .end.right { color: #cf6d00; transform: none; }
 .slider.charm-tone .track { background: linear-gradient(90deg, #dbe4ff, #efe8dd 50%, #fff3bf); }
 .slider.charm-tone .fill { background: linear-gradient(90deg, #748ffc, #ffd43b); opacity: 0.85; }
 .slider.bipolar .track::after { content: ""; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 3px; margin-left: -1.5px; background: #d6ccbc; border-radius: 2px; }
 
 /* ------------------------------------------------------------------ recording */
 .sound.record {
-  background: radial-gradient(120% 90% at 30% 20%, #ff6b81, var(--rec) 60%, #c81e3a);
-  color: #fff; padding: 15px;
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), 0 2px 0 #a3162b;
+  background: var(--surface); color: var(--rec); padding: 15px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rec) 70%, #fff), var(--e1);
 }
-.sound.record:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25); }
+@media (hover: hover) { .sound.record:hover { background: #fff0f2; } }
 .sound.record.denied { background: #dee2e6; color: #495057; box-shadow: none; }
 .sound.rec-sound { padding: 3px 7px 15px; }
 .sound .wave { position: absolute; left: 8px; right: 8px; bottom: 4px; height: 12px; width: auto; fill: var(--ink); opacity: 0.55; }
@@ -678,6 +688,8 @@ svg { display: block; }
 .ex-star, .now-badge { position: absolute; top: -9px; right: -9px; width: 34px; height: 34px; border-radius: 50%; box-shadow: var(--e1); }
 .ex-star { color: #f59f00; background: #fff; padding: 6px; }
 .now-badge { color: #fff; background: var(--go); padding: 9px 8px 9px 10px; }
+.song-faces { display: flex; gap: 3px; height: 24px; padding: 0 2px; }
+.song-faces svg { width: 24px; height: 24px; }
 .ex-name { font-weight: 800; font-size: 15px; color: var(--ink-soft); padding: 0 2px; }
 
 /* ------------------------------------------------------------------ responsive */
@@ -687,9 +699,10 @@ svg { display: block; }
   .grid { --gap: 4px; --spacer: 2px; }
   .grid-frame { padding: 12px 8px 6px 6px; }
   .wordmark { display: none; }
-  #top .brand-slot { margin-right: 4px; }
+  #top .brand-slot { margin-inline: 8px 16px; }
   .panel-group { min-width: 0; }
-  .charms { flex: 1 1 100%; order: 5; }
+  .edit-tools { margin-left: auto; }
+  .charms { flex: 1 1 100%; }
 }
 /* Portrait: the critters become a row under the top bar. */
 @media (max-aspect-ratio: 1/1) {
@@ -703,9 +716,9 @@ svg { display: block; }
     -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
     mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
   }
-  #rail .card, #rail.compact .card { flex: 0 0 120px; padding: 8px 8px 9px; }
-  #rail.compact .critter-btn { width: 66px; height: 66px; }
-  #rail.compact .minimap { height: 26px; }
+  #rail .card { flex: 0 0 120px; }
+  #rail.compact .card { flex: 0 0 104px; }
+  #rail.compact .minimap { height: 20px; }
   .card.selected::after, #rail.compact .card.selected::after { right: auto; left: 50%; top: auto; bottom: -12px; margin-left: -8px; width: 16px; height: 10px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 }
 @media (max-width: 720px) {
@@ -721,39 +734,41 @@ svg { display: block; }
 }
 /* Phones: play, mood, Itchy, undo/redo and songs on one row; speed gets its own. */
 @media (max-width: 560px) {
+  /* Row 1: play, speed, mood. Row 2: Itchy, then undo/redo and songs (same order as Tab). */
   #top { gap: 8px; min-height: 0; }
-  #top .group.grow { display: contents; }
-  .btn.mood { order: 1; }
-  #top .brand-slot { order: 2; margin-right: 0; }
-  #top .group.end { order: 3; margin-left: auto; gap: 8px; }
-  .slider.tempo { order: 4; flex: 1 1 100%; max-width: none; }
+  #top .group.grow { flex: 1 1 calc(100% - 80px); gap: 8px; }
+  #top .brand-slot { margin: 0; }
+  #top .group.end { margin-left: auto; gap: 8px; }
+  .slider.tempo { max-width: none; min-width: 0; }
   .brand { padding: 0; }
   .brand-mark { width: 38px; height: 38px; }
   #rail .card, #rail.compact .card { flex: 0 0 104px; padding: 6px 6px 7px; }
   .card .critter-btn, #rail.compact .critter-btn { width: 52px; height: 52px; }
   .card .mute { --tap: 44px; }
-  .charms { gap: 6px; }
-  .slider.charm { padding: 0 6px; height: 54px; }
+  /* Dock row 1: sounds and tidy-up; row 2: dice and charms. */
+  .charms { gap: 6px; flex: 1 1 0; }
+  .slider.charm { padding: 0 6px; height: 54px; min-width: 0; }
   .slider.charm .end { display: none; }
   .slider.charm .track { margin: 0 18px; }
   .slider.charm .thumb { width: 38px; height: 38px; margin: -19px 0 0 -19px; }
   .slider.charm .thumb svg { width: 22px; height: 22px; }
   #panel { gap: 8px; padding: 8px; border-radius: 24px; }
-  .panel-group { flex: 1 1 100%; }
-  .sounds { flex: 1; justify-content: space-between; }
-  .sound { width: 50px; height: 50px; }
-  .sound.record { padding: 13px; }
+  .panel-group { flex: 1 1 calc(100% - 104px); }
+  .edit-tools .btn { --tap: 44px; padding: 11px; }
+  .sound { width: 46px; height: 46px; padding: 5px; }
+  .sound.record { padding: 12px; }
+  .sound.rec-sound { padding: 2px 6px 13px; }
   .grid { --head: 30px; --pip: 22px; --gap: 2px; --spacer: 3px; }
   .row-head { padding: 2px; margin-right: 2px; }
-  .cell { border-radius: 6px; }
+  .cell { border-radius: calc(6px + var(--gap) / 2); }
 }
 
 /* ------------------------------------------------------------------ long notes */
 /* A long note is drawn as one bar: held cells reach back over the gap to join the note. */
 .cell.on.held::after { display: none; }
-.cell.on.held { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: calc(-1 * var(--gap)); }
-.cell.on.held.beat-start { margin-left: calc(-2 * var(--gap) - var(--spacer)); }
-.cell.on.held-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.cell.on.held { border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.cell.on.held.beat-start { margin-left: calc(-1 * var(--spacer)); }
+.cell.on.held-end { border-right-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; }

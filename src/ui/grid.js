@@ -12,6 +12,17 @@ import { isHomeRow } from '../model/scales.js';
 export const TUNE_COLORS = ['#e8590c', '#f08c00', '#f5c400', '#66a80f', '#0ca678', '#1c7ed6', '#5f3dc4', '#c2255c', '#e03131', '#f76707', '#fab005', '#37b24d'];
 export const KIT_COLORS = ['#3b5bdb', '#f76707', '#d6336c', '#2f9e44'];
 
+/**
+ * The colour for a critter's frame and selection ring. Light colours (yellow) get a darker,
+ * richer edge so they still stand out on the cream background; the rest stay soft.
+ */
+export function edgeColor(hex) {
+  const n = parseInt(hex.slice(1), 16), rgb = [n >> 16, (n >> 8) & 255, n & 255];
+  const lin = rgb.map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  const lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  return lum > 0.5 ? `color-mix(in oklch, ${hex} 72%, #5c3d00)` : `color-mix(in srgb, ${hex} 70%, #fff)`;
+}
+
 export function rowColor(sound, r) {
   return soundKind(sound) === 'beat' ? KIT_COLORS[r % 4] : TUNE_COLORS[r % TUNE_COLORS.length];
 }
@@ -36,6 +47,8 @@ export class Grid {
     root.append(this.frame);
     this.bindPointer();
     this.bindKeys();
+    // Keep the playhead bar on its column when the window changes size mid-song.
+    new ResizeObserver(() => { if (this.playStep >= 0) this.placePlayhead(this.playStep); }).observe(this.el);
   }
 
   /** Rebuild when the layer, its sound kind, length or mood changes; otherwise just refresh. */
@@ -47,6 +60,7 @@ export class Grid {
     if (sig !== this.sig) this.build(layer, rows);
     this.sig = sig;
     this.frame.style.setProperty('--layer', COLORS[layer.color]);
+    this.frame.style.setProperty('--edge', edgeColor(COLORS[layer.color]));
     for (let s = 0; s < layer.steps; s++) {
       for (let r = 0; r < rows; r++) {
         const note = noteAt(layer, s, r);
@@ -244,9 +258,11 @@ export class Grid {
     const ref = col.find((x) => !x.classList.contains('held')) || this.el.querySelector('.cell:not(.held)');
     const tick = this.ruler[step];
     const top = col[col.length - 1], bottom = col[0];
+    // Cells have a transparent border (the gap) around a painted padding box; frame the paint.
     const pad = 4;
-    const y = top.offsetTop - pad, hgt = bottom.offsetTop + bottom.offsetHeight - top.offsetTop + pad * 2;
-    const w = ref.offsetWidth + pad * 2;
+    const y = top.offsetTop + top.clientTop - pad;
+    const hgt = bottom.offsetTop + bottom.clientTop + bottom.clientHeight - (top.offsetTop + top.clientTop) + pad * 2;
+    const w = ref.clientWidth + pad * 2;
     const x = tick.offsetLeft + tick.offsetWidth / 2 - w / 2;
     const ph = this.playhead.style;
     ph.width = `${w}px`;

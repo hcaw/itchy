@@ -73,7 +73,7 @@ export function dicePlugin() {
         }
       };
       const dice = iconButton({ icon: diceFace(5), label: 'Surprise me! (make a pattern)', cls: 'dice', onPress: roll });
-      panel.push(h('div', { class: 'tools' }, dice));
+      panel.push(h('div', { class: 'tools dice-tools' }, dice));
     },
   };
 }

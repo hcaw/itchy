@@ -6,13 +6,14 @@ import { critterSVG } from './critters.js';
 import { ICONS } from './icons.js';
 import { COLORS, soundInfo, soundKind, rowsForSound, BEAT_SOUNDS, TUNE_SOUNDS, SOUNDS } from '../model/sounds.js';
 import { createLayer, nextColor, MAX_LAYERS } from '../model/project.js';
-import { rowColor } from './grid.js';
+import { rowColor, edgeColor } from './grid.js';
 
 export class Rail {
   constructor(root, { store, engine, onRecordNew }) {
     Object.assign(this, { root, store, engine, onRecordNew });
     this.cards = new Map();
     this.sig = '';
+    root.addEventListener('focusin', (e) => this.reveal(e.target.closest('.card') || e.target));
   }
 
   render() {
@@ -22,7 +23,9 @@ export class Rail {
     this.sig = sig;
     for (const l of p.layers) {
       const c = this.cards.get(l.id);
-      c.card.classList.toggle('selected', l.id === this.store.view.selected);
+      const chosen = l.id === this.store.view.selected;
+      if (chosen && !c.card.classList.contains('selected')) this.reveal(c.card);
+      c.card.classList.toggle('selected', chosen);
       c.card.classList.toggle('asleep', l.muted);
       c.select.setAttribute('aria-pressed', String(l.id === this.store.view.selected));
       c.mute.setAttribute('aria-pressed', String(l.muted));
@@ -36,6 +39,11 @@ export class Rail {
     this.root.classList.toggle('compact', p.layers.length > 3);
   }
 
+  /** Keep the chosen critter (or the focused control) in view in a scrolling rail. */
+  reveal(el) {
+    requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  }
+
   build() {
     this.root.innerHTML = '';
     this.cards.clear();
@@ -47,7 +55,7 @@ export class Rail {
       select.addEventListener('animationend', (e) => e.target.classList?.remove('sing'));
       const mute = h('button', { class: 'btn mute', type: 'button' });
       const map = h('canvas', { class: 'minimap', width: 96, height: 28, 'aria-hidden': 'true' });
-      const card = h('div', { class: 'card', style: { '--c': COLORS[l.color] } }, select, mute, map);
+      const card = h('div', { class: 'card', style: { '--c': COLORS[l.color], '--edge': edgeColor(COLORS[l.color]) } }, select, mute, map);
       instantPress(select, () => {
         this.engine.ensure();
         const wasSelected = this.store.view.selected === l.id;

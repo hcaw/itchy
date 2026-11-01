@@ -195,6 +195,14 @@ async function interactions(label, { width, height, touch }) {
   check(await page.locator('.cell.now').count() > 0, 'playhead is visible while playing');
   check(await page.locator('.playhead.on').count() === 1, 'playhead bar shows while playing');
   check(await page.locator('.tick.now').count() === 1, 'beat ruler lights the step being heard');
+  {
+    const off = await page.evaluate(() => {
+      const bar = document.querySelector('.playhead').getBoundingClientRect();
+      const tick = document.querySelector('.tick.now').getBoundingClientRect();
+      return Math.abs((bar.left + bar.width / 2) - (tick.left + tick.width / 2));
+    });
+    check(off < 1.5, 'playhead bar sits on the column being heard', `${off.toFixed(1)} px off`);
+  }
   await page.screenshot({ path: `${OUT}/${label}-2-playing.png` });
   await io.tap('.btn.play');
   await page.waitForTimeout(200);
@@ -210,6 +218,11 @@ async function interactions(label, { width, height, touch }) {
   check(await page.locator('.songbook').count() === 0, 'opening an example closes the songbook');
   check((await page.evaluate(() => itchy.store.project.layers.length)) >= 3, 'example song loaded');
   await page.screenshot({ path: `${OUT}/${label}-4-example.png` });
+
+  if (width >= 1024) {
+    const small = await page.evaluate(() => [...document.querySelectorAll('.cell')].map((c) => c.getBoundingClientRect()).filter((r) => r.width < 44 || r.height < 44).length);
+    check(small === 0, 'grid cells are at least 44 px to tap', `${small} smaller`);
+  }
 
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
@@ -385,8 +398,17 @@ async function delights() {
   check((await page.evaluate(() => document.body.dataset.mood)) === 'spooky', 'the room takes on the mood');
   await page.click('.btn.undo');
   check((await project(page)) === before, 'looking around changes nothing in the song');
-  const cells = await page.evaluate(() => [...document.querySelectorAll('.cell')].map((c) => c.getBoundingClientRect()).filter((r) => r.width < 44 || r.height < 44).length);
-  check(cells === 0, 'grid cells are at least 44 px on a laptop');
+  // Messages and badges never get in the way of a tap on the grid.
+  await page.evaluate(async () => { const w = await import('/src/ui/widgets.js'); w.toast('', 'Hello there, this is a message'); });
+  await page.evaluate(() => { const s = itchy.store; s.change((p) => { s.layer.muted = true; }); });
+  await page.waitForTimeout(450);
+  const blocked = await page.evaluate(() => ['#toast', '.sleep-badge'].filter((sel) => {
+    const r = document.querySelector(sel).getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height - 2);
+    return hit && hit.closest(sel);
+  }));
+  check(blocked.length === 0, 'toast and sleep badge let taps through', blocked.join(', '));
+  await page.click('.btn.undo');
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
 

@@ -20,7 +20,7 @@ export const ICONS = {
   turtle: svg('<path d="M10 30 C10 18 18 14 24 14 C30 14 38 18 38 30 Z" fill="currentColor" stroke-width="3"/><path d="M38 28 C42 28 44 24 44 22 C44 20 41 20 39 22 M14 30 L12 36 M34 30 L36 36 M6 30 H42"/>'),
   rabbit: svg('<ellipse cx="22" cy="30" rx="12" ry="9" fill="currentColor"/><circle cx="34" cy="24" r="6" fill="currentColor"/><path d="M33 18 C31 10 32 6 34 6 C36 6 37 12 36 18 M37 19 C39 12 41 10 42 11 C43 13 41 17 39 20"/><path d="M10 30 a3 3 0 1 0 0.1 0"/>'),
   echoSoft: svg('<circle cx="24" cy="24" r="5" fill="currentColor"/>'),
-  spaceFlat: svg('<path d="M6 34 Q24 26 42 34"/>'),
+  spaceFlat: svg('<path d="M12 36 L21 22 L26 29 L30 24 L37 36 Z"/>'),
   echo: svg('<circle cx="12" cy="24" r="4" fill="currentColor"/><path d="M20 16 a11 11 0 0 1 0 16 M27 11 a18 18 0 0 1 0 26 M34 6 a25 25 0 0 1 0 36"/>'),
   space: svg('<path d="M6 40 L18 16 L26 28 L32 20 L42 40 Z"/><path d="M34 8 l1.5 3.5 3.5 1.5 -3.5 1.5 -1.5 3.5 -1.5 -3.5 -3.5 -1.5 3.5 -1.5 Z" fill="currentColor" stroke-width="1.5"/><circle cx="12" cy="9" r="1.8" fill="currentColor"/>'),
   moon: svg('<path d="M30 8 a16 16 0 1 0 10 26 a13 13 0 0 1 -10 -26 Z" fill="currentColor"/>'),
@@ -31,12 +31,16 @@ export const ICONS = {
   sad: svg('<circle cx="24" cy="24" r="18"/><circle cx="17" cy="20" r="2.5" fill="currentColor"/><circle cx="31" cy="20" r="2.5" fill="currentColor"/><path d="M16 34 q8 -7 16 0"/>'),
 };
 
-// Kit pieces, bottom row first: kick, snare, clap, hat.
+// Kit pieces, bottom row first: kick, snare, clap, hat. One family: round 4-unit strokes, a light fill.
 export const KIT_ICONS = [
-  svg('<ellipse cx="24" cy="24" rx="17" ry="17" fill="currentColor" opacity=".25"/><circle cx="24" cy="24" r="17"/><circle cx="24" cy="24" r="5" fill="currentColor"/>'),
-  svg('<ellipse cx="24" cy="16" rx="16" ry="6"/><path d="M8 16 V32 C8 36 40 36 40 32 V16"/><path d="M12 22 L20 32 L28 22 L36 32"/>'),
-  svg('<path d="M14 40 L10 22 C9 18 14 17 15 21 L17 28 L15 12 C15 9 19 9 19 12 L21 26 L21 9 C21 6 25 6 25 9 L25 26 L27 12 C27 9 31 9 31 12 L29 32 C28 37 25 40 20 40 Z" fill="currentColor" opacity=".3"/><path d="M36 10 L40 6 M38 18 L44 17 M34 4 L35 0"/>', '0 0 48 48'),
-  svg('<path d="M6 18 C14 12 34 12 42 18 C34 22 14 22 6 18 Z" fill="currentColor" opacity=".3"/><path d="M6 18 C14 12 34 12 42 18 C34 22 14 22 6 18 Z M24 20 V42 M18 42 H30"/>'),
+  // kick: a big drum seen from the front
+  svg('<circle cx="24" cy="24" r="16" fill="currentColor" fill-opacity=".16"/><circle cx="24" cy="24" r="16"/><circle cx="24" cy="24" r="5" fill="currentColor"/>'),
+  // snare: a short drum with zig-zag lacing
+  svg('<ellipse cx="24" cy="15" rx="16" ry="6" fill="currentColor" fill-opacity=".16"/><ellipse cx="24" cy="15" rx="16" ry="6"/><path d="M8 15 V31 C8 37 40 37 40 31 V15"/><path d="M13 24 L18 31 L24 24 L30 31 L35 24"/>'),
+  // clap: two palms meeting, with a burst
+  svg('<path d="M14 42 C9 37 8 30 10 22 L13 12 C14 9 18 10 17 13 L16 20 L20 9 C21 6 25 7 24 10 L21 21" fill="currentColor" fill-opacity=".16"/><path d="M14 42 C9 37 8 30 10 22 L13 12 C14 9 18 10 17 13 L16 20 L20 9 C21 6 25 7 24 10 L21 21"/><path d="M22 42 C28 40 31 34 30 26 L29 18 C29 15 25 15 25 18 L25 24"/><path d="M35 9 L38 5 M38 16 L43 15 M33 3 L33 1"/>'),
+  // hi-hat: two cymbals on a stand
+  svg('<ellipse cx="24" cy="13" rx="17" ry="4.5" fill="currentColor" fill-opacity=".16"/><ellipse cx="24" cy="13" rx="17" ry="4.5"/><ellipse cx="24" cy="21" rx="17" ry="4.5"/><path d="M24 26 V43 M16 43 H32"/>'),
 ];
 
 // Mood faces: shape and expression carry the meaning, not just colour.

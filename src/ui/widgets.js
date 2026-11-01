@@ -136,14 +136,29 @@ export function popover(anchor, content, { cls = '' } = {}) {
   left = Math.max(8, Math.min(window.innerWidth - pw - 8, left));
   let top = r.bottom + 14;
   let side = 'below';
-  if (top + ph > window.innerHeight - 8) { top = Math.max(8, r.top - ph - 14); side = 'above'; }
+  if (top + ph > window.innerHeight - 8) {
+    top = r.top - ph - 14;
+    side = 'above';
+    if (top < 8) {
+      // No room above or below (a short landscape screen): open beside the button instead.
+      side = r.right + 14 + pw <= window.innerWidth - 8 ? 'right' : 'left';
+      left = side === 'right' ? r.right + 14 : Math.max(8, r.left - pw - 14);
+      top = Math.max(8, Math.min(window.innerHeight - ph - 8, r.top + r.height / 2 - ph / 2));
+    }
+  }
   pop.style.left = `${left}px`;
   pop.style.top = `${top}px`;
   // A little caret points back at the button that opened it.
-  const caret = Math.max(24, Math.min(pw - 24, r.left + r.width / 2 - left));
   pop.dataset.side = side;
-  pop.style.setProperty('--caret', `${caret}px`);
-  pop.style.transformOrigin = `${caret}px ${side === 'below' ? '0' : '100%'}`;
+  if (side === 'below' || side === 'above') {
+    const caret = Math.max(24, Math.min(pw - 24, r.left + r.width / 2 - left));
+    pop.style.setProperty('--caret', `${caret}px`);
+    pop.style.transformOrigin = `${caret}px ${side === 'below' ? '0' : '100%'}`;
+  } else {
+    const caret = Math.max(24, Math.min(ph - 24, r.top + r.height / 2 - top));
+    pop.style.setProperty('--caret-y', `${caret}px`);
+    pop.style.transformOrigin = `${side === 'right' ? '0' : '100%'} ${caret}px`;
+  }
   const away = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
   const key = (e) => { if (e.key === 'Escape') { close(); anchor.focus(); } };
   function close() {

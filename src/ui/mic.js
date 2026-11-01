@@ -100,7 +100,7 @@ export function micPlugin(storage) {
       if (status !== 'ok') {
         denied = true;
         engine.uiSound('bonk');
-        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s OK — try the other sounds!' : 'No microphone found. Try the other sounds!');
+        toast(ICONS.micOff, status === 'denied' ? 'No microphone? That’s OK! Try the other sounds.' : 'No microphone found. Try the other sounds!');
         return;
       }
       denied = false;
