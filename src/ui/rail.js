@@ -32,6 +32,8 @@ export class Rail {
       this.drawMap(l, -1);
     }
     this.add.hidden = p.layers.length >= MAX_LAYERS;
+    // With lots of critters the cards get smaller, so they all fit without scrolling.
+    this.root.classList.toggle('compact', p.layers.length > 3);
   }
 
   build() {

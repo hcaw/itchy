@@ -45,16 +45,25 @@ export function delightPlugin() {
   }
 
   function followEyes() {
-    let x = 0, y = 0, queued = false, idle = null;
+    let x = 0, y = 0, queued = false, idle = null, faces = null, measured = 0;
+    // Measure the faces once (and again after a second or a resize), never on every move,
+    // so painting a stroke on the grid stays smooth on slow machines.
+    const measure = () => {
+      faces = [...document.querySelectorAll('#rail .critter, .brand .critter')].map((svg) => {
+        const r = svg.getBoundingClientRect();
+        return { pupils: svg.querySelector('.pupils'), cx: r.left + r.width / 2, cy: r.top + r.height * 0.4, ok: r.width > 0 };
+      });
+      measured = performance.now();
+    };
     const look = () => {
       queued = false;
-      for (const svg of document.querySelectorAll('#rail .critter, .brand .critter')) {
-        const r = svg.getBoundingClientRect();
-        if (!r.width) continue;
-        const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height * 0.4);
+      if (!faces || performance.now() - measured > 1000) measure();
+      for (const f of faces) {
+        if (!f.ok || !f.pupils) continue;
+        const dx = x - f.cx, dy = y - f.cy;
         const d = Math.hypot(dx, dy) || 1;
         const reach = Math.min(2.4, d / 40);
-        svg.querySelector('.pupils')?.setAttribute('transform', `translate(${(dx / d * reach).toFixed(2)} ${(dy / d * reach).toFixed(2)})`);
+        f.pupils.setAttribute('transform', `translate(${(dx / d * reach).toFixed(2)} ${(dy / d * reach).toFixed(2)})`);
       }
     };
     const rest = () => { for (const p of document.querySelectorAll('.critter .pupils')) p.removeAttribute('transform'); };
@@ -67,12 +76,15 @@ export function delightPlugin() {
     };
     document.addEventListener('pointermove', move, { passive: true });
     document.addEventListener('pointerdown', move, { passive: true });
+    window.addEventListener('resize', () => { faces = null; });
+    document.getElementById('rail')?.addEventListener('scroll', () => { faces = null; }, { passive: true });
   }
 
   return {
     init(ctx, { brand: slot }) {
       brandArt = h('span', { class: 'brand-mark', html: critterSVG('blob', COLORS[0]) });
-      brand = h('button', { class: 'brand', type: 'button', 'aria-label': 'Itchy says hello', title: 'Itchy' },
+      // Out of the Tab order: it's a toy to poke, not a control you need.
+      brand = h('button', { class: 'brand', type: 'button', tabindex: '-1', 'aria-label': 'Itchy says hello', title: 'Itchy' },
         brandArt, h('span', { class: 'wordmark', 'aria-hidden': 'true' }, 'itchy'));
       brand.addEventListener('animationend', (e) => { if (e.target === brand) brand.classList.remove('hop'); });
       instantPress(brand, () => hello(ctx));
@@ -84,7 +96,7 @@ export function delightPlugin() {
     },
     render({ store }) {
       const mood = MOODS[store.project.mood] ? store.project.mood : 'happy';
-      if (document.documentElement.dataset.mood !== mood) document.documentElement.dataset.mood = mood;
+      if (document.body.dataset.mood !== mood) document.body.dataset.mood = mood;
     },
   };
 }

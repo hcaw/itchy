@@ -140,7 +140,23 @@ async function interactions(label, { width, height, touch }) {
     check(n === 6, 'stroke paints six cells', `got ${n}`);
   }
   await actionCheck(page, 'choose a sound', () => io.tap('.sounds .sound:not(.on):not(.record)'));
-  await actionCheck(page, 'roll the dice', () => io.tap('.btn.dice'));
+  {
+    const face = await page.locator('.btn.dice').innerHTML();
+    await actionCheck(page, 'roll the dice', () => io.tap('.btn.dice'));
+    check((await page.locator('.btn.dice').innerHTML()) !== face, 'the dice lands on a new face');
+  }
+  {
+    await io.tap('.cell[data-s="12"][data-r="5"]');
+    check(await page.locator('.sparks').count() > 0, 'a new note gives off sparks');
+    await page.waitForTimeout(1000);
+    check(await page.locator('.sparks').count() === 0, 'sparks tidy themselves away');
+    await page.click('.btn.undo');
+  }
+  if (await page.locator('.brand').isVisible()) {
+    const song = await project(page);
+    await actionCheck(page, 'say hello to Itchy', () => io.tap('.brand'), { changes: false });
+    check((await project(page)) === song, 'hello leaves the song alone');
+  }
   await actionCheck(page, 'pull the Echo charm', async () => {
     const { b } = await center(page, '.charm-echo .track');
     await io.drag({ x: b.x + 2, y: b.y + b.height / 2 }, { x: b.x + b.width * 0.7, y: b.y + b.height / 2 });
@@ -177,10 +193,13 @@ async function interactions(label, { width, height, touch }) {
   await io.tap('.btn.play');
   await page.waitForTimeout(1200);
   check(await page.locator('.cell.now').count() > 0, 'playhead is visible while playing');
+  check(await page.locator('.playhead.on').count() === 1, 'playhead bar shows while playing');
+  check(await page.locator('.tick.now').count() === 1, 'beat ruler lights the step being heard');
   await page.screenshot({ path: `${OUT}/${label}-2-playing.png` });
   await io.tap('.btn.play');
   await page.waitForTimeout(200);
   check(!(await page.evaluate(() => itchy.engine.playing)), 'stop button stops');
+  check(await page.locator('.playhead.on').count() === 0, 'playhead bar goes away when stopped');
 
   await io.tap('.btn.book');
   await page.waitForSelector('.songbook');
@@ -353,6 +372,39 @@ async function keyboard() {
   await ctx.close();
 }
 
+/** The small delights: they come and go, never touch the song, and respect reduced motion. */
+async function delights() {
+  console.log('\nDelights and reduced motion');
+  const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
+  const before = await project(page);
+  await page.mouse.move(40, 700);
+  await page.waitForTimeout(120);
+  const eyes = await page.evaluate(() => [...document.querySelectorAll('#rail .critter .pupils')].filter((p) => p.getAttribute('transform')).length);
+  check(eyes > 0, 'critters look towards the pointer');
+  await page.evaluate(() => { const s = itchy.store; s.change((p) => { p.mood = 'spooky'; }); });
+  check((await page.evaluate(() => document.body.dataset.mood)) === 'spooky', 'the room takes on the mood');
+  await page.click('.btn.undo');
+  check((await project(page)) === before, 'looking around changes nothing in the song');
+  const cells = await page.evaluate(() => [...document.querySelectorAll('.cell')].map((c) => c.getBoundingClientRect()).filter((r) => r.width < 44 || r.height < 44).length);
+  check(cells === 0, 'grid cells are at least 44 px on a laptop');
+  check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
+  await ctx.close();
+
+  const calm = await browser.newContext({ viewport: { width: 1024, height: 768 }, reducedMotion: 'reduce' });
+  const p2 = await calm.newPage();
+  await p2.goto(URL_);
+  await p2.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
+  await p2.locator('.cell[data-s="3"][data-r="3"]').click();
+  check(await p2.locator('.sparks').count() === 0, 'reduced motion: no sparks');
+  await p2.mouse.move(30, 700);
+  await p2.waitForTimeout(120);
+  const moved = await p2.evaluate(() => [...document.querySelectorAll('.critter .pupils')].filter((p) => p.getAttribute('transform')).length);
+  check(moved === 0, 'reduced motion: eyes stay still');
+  const running = await p2.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a.effect?.getTiming().iterations === Infinity).length);
+  check(running === 0, 'reduced motion: nothing animates forever');
+  await calm.close();
+}
+
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
@@ -380,6 +432,7 @@ try {
   await recording();
   await persistence();
   await keyboard();
+  await delights();
   await examples();
 } catch (e) {
   failures++;

@@ -10,25 +10,34 @@ import { EXAMPLES } from '../model/examples.js';
 import { rowColor } from './grid.js';
 
 function thumb(preview) {
-  const W = 160, H = 96, k = 2; // drawn at 2× so it stays sharp on high-density screens
-  const cv = h('canvas', { class: 'thumb', width: W * k, height: H * k, 'aria-hidden': 'true' });
+  const cv = h('canvas', { class: 'thumb', width: 320, height: 192, 'aria-hidden': 'true' });
+  // Draw once it's on screen, at its real size and the screen's pixel density, so it stays sharp.
+  requestAnimationFrame(() => paintThumb(cv, preview));
+  return cv;
+}
+
+function paintThumb(cv, preview) {
+  const W = cv.clientWidth || 160, H = cv.clientHeight || 96;
+  const k = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * k);
+  cv.height = Math.round(H * k);
   const g = cv.getContext('2d');
-  g.scale(k, k);
+  g.setTransform(k, 0, 0, k, 0, 0);
   const box = (x, y, w, hh, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, hh, r); else g.rect(x, y, w, hh); g.fill(); };
   const lanes = Math.max(1, preview.length);
-  const laneH = H / lanes;
+  const gap = 3, laneH = (H - gap * (lanes - 1)) / lanes;
   preview.forEach((l, i) => {
-    const y0 = i * laneH;
-    g.fillStyle = COLORS[l.color] + '24';
-    box(0, y0 + 1, W, laneH - 2, 5);
+    const y0 = i * (laneH + gap);
+    g.fillStyle = COLORS[l.color] + '26';
+    box(0, y0, W, laneH, 6);
     const rows = l.sound === 'kit' || l.sound === 'tinykit' ? 4 : 8;
-    const cw = W / (l.steps || 16), rh = (laneH - 6) / rows;
+    const pad = 4;
+    const cw = (W - pad * 2) / (l.steps || 16), rh = (laneH - pad * 2) / rows;
     for (const [s, r] of l.notes) {
       g.fillStyle = rowColor(l.sound, r);
-      box(s * cw + 1.5, y0 + 3 + (rows - 1 - r) * rh, Math.max(2, cw - 3), Math.max(2, rh - 1), 1.5);
+      box(pad + s * cw + 1, y0 + pad + (rows - 1 - r) * rh, Math.max(2, cw - 2), Math.max(2, rh - 1), 1.5);
     }
   });
-  return cv;
 }
 
 export function songbookPlugin(storage) {
@@ -55,7 +64,11 @@ export function songbookPlugin(storage) {
 
     const mineGrid = h('div', { class: 'song-grid' },
       card(h('div', { class: 'new-song', html: ICONS.plus }), 'New song', () => choose(() => createProject()), 'new'),
-      ...mine.map((m, i) => card(thumb(m.preview), `My song ${i + 1}`, () => choose(() => storage.loadProject(m.id)), m.id === store.project.id ? 'current' : '')),
+      ...mine.map((m, i) => {
+        const current = m.id === store.project.id;
+        const content = h('div', { class: 'ex-wrap' }, thumb(m.preview), current ? h('span', { class: 'now-badge', html: ICONS.play }) : null);
+        return card(content, current ? `My song ${i + 1} (open now)` : `My song ${i + 1}`, () => choose(() => storage.loadProject(m.id)), current ? 'current' : '');
+      }),
     );
     const exGrid = h('div', { class: 'song-grid' },
       ...EXAMPLES.map((ex) => {

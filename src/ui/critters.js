@@ -6,7 +6,7 @@
 const BODIES = {
   drum: `<ellipse cx="50" cy="62" rx="38" ry="28"/><rect x="12" y="36" width="76" height="27" />
          <ellipse cx="50" cy="36" rx="38" ry="14" class="lighter"/>
-         <path d="M18 44 L34 74 L50 46 L66 74 L82 44" class="stripe"/>`,
+         <path d="M16 72 L26 84 L38 74 L50 87 L62 74 L74 84 L84 72" class="stripe"/>`,
   robot: `<rect x="14" y="22" width="72" height="66" rx="18"/>
           <line x1="50" y1="22" x2="50" y2="9" class="stripe dark"/><circle cx="50" cy="8" r="6" class="lighter"/>
           <rect x="24" y="72" width="52" height="7" rx="3.5" class="lighter"/>`,
@@ -22,7 +22,7 @@ const BODIES = {
 
 // A soft highlight on each body, so it looks rounded rather than flat.
 const SHINES = {
-  drum: '<ellipse cx="34" cy="33" rx="14" ry="4.5"/>',
+  drum: '<ellipse cx="36" cy="32" rx="13" ry="4"/>',
   robot: '<path d="M24 34 q2 -8 12 -8" class="shine-line"/>',
   bell: '<path d="M34 24 q4 -10 12 -11" class="shine-line"/>',
   star: '<path d="M44 22 l3 -7" class="shine-line"/>',
@@ -32,7 +32,7 @@ const SHINES = {
 };
 
 // Faces sit in slightly different places on each body.
-const FACE_Y = { drum: 58, robot: 48, bell: 48, star: 52, blob: 50, cloud: 60, mic: 44 };
+const FACE_Y = { drum: 56, robot: 48, bell: 48, star: 52, blob: 50, cloud: 60, mic: 44 };
 
 export function critterSVG(shape = 'blob', color = '#ff6b6b', label = '') {
   const y = FACE_Y[shape] ?? 50;

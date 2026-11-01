@@ -13,7 +13,7 @@ export class Panel {
     this.extraSounds = null; // filled by the recorder (my recorded sounds)
     this.clear = iconButton({ icon: ICONS.eraser, label: 'Rub out all notes', cls: 'tool', onPress: () => this.clearNotes() });
     this.remove = iconButton({ icon: ICONS.trash, label: 'Remove this critter', cls: 'tool', onPress: () => this.removeLayer() });
-    this.tools = h('div', { class: 'tools' }, this.clear, this.remove);
+    this.tools = h('div', { class: 'tools edit-tools', role: 'group', 'aria-label': 'Tidy up' }, this.clear, this.remove);
     root.append(h('div', { class: 'panel-group' }, this.sounds), ...sections, this.tools);
     this.sig = '';
   }

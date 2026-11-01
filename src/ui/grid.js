@@ -28,7 +28,11 @@ export class Grid {
     this.playStep = -1;
     this.ruler = [];
     this.el = h('div', { class: 'grid', role: 'grid', 'aria-label': 'Notes' });
-    this.frame = h('div', { class: 'grid-frame' }, this.el);
+    // The playhead is a soft bar of light over the column being heard.
+    this.playhead = h('div', { class: 'playhead', 'aria-hidden': 'true' });
+    // A sleeping critter's grid says so with a picture, not just paler colours.
+    this.sleepBadge = h('div', { class: 'sleep-badge', 'aria-hidden': 'true', html: ICONS.sleep });
+    this.frame = h('div', { class: 'grid-frame' }, this.el, this.playhead, this.sleepBadge);
     root.append(this.frame);
     this.bindPointer();
     this.bindKeys();
@@ -85,7 +89,7 @@ export class Grid {
       const head = h('button', {
         class: 'row-head', type: 'button', tabindex: '-1', 'aria-label': `Play ${label}`, title: label,
         style: { '--rc': color, gridRow: String(gridRow), gridColumn: '1' },
-        html: kind === 'beat' ? KIT_ICONS[r] : `<span class="pip" style="--size:${0.45 + r * 0.06}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
+        html: kind === 'beat' ? KIT_ICONS[r] : `<span class="pip" style="--size:${(0.66 + r * 0.045).toFixed(3)}">${isHomeRow(r, mood) ? ICONS.star : ''}</span>`,
       });
       head.addEventListener('pointerdown', () => { this.engine.preview(this.store.layer, r); head.animate([{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], 200); });
       head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); this.engine.preview(this.store.layer, r); } });
@@ -214,6 +218,7 @@ export class Grid {
   /** Called by the animation loop when a step is heard. */
   showStep(step, hitRows) {
     if (step !== this.playStep) {
+      this.placePlayhead(step);
       if (this.playStep >= 0) {
         for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
         this.ruler[this.playStep]?.classList.remove('now');
@@ -231,7 +236,27 @@ export class Grid {
     }
   }
 
+  placePlayhead(step) {
+    const col = this.cells[step];
+    if (!col?.length) return;
+    // Columns are all the same width; measure one cell that isn't part of a long note (those
+    // reach back over the gap) and centre the bar on this column's ruler dot.
+    const ref = col.find((x) => !x.classList.contains('held')) || this.el.querySelector('.cell:not(.held)');
+    const tick = this.ruler[step];
+    const top = col[col.length - 1], bottom = col[0];
+    const pad = 4;
+    const y = top.offsetTop - pad, hgt = bottom.offsetTop + bottom.offsetHeight - top.offsetTop + pad * 2;
+    const w = ref.offsetWidth + pad * 2;
+    const x = tick.offsetLeft + tick.offsetWidth / 2 - w / 2;
+    const ph = this.playhead.style;
+    ph.width = `${w}px`;
+    ph.height = `${hgt}px`;
+    ph.transform = `translate(${x}px, ${y}px)`;
+    this.playhead.classList.add('on');
+  }
+
   clearPlayhead() {
+    this.playhead?.classList.remove('on');
     if (this.playStep >= 0) {
       for (const c of this.cells[this.playStep] || []) c.classList.remove('now');
       this.ruler[this.playStep]?.classList.remove('now');

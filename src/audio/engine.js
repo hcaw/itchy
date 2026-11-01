@@ -176,7 +176,9 @@ export class Engine {
     const p = this.getProject();
     const ids = new Set(p.layers.map((l) => l.id));
     for (const [id, c] of this.chains) {
-      if (!ids.has(id)) {
+      // Chains for interface voices (ids starting "__", e.g. the mood arpeggio) are kept, so a
+      // sync straight after them doesn't cut their echo short.
+      if (!ids.has(id) && !id.startsWith('__')) {
         c.input.disconnect();
         c.previewIn.disconnect();
         c.highpass.disconnect();
