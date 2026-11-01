@@ -45,20 +45,20 @@ export function micPlugin(storage) {
       const on = layer.sound === sound;
       const b = h('button', {
         class: `sound rec-sound ${on ? 'on' : ''}`, type: 'button', 'aria-pressed': String(on),
-        'aria-label': `My recorded sound ${i + 1}`, title: 'My sound',
+        'aria-label': `My recorded sound ${i + 1}`, title: 'My sound', 'data-sound': sound,
         html: critterSVG('mic', COLORS[layer.color]) + wave(r.peaks),
       });
       if (on) b.append(h('span', { class: 'tick-badge', html: ICONS.check }));
-      scrollSafePress(b, async () => {
+      scrollSafePress(b, async (e, o) => {
         engine.ensure();
         await ensureBuffers([r.id]);
-        app.panel.chooseSound(sound);
+        app.panel.chooseSound(sound, o?.previewed);
       }, { preview: async () => { engine.ensure(); await ensureBuffers([r.id]); app.panel.previewSound(sound); } });
       out.push(b);
     });
     const micBtn = h('button', {
       class: `sound record ${denied ? 'denied' : ''}`, type: 'button',
-      'aria-label': denied ? 'Microphone is off. Try again?' : 'Record my own sound', title: 'Record my own sound',
+      'aria-label': denied ? 'Microphone is off. Try again?' : 'Record my own sound', title: 'Record my own sound', 'data-sound': 'record',
       html: denied ? ICONS.micOff : ICONS.mic,
     });
     // The mic only ever opens on a clean tap, never at the start of a swipe along the tray.

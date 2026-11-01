@@ -19,6 +19,8 @@ export const ICONS = {
   sleep: svg('<path d="M8 19 H15 L25 10 V38 L15 29 H8 Z" fill="currentColor" fill-opacity=".18"/><path d="M31 18 L41 30 M41 18 L31 30"/>'),
   turtle: svg('<path d="M10 30 C10 18 18 14 24 14 C30 14 38 18 38 30 Z" fill="currentColor" stroke-width="3"/><path d="M38 28 C42 28 44 24 44 22 C44 20 41 20 39 22 M14 30 L12 36 M34 30 L36 36 M6 30 H42"/>'),
   rabbit: svg('<ellipse cx="22" cy="30" rx="12" ry="9" fill="currentColor"/><circle cx="34" cy="24" r="6" fill="currentColor"/><path d="M33 18 C31 10 32 6 34 6 C36 6 37 12 36 18 M37 19 C39 12 41 10 42 11 C43 13 41 17 39 20"/><path d="M10 30 a3 3 0 1 0 0.1 0"/>'),
+  // Half moon, half sun: Dark↔Bright in the middle.
+  halfSun: svg('<circle cx="24" cy="24" r="12"/><path d="M24 12 a12 12 0 0 0 0 24 Z" fill="currentColor"/>'),
   echoSoft: svg('<circle cx="24" cy="24" r="5" fill="currentColor"/>'),
   spaceFlat: svg('<path d="M12 36 L21 22 L26 29 L30 24 L37 36 Z"/>'),
   echo: svg('<circle cx="12" cy="24" r="4" fill="currentColor"/><path d="M20 16 a11 11 0 0 1 0 16 M27 11 a18 18 0 0 1 0 26 M34 6 a25 25 0 0 1 0 36"/>'),

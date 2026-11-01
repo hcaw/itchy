@@ -260,7 +260,7 @@ svg { display: block; }
   -webkit-mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
   mask-image: linear-gradient(transparent var(--f0), #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
 }
-#rail.more-start { --f0: 7px; --fa: 34px; }
+#rail.more-start { --f0: 12px; --fa: 38px; }
 #rail.more-end { --fb: 26px; }
 #rail::-webkit-scrollbar { display: none; }
 .card {
@@ -474,6 +474,7 @@ svg { display: block; }
 /* Long notes stay one bar while they play. */
 .cell.now.on.held, .cell.now.on.held-end { transform: none; filter: none; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
 .cell.bump { animation: bump 0.22s var(--ease); }
+.cell.hit.held::before, .cell.hit.held-end::before { animation: none; } /* long notes: no ring on one segment */
 .cell.hit::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   animation: ring 0.3s var(--ease) forwards;
@@ -548,8 +549,8 @@ svg { display: block; }
 .sound .critter { transition: transform 0.25s var(--spring); }
 .sound:not(.on) .critter { transform: scale(0.88); }
 .sound .tick-badge {
-  position: absolute; right: -5px; top: -5px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: #fff; padding: 4px;
-  box-shadow: 0 0 0 2.5px #fff; animation: pop-in 0.25s var(--spring);
+  position: absolute; right: 2px; top: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--ink); color: #fff; padding: 3.5px;
+  box-shadow: 0 0 0 2px #fff; animation: pop-in 0.25s var(--spring);
 }
 
 /* ------------------------------------------------------------------ popovers, toast */
@@ -589,7 +590,7 @@ svg { display: block; }
 #toast {
   position: fixed; left: 16px; right: 16px; bottom: 28px; margin-inline: auto; width: fit-content; z-index: 60;
   background: rgba(38, 31, 61, 0.96); color: #fff; border-radius: 24px; padding: 8px 22px 8px 8px;
-  display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 800; line-height: 1.25; text-wrap: balance;
+  display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 800; line-height: 1.25; text-wrap: pretty;
   box-shadow: var(--e3);
   transform: translateY(24px); opacity: 0;
   transition: transform 0.4s var(--spring), opacity 0.25s var(--ease), visibility 0.4s;
@@ -644,8 +645,7 @@ svg { display: block; }
 .slider.charm .tone-face svg { width: 100%; height: 100%; transform: none; }
 .tone-face .moon { color: #4c6ef5; opacity: var(--m); transform: scale(calc(0.6 + var(--m) * 0.4)); }
 .tone-face .sun { color: #cf6d00; opacity: var(--s); transform: scale(calc(0.6 + var(--s) * 0.4)) rotate(calc(var(--s) * 45deg)); }
-.tone-face .dot { opacity: calc(1 - var(--m) - var(--s)); }
-.tone-face .dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--sc); }
+.tone-face .dot { opacity: calc(1 - var(--m) - var(--s)); color: #cf6d00; }
 .slider.bipolar .track::after { content: ""; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 3px; margin-left: -1.5px; background: #d6ccbc; border-radius: 2px; }
 
 /* ------------------------------------------------------------------ recording */
@@ -693,11 +693,19 @@ svg { display: block; }
   display: grid; place-items: center; padding: 16px; animation: fade-in 0.2s var(--ease);
 }
 .songbook {
-  background: var(--bg); border-radius: 34px; padding: 20px 22px 26px; width: min(760px, 100%); max-height: 100%; overflow: auto;
+  background: var(--bg); border-radius: 34px; padding: 20px 22px 16px; width: min(760px, 100%); max-height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
   box-shadow: var(--e3); animation: sheet-in 0.35s var(--spring);
-  scrollbar-width: thin;
-  -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
-  mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+}
+/* The songs scroll inside the sheet (with room for card shadows and badges); a fade shows only
+   while there's more below, so the sheet itself stays crisp. */
+.songbook-body {
+  min-height: 0; overflow: auto; scrollbar-width: thin;
+  padding: 12px 12px 14px; margin: -12px -12px 0;
+}
+.songbook-body.more-below {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
 }
 @keyframes sheet-in { from { transform: translateY(24px) scale(0.97); opacity: 0; } }
 .songbook-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
@@ -740,7 +748,7 @@ svg { display: block; }
   .grid-frame { padding: 12px 8px 6px 6px; }
   .wordmark { display: none; }
   #top .brand-slot { margin-right: 4px; }
-  .panel-group { min-width: 0; flex: 0 1 auto; }
+  .panel-group { min-width: 0; flex: 0 1 auto; max-width: calc(100% - 200px); /* room for tidy-up and dice */ }
   .sounds {
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fa), #000 calc(100% - var(--fb)), transparent);
@@ -798,12 +806,12 @@ svg { display: block; }
   .charms { gap: 6px; flex: 1 1 0; }
   .slider.charm { padding: 0 4px; height: 54px; min-width: 0; }
   .slider.charm .end { display: none; }
-  .slider.charm .track { margin: 0 15px; }
+  .slider.charm .track { margin: 0 20px; }
   .slider.charm .thumb { width: 34px; height: 34px; margin: -17px 0 0 -17px; border-width: 3px; }
   .slider.charm .thumb svg, .tone-face { width: 20px; height: 20px; }
   .btn.dice { --tap: 46px; padding: 9px; }
   #panel { gap: 8px; padding: 8px; border-radius: 24px; }
-  .panel-group { flex: 1 1 calc(100% - 100px); }
+  .panel-group { flex: 1 1 calc(100% - 100px); max-width: none; }
   .edit-tools .btn { --tap: 44px; padding: 11px; }
   .sounds { gap: 3px; }
   .sound { width: 45px; height: 45px; padding: 5px; }

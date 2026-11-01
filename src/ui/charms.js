@@ -9,7 +9,7 @@ import { soundKind } from '../model/sounds.js';
 const CHARMS = [
   { key: 'echo', label: 'Echo', min: 0, max: 1, left: ICONS.echoSoft, right: ICONS.echo, thumb: ICONS.echo, color: '#0ca678' },
   { key: 'space', label: 'Space', min: 0, max: 1, left: ICONS.spaceFlat, right: ICONS.space, thumb: ICONS.space, color: '#7048e8' },
-  { key: 'tone', label: 'Dark or bright', min: -1, max: 1, bipolar: true, left: ICONS.moon, right: ICONS.sun, thumb: `<span class="tone-face"><span class="dot"></span><span class="moon">${ICONS.moon}</span><span class="sun">${ICONS.sun}</span></span>`, color: '#f59f00' },
+  { key: 'tone', label: 'Dark or bright', min: -1, max: 1, bipolar: true, left: ICONS.moon, right: ICONS.sun, thumb: `<span class="tone-face"><span class="dot">${ICONS.halfSun}</span><span class="moon">${ICONS.moon}</span><span class="sun">${ICONS.sun}</span></span>`, color: '#f59f00' },
 ];
 
 export function charmsPlugin() {

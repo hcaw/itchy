@@ -89,12 +89,15 @@ export function songbookPlugin(storage) {
     );
     const closeBtn = h('button', { class: 'btn close', type: 'button', 'aria-label': 'Close', title: 'Close', html: ICONS.close });
     instantPress(closeBtn, () => { engine.uiSound('pop'); close(); });
+    // The songs scroll inside a crisp sheet; a soft fade shows only while there's more below.
+    const body = h('div', { class: 'songbook-body' }, mineGrid, h('div', { class: 'songbook-sub', html: ICONS.star }), exGrid);
+    const fade = () => body.classList.toggle('more-below', body.scrollTop + body.clientHeight < body.scrollHeight - 2);
+    body.addEventListener('scroll', fade, { passive: true });
+    requestAnimationFrame(fade);
     const overlay = h('div', { class: 'songbook-overlay', role: 'dialog', 'aria-label': 'My songs', 'aria-modal': 'true' },
       h('div', { class: 'songbook' },
         h('div', { class: 'songbook-head' }, h('span', { class: 'big-icon', html: ICONS.book }), closeBtn),
-        mineGrid,
-        h('div', { class: 'songbook-sub', html: ICONS.star }),
-        exGrid,
+        body,
       ),
     );
     overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) close(); });

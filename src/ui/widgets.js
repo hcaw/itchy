@@ -57,7 +57,7 @@ export function scrollSafePress(el, fn, { preview } = {}) {
     if (!start) return;
     const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8 || Math.abs((start.strip?.scrollLeft ?? 0) - start.scroll) > 2;
     start = null;
-    if (!moved) fn(e);
+    if (!moved) fn(e, { previewed: true }); // its sound already played on touch-down: don't play it twice
   });
   el.addEventListener('pointercancel', () => { start = null; }); // the browser took over to scroll
   el.addEventListener('click', (e) => { if (e.detail === 0) fn(e); });

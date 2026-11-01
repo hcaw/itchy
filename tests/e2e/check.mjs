@@ -375,6 +375,13 @@ async function keyboard() {
   check((await project(page)) !== before, 'arrow keys + Enter place a note');
   await page.keyboard.press('Control+z');
   check((await project(page)) === before, 'Ctrl+Z undoes');
+  {
+    await page.locator('.sounds .sound:not(.on):not(.record)').first().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(80);
+    check(await page.evaluate(() => !!document.activeElement?.closest('.sounds')), 'choosing a sound with Enter keeps keyboard focus on the sounds');
+    await page.keyboard.press('Control+z');
+  }
   await page.locator('.charm-space').focus();
   await page.keyboard.press('ArrowRight');
   check((await page.evaluate(() => itchy.store.layer.fx.space)) > 0, 'charms work with arrow keys');
@@ -470,10 +477,17 @@ async function smallScreens() {
   check(await page.locator('.rec-overlay').count() === 0, 'swiping past the mic never starts recording');
   await page.evaluate(() => { document.querySelector('.sounds').scrollLeft = 0; });
   await page.waitForTimeout(100);
-  await actionCheck(page, 'a clean tap on a sound in the tray still chooses it', async () => {
-    const b = await page.locator('.sounds .sound:not(.on):not(.record)').first().boundingBox();
-    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
-  });
+  {
+    let heard = 0;
+    await actionCheck(page, 'a clean tap on a sound in the tray still chooses it', async () => {
+      const b = await page.locator('.sounds .sound:not(.on):not(.record)').first().boundingBox();
+      const v0 = await sounds(page);
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(80);
+      heard = (await sounds(page)) - v0;
+    });
+    check(heard === 1, 'a finger tap on a sound plays it once, not twice', `${heard} sounds`);
+  }
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
 

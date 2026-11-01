@@ -21,6 +21,7 @@ export class Panel {
     new ResizeObserver(() => this.fit()).observe(root);
     // Keyboard focus in the scrolling tray: bring the tile clear of the edge fades.
     this.sounds.addEventListener('focusin', (e) => {
+      if (!e.target.matches(':focus-visible')) return; // a finger or mouse is already where it wants to be
       const t = this.sounds, r = e.target.getBoundingClientRect(), box = t.getBoundingClientRect(), edge = 26;
       let by = 0;
       if (r.left < box.left + edge) by = r.left - box.left - edge;
@@ -48,11 +49,16 @@ export class Panel {
     const sig = `${layer.id}|${layer.sound}|${layer.color}|${this.extraSig?.() ?? ''}`;
     if (sig !== this.sig) {
       this.sig = sig;
+      // Rebuilding the tray must not drop keyboard focus: remember which tile had it.
+      const focused = this.sounds.contains(document.activeElement) ? document.activeElement.dataset.sound : null;
       this.sounds.innerHTML = '';
       for (const sound of kind === 'beat' ? BEAT_SOUNDS : TUNE_SOUNDS) {
         this.sounds.append(this.soundButton(sound, critterSVG(SOUNDS[sound].shape, COLORS[layer.color]), SOUNDS[sound].label));
       }
       if (kind === 'tune' && this.extraSounds) this.sounds.append(...this.extraSounds(layer));
+      if (focused) this.sounds.querySelector(`[data-sound="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+      // Keep the chosen sound clear of the tray's fading edges.
+      requestAnimationFrame(() => this.showChosen());
     }
     this.root.style.setProperty('--layer', COLORS[layer.color]);
     this.root.style.setProperty('--edge', edgeColor(COLORS[layer.color]));
@@ -64,9 +70,9 @@ export class Panel {
   soundButton(sound, html, label) {
     const layer = this.store.layer;
     const on = layer.sound === sound;
-    const b = h('button', { class: `sound ${on ? 'on' : ''}`, type: 'button', 'aria-pressed': String(on), 'aria-label': label, title: label, html });
+    const b = h('button', { class: `sound ${on ? 'on' : ''}`, type: 'button', 'aria-pressed': String(on), 'aria-label': label, title: label, html, 'data-sound': sound });
     if (on) b.append(h('span', { class: 'tick-badge', html: ICONS.check }));
-    scrollSafePress(b, () => this.chooseSound(sound), { preview: () => this.previewSound(sound) });
+    scrollSafePress(b, (e, o) => this.chooseSound(sound, o?.previewed), { preview: () => this.previewSound(sound) });
     return b;
   }
 
@@ -77,11 +83,20 @@ export class Panel {
     this.engine.preview({ ...layer, sound }, soundKind(sound) === 'beat' ? 0 : 3);
   }
 
-  chooseSound(sound) {
+  chooseSound(sound, alreadyHeard = false) {
     const layer = this.store.layer;
     this.engine.ensure();
     if (layer.sound !== sound) this.store.change(() => { layer.sound = sound; });
-    this.engine.preview(layer, soundKind(sound) === 'beat' ? 0 : 3);
+    if (!alreadyHeard) this.engine.preview(layer, soundKind(sound) === 'beat' ? 0 : 3);
+  }
+
+  /** Scroll the tray (not the page) so the chosen sound sits clear of the edge fades. */
+  showChosen() {
+    const t = this.sounds, on = t.querySelector('.sound.on');
+    if (!on || t.scrollWidth <= t.clientWidth) return;
+    const r = on.getBoundingClientRect(), box = t.getBoundingClientRect(), edge = 30;
+    if (r.left < box.left + edge) t.scrollLeft += r.left - box.left - edge;
+    else if (r.right > box.right - edge) t.scrollLeft += r.right - box.right + edge;
   }
 
   clearNotes() {
