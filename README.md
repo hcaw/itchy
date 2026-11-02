@@ -101,6 +101,11 @@ To put it on your own site, copy `index.html`, `manifest.webmanifest`, `styles.c
 static host. The [Pages workflow](.github/workflows/pages.yml) does exactly this for <https://hcaw.github.io/itchy/>
 on every push to `main`.
 
+Every pull request also gets its own preview on Vercel, so you can try a change before it's merged: Vercel's bot
+posts the link on the pull request. Each preview has its own web address, so songs saved there never touch the ones
+on the live site. [`vercel.json`](vercel.json) turns off Vercel deploys from `main`, and
+[`.vercelignore`](.vercelignore) uploads only the app's files.
+
 Checks:
 
 ```sh
