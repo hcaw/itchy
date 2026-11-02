@@ -5,7 +5,8 @@
 // touch, at laptop and tablet sizes; each action makes a sound and can be undone; playback
 // starts, loops, keeps steady time and stops; recording works with a fake microphone and
 // fails kindly when permission is denied; work survives a reload; example songs play;
-// keyboard controls work.
+// keyboard controls work; in WebKit (when installed, always in CI), Safari layout holds, a tap
+// starts the sound and nothing is logged.
 
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -36,15 +37,21 @@ try {
 async function openPage({ width, height, touch = false, mic = true }) {
   const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: touch, permissions: mic ? ['microphone'] : [] });
   const page = await ctx.newPage();
-  const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
-  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  const errors = watchConsole(page);
   await page.goto(URL_);
   await page.waitForSelector('.cell');
   await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
   await instrument(page);
   await page.waitForTimeout(350); // let the fade-in finish before screenshots
   return { ctx, page, errors };
+}
+
+/** Collect console errors and warnings, and uncaught page errors, for a final check. */
+function watchConsole(page) {
+  const errors = [];
+  page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  return errors;
 }
 
 /** Count every sound the app makes (notes, previews, interface blips). */
@@ -521,14 +528,22 @@ async function smallScreens() {
   await land.ctx.close();
 }
 
-/** Safari lays out some things differently; check those in WebKit when it is installed. */
+/**
+ * Safari lays out some things differently; check those in WebKit when it is installed.
+ * Locally it is skipped if WebKit is missing; in CI (which installs it) a missing WebKit is a failure.
+ */
 async function safariLayout() {
   let wk;
-  try { wk = await webkit.launch(); } catch { console.log('\nSafari layout (skipped: WebKit not installed)'); return; }
+  try { wk = await webkit.launch(); } catch (e) {
+    if (process.env.CI) { console.log('\nSafari layout (WebKit)'); check(false, 'WebKit launches in CI', e.message.split('\n')[0]); return; }
+    console.log('\nSafari layout (skipped: WebKit not installed)');
+    return;
+  }
   console.log('\nSafari layout (WebKit)');
   try {
     const ctx = await wk.newContext({ viewport: { width: 430, height: 800 }, hasTouch: true });
     const page = await ctx.newPage();
+    const errors = watchConsole(page);
     await page.goto(URL_);
     await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
     for (const [i, what] of [[0, 'drum'], [1, 'tune']]) {
@@ -540,6 +555,21 @@ async function safariLayout() {
     await page.locator('#rail .critter-btn').nth(0).tap();
     await page.waitForTimeout(150);
     await page.locator('.grid-frame').screenshot({ path: `${OUT}/safari-phone-drums.png` });
+    // Playwright's Linux WebKit runs a real AudioContext (no sound card needed), so a tap must start
+    // the audio clock and put sound through the mix, as in Chromium.
+    await page.locator('.cell').first().tap();
+    const clock = await page.evaluate(async () => {
+      const c = itchy.engine.ctx, t = c?.currentTime ?? 0;
+      await new Promise((r) => setTimeout(r, 300));
+      return { state: c?.state, advanced: (c?.currentTime ?? 0) - t };
+    });
+    check(clock.state === 'running' && clock.advanced > 0.1, 'a tap starts the audio clock', JSON.stringify(clock));
+    await page.locator('.btn.play').tap({ force: true });
+    await page.waitForTimeout(500);
+    const peak = await peakLevel(page);
+    check(peak > 0.01, 'sound is coming out', `peak level ${peak.toFixed(3)}`);
+    await page.locator('.btn.play').tap({ force: true });
+    check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   } finally { await wk.close(); }
 }
 

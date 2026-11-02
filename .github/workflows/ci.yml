@@ -34,10 +34,11 @@ jobs:
         with:
           node-version-file: .nvmrc
       # Playwright is a test tool only: installed here for CI, never a dependency of Itchy itself.
-      - name: Install Playwright and Chromium
+      # WebKit stands in for Safari and iPad. GitHub sets CI=true, so check.mjs fails if WebKit won't launch.
+      - name: Install Playwright, Chromium and WebKit
         run: |
           npm install --no-save --no-package-lock playwright@1.63.0
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
       - run: npm run check
       - name: Keep the screenshots
         if: always()

@@ -46,6 +46,9 @@ it once, globally or anywhere Node can find it:
 npm install --no-save playwright && npx playwright install chromium
 ```
 
+If WebKit is installed too (`npx playwright install --with-deps webkit`), the checks also run in it as a stand-in for
+Safari and the iPad; otherwise they skip it. CI always installs WebKit and fails if it won't start.
+
 Run both before you open a pull request, and look at the screenshots in `test-output/`: the checks catch broken
 behaviour, but only your eyes catch a layout that has gone wrong. CI runs both on every pull request.
 

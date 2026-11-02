@@ -151,3 +151,6 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Pull requests get a preview on Vercel; the live site stays on GitHub Pages** — you can play with a change before
   it's merged, and each preview has its own web address, so a preview never reads or rewrites the songs saved on the
   live site. It's hosting only: no runtime dependency, no build step, and the toolbar and analytics stay off.
+- **CI runs the browser checks in WebKit as well as Chromium, and fails if WebKit won't start** — many children use
+  iPads, and Safari is the browser most likely to differ; Playwright's Linux WebKit runs real audio, so CI also checks
+  that a tap starts the sound there. Locally WebKit stays optional.
