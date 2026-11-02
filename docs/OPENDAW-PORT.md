@@ -625,8 +625,8 @@ backends; peak ≤ 0.18, so no limiting needed.
   The measured numbers go in the PR and the README.
 - **No console errors or warnings**, everywhere, except the one documented warning in the worklet-error scenario.
 - **WebKit:** `safariLayout()` gains console collection and, in CI, a boot step that asserts `ready` settles and that
-  a tap gives `level() > 0.01` on whichever backend is chosen. If M0 finds that Playwright's Linux WebKit cannot run
-  an `AudioContext` at all, the level assertion is replaced by "context running after a tap" and this is noted; the
+  a tap gives `level() > 0.01` on whichever backend is chosen. M0 found that Playwright's Linux WebKit does run an
+  `AudioContext` with no sound card, so the level assertion stays (M0 already asserts it for the native engine); the
   real-iPad checklist (M5) remains the gate.
 - Extend `check.mjs` for every new interaction (the port adds no gestures).
 
@@ -739,7 +739,7 @@ example songs on both and note differences.
 | 14 | AGPL | Certain / owner's call | §12; sign-off before merge |
 | 15 | Hidden tab: `AnimationFrame` stops, playhead freezes | Certain / none | Tracker drops large jumps |
 | 16 | Phrases sound slightly different from the song (native mix) | Certain / low | Parity check; logged |
-| 17 | WebKit only verifiable in CI and on an iPad, not in this container | Certain / medium | M0 enables WebKit in CI first; iPad checklist |
+| 17 | WebKit only verifiable in CI and on an iPad (this container needs `playwright install-deps webkit` first) | Certain / medium | M0 enables WebKit in CI first; iPad checklist |
 
 **Project-level fallback.** M1 has go/no-go "must" spikes. If one fails, or M3's parity and timing checks can't
 pass, stop and report; the app stays native. The facade keeps the native backend intact at every milestone.
@@ -765,6 +765,18 @@ Steps:
 
 Acceptance: locally unchanged (WebKit skipped); in CI the existing `safariLayout()` checks pass or their failures
 are fixed independently of the port.
+
+Done, with two additions to the plan:
+- **Finding:** Playwright 1.63's Linux WebKit (26.6, build 2359) runs a real `AudioContext` with no sound card or
+  sound server. Tested in this container after `npx playwright install-deps webkit` (on a separate browsers path, so
+  the local `npm run check` still skips WebKit): the context starts `suspended`, `resume()` runs it, `currentTime`
+  advances in real time, `audioWorklet.addModule` works, `OfflineAudioContext` renders, and Itchy's analyser level
+  reaches 1.0 while the drums play. `SharedArrayBuffer` is undefined there (no isolation), as expected. So §10b keeps
+  the `level() > 0.01` assertion for WebKit.
+- **Added:** `safariLayout()` now also asserts, on today's native engine, that a tap starts the audio clock and that
+  playing puts sound through the mix, so CI confirms the finding on GitHub's runner too. And when `CI` is set (GitHub
+  sets it), a WebKit that won't launch is a failure instead of a silent skip; locally it is still skipped.
+- With WebKit available, the whole `npm run check` passed here (300 checks, 0 failures), so no fixes were needed.
 
 ### M1. Groundwork: vendored SDK, isolation, notices, in-memory samples and a boot spike (Itchy still native)
 
@@ -935,7 +947,7 @@ Itchy's source and the reviewers' spikes.
 | 15 | Sound hook counts calls, not output; no latency measure; Maximizer lookahead omitted | **Accepted** | Output-based assertion within 50 ms via a worklet tap; latency probe with budget native + 10 ms including the 5 ms lookahead (confirmed in maximizer `lib.rs:37`). |
 | 16 | Checks force autoplay, so the suspended path is untested | **Accepted** | `--autoplay-policy` flag confirmed in check.mjs:31. Added a no-flag browser: suspended before gesture, ready, first tap and first Play audible, unlock spy. |
 | 17 | Screenshots nondeterministic between backends | **Accepted** | `openApp()` waits only 400 ms (confirmed). `openApp()` awaits `ready` and asserts `kind`; listed as a pipeline change. |
-| 18 | iPad never gates the merge; WebKit CI asserts no sound | **Accepted** | Real-iPad checklist is an M5 merge gate; WebKit CI asserts output (or context running if Linux WebKit has no audio, decided in M0). |
+| 18 | iPad never gates the merge; WebKit CI asserts no sound | **Accepted** | Real-iPad checklist is an M5 merge gate; WebKit CI asserts output (M0 found Linux WebKit runs an `AudioContext`, so the level is asserted). |
 | 19 | Download figures wrong; no budget | **Accepted** | Recomputed from runtime.md §5: 5.2 MB raw, 1.41 MB gz, ≈ 2.7 MB on Pages; budgets under CDP throttling in M4; classroom cost logged. The fixed 15 s boot timeout was replaced by a 10 s `isReady` watchdog, since slow downloads are harmless with the bridge. |
 | 20 | coi reloads devices that can never run openDAW | **Accepted** | `shouldRegister` gated on the same probe (and `?engine=native`); a test keeps the inline and module probes identical. |
 | 21 | Sustained notes outlast their samples | **Accepted** | Range −7..+21 st with key, more with octave, len up to 32. Bass and cloud now loop a steady segment (Nano loop fields exist in 0.0.118 boxes and 9306eaab voice.rs); mirror test for the extreme note; Vaporisateur fallback kept. |
