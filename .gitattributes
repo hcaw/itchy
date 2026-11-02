@@ -2,3 +2,8 @@
 * text=auto eol=lf
 *.png binary
 *.woff2 binary
+*.wasm binary
+# Generated or third-party files: keep them byte for byte (their hashes are checked), out of diffs and language stats.
+vendor/** binary linguist-vendored
+coi-serviceworker.js linguist-vendored
+scripts/opendaw/package-lock.json -diff linguist-generated

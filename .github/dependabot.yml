@@ -1,4 +1,9 @@
 # Itchy has no npm dependencies, so only the GitHub Actions it uses need keeping up to date.
+# scripts/opendaw/package-lock.json only feeds the hand-run vendoring script (npm run vendor:opendaw); nothing in it
+# reaches the browser except through the committed vendor/opendaw/<version>/ bundle. GitHub still scans that lock,
+# so security alerts for it (for example y-websocket's old level* packages) are expected; they are handled at the
+# next deliberate openDAW upgrade. There is deliberately no npm entry here: a lock bump without re-vendoring would
+# no longer match vendor/opendaw/<version>/VERSIONS.json (tests/vendor.test.js fails on that).
 version: 2
 updates:
   - package-ecosystem: github-actions

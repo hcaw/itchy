@@ -1,0 +1,160 @@
+{
+  "sdk": "0.0.180",
+  "repository": "https://github.com/andremichelle/opendaw",
+  "esbuild": "0.25.0",
+  "packages": {
+    "@opendaw/lib-box": {
+      "version": "0.0.102",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/lib-dawproject": {
+      "version": "0.0.85",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/lib-dom": {
+      "version": "0.0.95",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/lib-dsp": {
+      "version": "0.0.100",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/lib-fusion": {
+      "version": "0.0.111",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/lib-jsx": {
+      "version": "0.0.97",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/lib-midi": {
+      "version": "0.0.81",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/lib-runtime": {
+      "version": "0.0.90",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/lib-std": {
+      "version": "0.0.89",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/lib-xml": {
+      "version": "0.0.75",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/nam-wasm": {
+      "version": "1.2.0",
+      "license": "MIT",
+      "gitHead": null
+    },
+    "@opendaw/studio-adapters": {
+      "version": "0.3.12",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/studio-boxes": {
+      "version": "0.0.118",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/studio-core": {
+      "version": "0.2.14",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/studio-core-wasm": {
+      "version": "0.0.25",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    },
+    "@opendaw/studio-enums": {
+      "version": "0.1.10",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "652e6caf759b06e8171f49fb71257884e7cae66e"
+    },
+    "@opendaw/studio-sdk": {
+      "version": "0.0.180",
+      "license": "AGPL-3.0-or-later",
+      "gitHead": "9306eaab693b96c1e3000bd02b4ce59e3ed0b51e"
+    }
+  },
+  "bundled": {
+    "@opendaw/lib-box": "0.0.102 AGPL-3.0-or-later",
+    "@opendaw/lib-dawproject": "0.0.85 AGPL-3.0-or-later",
+    "@opendaw/lib-dom": "0.0.95 AGPL-3.0-or-later",
+    "@opendaw/lib-dsp": "0.0.100 AGPL-3.0-or-later",
+    "@opendaw/lib-fusion": "0.0.111 AGPL-3.0-or-later",
+    "@opendaw/lib-midi": "0.0.81 AGPL-3.0-or-later",
+    "@opendaw/lib-runtime": "0.0.90 AGPL-3.0-or-later",
+    "@opendaw/lib-std": "0.0.89 AGPL-3.0-or-later",
+    "@opendaw/lib-xml": "0.0.75 AGPL-3.0-or-later",
+    "@opendaw/studio-adapters": "0.3.12 AGPL-3.0-or-later",
+    "@opendaw/studio-boxes": "0.0.118 AGPL-3.0-or-later",
+    "@opendaw/studio-core": "0.2.14 AGPL-3.0-or-later",
+    "@opendaw/studio-core-wasm": "0.0.25 AGPL-3.0-or-later",
+    "@opendaw/studio-enums": "0.1.10 AGPL-3.0-or-later",
+    "@opendaw/studio-sdk": "0.0.180 AGPL-3.0-or-later",
+    "dropbox": "10.47.0 MIT",
+    "jszip": "3.10.2 (MIT OR GPL-3.0-or-later)",
+    "lib0": "0.2.119 MIT",
+    "soundfont2": "0.5.0 MIT",
+    "y-protocols": "1.0.7 MIT",
+    "y-websocket": "1.5.4 MIT",
+    "yjs": "13.6.33 MIT",
+    "zod": "4.6.7 MIT"
+  },
+  "files": {
+    "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+    "NOTICE.md": "59ac325d5df6881c4adeba1d89ef777583a22f4aacd52908e02abc35ebdf4e0b",
+    "opendaw.js": "064917f36e554eff84bbafbcd9af9c31f6537c4564e744b21a014a8f3e37bbd6",
+    "wasm-offline-worker.js": "ba5501b043d419e6a3d87fa96b0b5a2c6f598ba1c29d91066893d2d39fc6e3fe",
+    "wasm-processor.js": "f04644ada073d59a429a9ed5c843b44a802b827dfa4e1958f897fce482084caf",
+    "wasm/engine.wasm": "c7ff9abf122e032d6c07ded76b0a83044d480a2d86214352700d956440d4db2c",
+    "wasm/plugins/device_apparat.wasm": "8fdb84e9349d3282f822e9c557a839a916dc6b8dd869bb4e640207af6c77d6ba",
+    "wasm/plugins/device_arpeggio.wasm": "512c00bd174bd1a43c4e24f06031e76abf15ef7232de6c9066c902ebfe605ee1",
+    "wasm/plugins/device_autotune.wasm": "4288e8508e74c857dfa2031a1c29cee26ddf4801abac207e3d7b30a3c2ccca4e",
+    "wasm/plugins/device_compressor.wasm": "c8a1ff710cb771fd46a1c275ccace1a522c33cd534341d7b3254e4d703d97617",
+    "wasm/plugins/device_convolver.wasm": "9e9f545cfcf0c75e08af2fa64d68dcb1bad0329204bbc6d97b08433b3080827f",
+    "wasm/plugins/device_crusher.wasm": "eb2c6d231cb38e0b15cc889d1782bdbb7bca9ed44af3f2d81df8680a4fe0d7fb",
+    "wasm/plugins/device_cubed.wasm": "65664787ca3296b380a627e213503f97680fb729379aa664739dc529451f986b",
+    "wasm/plugins/device_dattorro_reverb.wasm": "cc6badeae230acded4fa77fbc4545dcdcf3ddf793fe4f081adc82fdaafe62e34",
+    "wasm/plugins/device_delay.wasm": "76add71a5e5b54c2c5d23d5a4f8d7abe996fc839b5d8cf957061f50aa2198fd0",
+    "wasm/plugins/device_fold.wasm": "cb23b3b8dd36436c58a9747868bfb18927003a65690101df7d1ac14b9efecfb3",
+    "wasm/plugins/device_gate.wasm": "3c906fccdde1a2d16d22b1ebc0ad4ea53f1a42d3d01d6f6a1accbbc6d8fcb00a",
+    "wasm/plugins/device_korpus.wasm": "6cdfde609a731a66d8ab652036990af42d49520f56ed73ad0c7d330c357fe43b",
+    "wasm/plugins/device_maximizer.wasm": "4be6cce45969c584e6b894850dae95e4b8480422d56bbd75cbbc02263137300a",
+    "wasm/plugins/device_nano.wasm": "c113e2894469281be7bc36a966525d50ac83f9406352e8fb52f88939f9acf61a",
+    "wasm/plugins/device_neon.wasm": "432d069e902ec55c5abbf2b480724e1c41283ab0ec789156fa86d7b3db352a35",
+    "wasm/plugins/device_neural_amp.wasm": "5fda3ef956271a8399c3b40cf7c46f804f35a37d2dadd20323a35e5ecfa60a5f",
+    "wasm/plugins/device_pitch.wasm": "b3368bee2b249fb959c5c3af9604adc13f58dd92b0f40560bb3673f395ac5fc0",
+    "wasm/plugins/device_playfield_sample.wasm": "4fe4d03413c9588a661b4e6255e5ced5a033371462fdde27f5ca97b4f13aae2f",
+    "wasm/plugins/device_revamp.wasm": "cc0bbc3b1dbcbe84cf2a6d55868b838182751f5f5eb40a04d280cb37a6640b6f",
+    "wasm/plugins/device_reverb.wasm": "77b599f36fa147c488bdfecf67289931ab9540f993f8bdf654bc9b127f82101d",
+    "wasm/plugins/device_soundfont.wasm": "1fecf0aa87581d24018e08a2bd28943203ad30c497ecd93d8444f40cecf700d7",
+    "wasm/plugins/device_spielwerk.wasm": "0d70482c974f6effdc34988bd676e38f53ef5ac488c62c9d853e8b925ac067f6",
+    "wasm/plugins/device_stereo_tool.wasm": "0d8878e618afbf89f6d61b96977b48768e45e3c5782a7aa1cfeddd82ed38abd5",
+    "wasm/plugins/device_tidal.wasm": "3745776d2eb50f3910a053e7fee40b55357b8e1b088fbc3db6073ec270e20594",
+    "wasm/plugins/device_tubular.wasm": "2bb9c1a420d02b14d4d19f27f403231c14f7eb4f3ffd789bf03b9311fa3791fa",
+    "wasm/plugins/device_vaporisateur.wasm": "dae506b2c8c69a606dd7817bcd100e25f878b0630a0425d42a0fd30347bc351f",
+    "wasm/plugins/device_velocity.wasm": "332b7aa53ea316d23114f5605af4c3b5301bd510803ba75a84616212f45da88f",
+    "wasm/plugins/device_vocoder.wasm": "7dd6e411ac9298aa4c16fcfa5f6b38804e4c52f00748b3a815d3b853b72b4b86",
+    "wasm/plugins/device_waveshaper.wasm": "76b2b0b3c105b991f05e4f0376aa4bc8132300d36b010758b4cc90c7d6d5ea36",
+    "wasm/plugins/device_wclap.wasm": "6b7bee4b66e5ba5537461f4ac8fea16aa870c69793644fd661a62b17ae400892",
+    "wasm/plugins/device_wclap_instrument.wasm": "eebc35aa0ebcbbb19343c5c03952c86df466a2b8ddc2089c389803f55ae47106",
+    "wasm/plugins/device_wclap_midi.wasm": "7c0fe078bb8f27f93625744cb287d17d78697b5e890938eb4a9c1889c1f623cd",
+    "wasm/plugins/device_werkstatt.wasm": "8e6f6b3e5c85c52a36b571ce71895cc4016d1bb77d16e42026b3b7275a768edd",
+    "wasm/plugins/device_zeitgeist.wasm": "1e9d5c3b5d7116e0430460d98e5a6b37dda9907eb7893143d4058263d88417be",
+    "workers-main.js": "cac5a1505713b7140bd540d41f001e18a5379e2cfe3ff64d7ebe9d26b1008db9"
+  }
+}

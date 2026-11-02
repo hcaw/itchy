@@ -16,7 +16,8 @@
     "start": "node scripts/serve.js",
     "test": "node --test tests/*.test.js",
     "check": "node tests/e2e/check.mjs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "vendor:opendaw": "node scripts/vendor-opendaw.mjs"
   },
   "engines": {
     "node": ">=18"
