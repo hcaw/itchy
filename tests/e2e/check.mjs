@@ -6,10 +6,11 @@
 // starts, loops, keeps steady time and stops; recording works with a fake microphone and
 // fails kindly when permission is denied; work survives a reload; example songs play;
 // keyboard controls work; in WebKit (when installed, always in CI), Safari layout holds, a tap
-// starts the sound and nothing is logged.
+// starts the sound and nothing is logged. The openDAW probe (tests/e2e/opendaw-probe.js) boots the
+// vendored openDAW engine inside Itchy's page and must pass every go/no-go item of the port's M1.
 
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
 
@@ -573,6 +574,39 @@ async function safariLayout() {
   } finally { await wk.close(); }
 }
 
+/**
+ * openDAW port, milestone M1: boot the vendored engine inside Itchy's (cross-origin isolated) page, on Itchy's
+ * AudioContext, through Itchy's in-memory sample manager. Every "must" item is a go/no-go for the port; the
+ * "report" items are printed and saved to test-output/opendaw-probe.json. Itchy itself still plays natively.
+ */
+async function openDawProbe() {
+  console.log('\nopenDAW probe (M1 spike)');
+  {
+    const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
+    const isolated = await page.evaluate(() => window.crossOriginIsolated);
+    check(isolated, 'the page is cross-origin isolated');
+    const { must, report } = await page.evaluate(async () => {
+      const m = await import('/tests/e2e/opendaw-probe.js');
+      return m.runProbe(itchy.engine.ensure());
+    });
+    for (const [what, r] of Object.entries(must)) check(r.ok, `must: ${what}`, r.detail);
+    for (const [what, v] of Object.entries(report)) console.log(`  · ${what}: ${JSON.stringify(v)}`);
+    writeFileSync(`${OUT}/opendaw-probe.json`, JSON.stringify({ must, report }, null, 2));
+    check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
+    await ctx.close();
+  }
+  {
+    // A worklet failure must reach Itchy's handler, which terminates the project, so openDAW doesn't restart it.
+    // openDAW logs the failing event with console.warn first: the one warning allowed here.
+    const { ctx, page, errors } = await openPage({ width: 1024, height: 768 });
+    const r = await page.evaluate(async () => (await import('/tests/e2e/opendaw-probe.js')).runWorkletErrorProbe(itchy.engine.ensure()));
+    check(r.reachedUnload && r.terminated && r.restarts === 0, 'must: a worklet error reaches restart.unload, with no restart', JSON.stringify(r));
+    const others = errors.filter((e) => e !== 'warning: ErrorEvent');
+    check(others.length === 0 && errors.length === 1, 'only openDAW’s one documented warning', errors.join(' | '));
+    await ctx.close();
+  }
+}
+
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
@@ -603,6 +637,7 @@ try {
   await delights();
   await smallScreens();
   await examples();
+  await openDawProbe();
   await safariLayout();
 } catch (e) {
   failures++;
