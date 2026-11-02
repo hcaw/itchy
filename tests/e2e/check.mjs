@@ -13,9 +13,10 @@ import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
 
 const { chromium, webkit } = createRequire(import.meta.url)('playwright');
-const OUT = fileURLToPath(new URL('../../test-output/', import.meta.url));
+// CHECK_OUT and CHECK_PORT let two runs share a machine without clobbering each other.
+const OUT = process.env.CHECK_OUT || fileURLToPath(new URL('../../test-output/', import.meta.url));
 mkdirSync(OUT, { recursive: true });
-const PORT = 5179;
+const PORT = Number(process.env.CHECK_PORT) || 5179;
 const URL_ = `http://localhost:${PORT}/`;
 
 let failures = 0, passes = 0;

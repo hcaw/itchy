@@ -23,7 +23,7 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const IMAGES = `${ROOT}docs/images/`;
 const ASSETS = `${ROOT}assets/`;
-const PORT = 5178;
+const PORT = Number(process.env.SCREENSHOTS_PORT) || 5178;
 const URL_ = `http://localhost:${PORT}/`;
 
 // Brand colours, from the design tokens at the top of styles.css.
