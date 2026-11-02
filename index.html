@@ -22,6 +22,27 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
+  <!-- Cross-origin isolation for openDAW's engine. GitHub Pages can't send the COOP/COEP headers, so a service worker
+       adds them, but only on devices that pass the same capability probe as src/audio/probe.js (kept identical by
+       tests/probe.test.js), so other devices are never reloaded. Must stay classic scripts, before the module. -->
+  <script>
+    function itchyProbe() {
+      try {
+        return typeof AudioWorkletNode === 'function'
+          && typeof Promise.withResolvers === 'function'
+          && typeof WebAssembly === 'object'
+          && WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
+      } catch (e) {
+        return false;
+      }
+    }
+    window.coi = {
+      quiet: true,
+      coepCredentialless: () => false, // Safari has no "credentialless", so every browser gets require-corp
+      shouldRegister: () => !window.crossOriginIsolated && itchyProbe() && !/[?&]engine=native/.test(location.search),
+    };
+  </script>
+  <script src="coi-serviceworker.js"></script>
 </head>
 <body>
   <div id="app" class="loading">

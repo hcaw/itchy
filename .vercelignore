@@ -1,9 +1,11 @@
 # Vercel publishes previews of pull requests only (the live site is GitHub Pages).
-# Upload just the app, the same files the Pages workflow copies.
+# Upload just the app: the same files scripts/collect-site.mjs copies for Pages (SHIPPED), plus vercel.json.
 /*
 !index.html
 !manifest.webmanifest
 !styles.css
 !src
 !assets
+!vendor
+!coi-serviceworker.js
 !vercel.json

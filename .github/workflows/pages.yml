@@ -27,10 +27,7 @@ jobs:
           node-version-file: .nvmrc
       - run: npm test
       - name: Collect the site
-        run: |
-          mkdir _site
-          cp -r index.html manifest.webmanifest styles.css src assets _site/
-          touch _site/.nojekyll
+        run: node scripts/collect-site.mjs _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
