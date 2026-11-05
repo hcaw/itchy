@@ -429,7 +429,7 @@ high-pass at 20 Hz (Revamp's range is 20 Hz to 20 kHz) when the tone doesn't use
 
 | Itchy charm | openDAW mapping (same formulas as `applyLayer`) |
 |---|---|
-| **Tone**, at unit creation | `EffectFactories.Revamp` defaults are order 1 (24 dB/oct) on both passes and the high-pass **on** at 40 Hz ([verified] `EffectParameterDefaults.js:7,9,24`). apply.js sets `highPass.order = 0`, `lowPass.order = 0` (order is 0..3 → 1..4 biquad sections, so 0 = one 12 dB/oct biquad) and `highPass.enabled = false`, `lowPass.enabled = false` explicitly. |
+| **Tone**, at unit creation | `EffectFactories.Revamp` defaults are order 1 (24 dB/oct) on both passes and the high-pass **on** at 40 Hz ([verified] `EffectParameterDefaults.js:7,9,24`). apply.js sets `highPass.order = 0`, `lowPass.order = 0` (order is 0..3 → 1..4 biquad sections, so 0 = one 12 dB/oct biquad) and `highPass.enabled = true`, `lowPass.enabled = true` explicitly, at their neutral ends (next rows; corrected in M2: the earlier "both disabled" predates M1's finding that `enabled` clicks). |
 | **Tone** `tone < 0` (dark) | `lowPass.enabled = true`, `frequency = clamp(180·2^((1+tone)·6.8), 20, 20000)`, `q = 0.7 + 5·(−tone)` |
 | **Tone** `tone > 0` (bright) | `highPass.enabled = true`, `frequency = clamp(20·2^(tone·7.3), 20, 20000)`, `q = 0.7 + 4·tone` |
 | **Tone** `tone == 0` | both passes stay enabled at neutral (low-pass 20 kHz, high-pass 20 Hz, `q = 0.7`), as native keeps its biquads at 20 kHz / 10 Hz; never toggled (M1: `enabled` clicks) |
@@ -571,11 +571,12 @@ backends; peak ≤ 0.18, so no limiting needed.
 - **`tests/mirror.test.js`**: `s·240` positions, `loopDuration`, muted regions; drum slot notes `36 + 4r + v` and
   `v = s mod variants`; tune pitches for every mood with key and octave, clamped; recordings (rootKey 60, key
   cancels); dB conversions (volume 0 → −96, space 0 → −∞); Nano volume 0 dB on every Nano unit; Revamp orders 0 and
-  passes disabled at creation; Playfield `polyphone` true on every slot; echo and tone formulas; **swing:
+  both passes enabled at neutral (M2: corrected from "disabled at creation", see §4f); Playfield `polyphone` true on every slot; echo and tone formulas; **swing:
   `amount(0) = 0.5`, `amount(0.5) = 0.6275510…`, `amount(1) = 0.7551020…`, and `squash(amount(s))` puts the odd step
   at `0.5 + s/4`**; one-shot and sustained durations at 60 and 160 BPM; **a len-32 note at 60 BPM on the top row
   with key 11 and octave +2 either has `loop` enabled or never runs past its sample**; `diffScene` (no-op on an
-  identical scene, one field write for a charm move, note add/remove, mood change rewrites only pitches, same-type
+  identical scene, one field write for a charm move, note add/remove, mood change rewrites only pitches (and the one-shot
+  lengths that follow them), same-type
   sound change → `setFile`, kit ↔ tune → `replaceUnit`, removing a layer removes the unit); every example song and
   `createProject()` gives a valid scene; **every file a unit references is in the library list** (no orphan
   possible by construction).
@@ -918,6 +919,53 @@ Acceptance:
 - `npm run check` passes unchanged (sound counts, the 1e-6 native timing check, no warnings), plus: unlock buffer
   played in the first gesture; `kind === 'native'`.
 - `npm run screenshots` leaves the tree clean (native still uses `Math.random`, as today).
+
+Done. Everything still plays on the built-in engine; the seams exist and are tested. `npm test`: 62 passed
+(36 before, plus 20 mirror and 6 playhead tests). `npm run check`: 343 passed locally, 348 with WebKit as CI runs
+it; the sound counts, the 1e-6 timing check and the no-warnings checks are unchanged. Notes and deviations:
+- **Facade** (`src/audio/engine.js`): `kind` is `'native'`, `ready` resolves `'native'`, `openDaw` is null. The
+  context is made at load when `canUseOpenDaw()` (the check server is isolated, so the checks now run that path)
+  and lazily in the first gesture otherwise. The unlock buffer is keyed on a plain `unlocked` flag and plays in
+  the first `ensure()`; the app's first `ensure()` is always a gesture. New check `audioFacade()`: on the isolated
+  page and with `?engine=native`, by mouse and by finger, the backend is native, the context is made at load or
+  in the first gesture, the first tap sounds, and the 1-sample buffer starts exactly once, in the first gesture
+  (with `navigator.userActivation.isActive` true for the mouse). Chromium logs nothing when a context is made
+  before a gesture (tested without the autoplay flag), so the M3 no-flag browser won't trip the warnings check on
+  that. `playStep()`, the visual queue, `uiSound()` (now into `uiBus`, no longer through the native limiter; its
+  peak is far below the limiter's threshold), `level()` and `drainEvents()` live in the facade. `playing` is a
+  plain flag; `gen` is bumped by play and stop, for M3's async play.
+- **Native engine** (`src/audio/native/engine.js`): `new NativeEngine(getProject, { ctx, out, onStep })`. Its
+  scheduler calls the facade's `playStep` through `onStep`, so wrapping `itchy.engine.playStep` (as the checks do)
+  still sees every step, and every note still goes through the facade's `voice()`. It keeps `buffers` for
+  recordings; the facade holds recordings that arrive before there is a context.
+- **Seeded renders** (`src/audio/render-sounds.js`): 25 files (kit 1+4+4+4, tinykit 1+4+1+1, four tunes, the stereo
+  impulse) in about 75 ms. File ids are `kit.snare.2`, `bells`, `space` (and `rec:<id>` for recordings); boot maps
+  them to `samples.js` keys in M3. Loop points are snapped to whole periods of the root: bass 0.6–1.396 s of 1.85 s
+  (fade 0.05 s), cloud 0.25–2.207 s of 3.0 s, four beats of its ±9-cent detune (fade 0.1 s). `soundCatalogue()` is
+  pure, so the mirror tests use the same facts. **New:** renders were not byte-identical at first: Chromium sums a
+  node's inputs in no fixed order and three or more inputs round differently (up to 2e-7). `instruments.js` now
+  routes the bells' shimmer and knock, and the cloud's two saws, through a small bus so no node has more than two
+  inputs (two floats add up the same either way). 20 renders of every file in Chromium and 5 in WebKit were all
+  identical. The browser check `renderedSounds()` also checks that only the noisy pieces have variants (a
+  one-variant piece rendered with another seed is identical; variants differ from each other) and that each loop
+  lies on a steady part of the hold (level at its two ends within 1 dB).
+- **Mirror** (`src/audio/mirror.js`): a unit's `instrument` is `{ type: 'playfield', slots: [{ note, file, gate: 0,
+  polyphone: true }], variants }` or `{ type: 'nano', file, rootKey, volumeDb: 0, attack, release, loop, sustain,
+  seconds }`; Nano `loopStart`/`loopEnd` are fractions of the sample (as `voice.rs` reads them), so the mirror
+  divides the loop seconds by the sample length. Ops add `addFile` (for the library holder) and `setField` with
+  `key: null` for project fields; `diffScene(null, scene)` builds everything. Envelopes: bells and pluck attack
+  0.001 s, release 0.05 s (pluck's were unstated); bass 0.001/0.12; cloud 0.001/1.0; recordings 0.004/0.03.
+  **Corrections:** Revamp passes stay enabled at neutral (the §4f creation row and §10a said "disabled", which
+  predates M1); a one-shot note's length follows its pitch (`oneShotPulses`), so a mood or key change also rewrites
+  one-shot lengths, not only pitches; a charm move writes that charm's fields (space and volume one, echo two:
+  feedback and wet; tone two: frequency and Q), not always exactly one.
+- **Playhead** (`src/audio/playhead.js`): `StepTracker.advance(position, { tempo, latency, swing })` returns `{ index,
+  ago }` (seconds since the engine played it, so its audio time is `now − ago`); `stepEvent()` builds today's event
+  and the facade's `playStep` uses it.
+- **Docs:** the README and CONCEPT trees now list `native/engine.js` (the full tree update stays in M3).
+- **Screenshots:** with the context made at load, `assets/social-card.png` renders byte for byte as on `main` again
+  (three runs alike), so M1's re-render is undone and committed. The tablet shot's play-button glow still varies
+  between runs (the flake that predates the port); a run that hits it is not committed.
 
 ### M3. openDAW plays everything: sounds, recordings, notes, charms, tempo, swing, transport, previews, playhead
 
