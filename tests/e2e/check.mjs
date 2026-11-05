@@ -18,8 +18,10 @@
 // gesture; each sound rendered for openDAW is non-silent and the same every time; on the site served without
 // isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads, and without a
 // service worker, forced, or on a device that can't run openDAW, the built-in engine plays with exact timing and no
-// reload; a CPU overload shows as a stop, a page restored from the back/forward cache reloads, and a tab whose boot
-// died plays on the built-in engine; and the M1 probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
+// reload; on Fast 3G with a 4× slower CPU (over HTTP/2, as deployed) the app renders and the first tap is heard
+// within 3 s and openDAW is ready within 60 s (4 s with a warm cache); a CPU overload shows as a stop, a page
+// restored from the back/forward cache reloads, and a tab whose boot died plays on the built-in engine; and the M1
+// probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
 
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -28,6 +30,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
 import { collectSite } from '../../scripts/collect-site.mjs';
+import { startH2Server } from './h2-server.js';
 
 const { chromium, webkit } = createRequire(import.meta.url)('playwright');
 const OUT = fileURLToPath(new URL('../../test-output/', import.meta.url));
@@ -1299,6 +1302,85 @@ async function isolationPaths() {
 }
 
 /**
+ * Budgets (docs/OPENDAW-PORT.md §10b), on a slow tablet: the network at DevTools' Fast 3G (562.5 ms round trips,
+ * 1.44 Mbit/s down) and the CPU 4× slower, served over HTTP/2 with gzip and caching as Pages and Vercel serve it
+ * (tests/e2e/h2-server.js). Cold cache: the app renders and the first tap is heard within 3 s (the built-in engine
+ * plays it while openDAW downloads), openDAW is ready within 60 s, and at most 5.5 MB comes from /vendor/. Warm
+ * cache: openDAW is ready within 4 s. The numbers, with the JS heap after boot, go to test-output/budgets.json.
+ */
+async function budgets() {
+  console.log('\nBudgets: Fast 3G and a 4× slower CPU');
+  const dir = mkdtempSync(join(tmpdir(), 'itchy-h2-'));
+  collectSite(dir);
+  const h2 = await startH2Server(PORT + 3, { root: dir });
+  if (!h2) {
+    rmSync(dir, { recursive: true, force: true });
+    if (process.env.CI) check(false, 'openssl makes a test certificate in CI');
+    else console.log('  (skipped: no openssl to make a test certificate)');
+    return;
+  }
+  const args = ['--autoplay-policy=no-user-gesture-required', `--ignore-certificate-errors-spki-list=${h2.spki}`];
+  const slow = await chromium.launch({ channel: 'chromium', args }).catch(() => chromium.launch({ args }));
+  const results = {};
+  try {
+    const ctx = await slow.newContext({ viewport: { width: 1024, height: 768 } });
+    for (const run of ['cold', 'warm']) {
+      h2.served.length = 0;
+      const page = await ctx.newPage();
+      const errors = watchConsole(page);
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Network.enable');
+      await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 562.5, downloadThroughput: 180000, uploadThroughput: 84375 });
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      const t0 = Date.now();
+      await page.goto(h2.url, { waitUntil: 'commit' });
+      await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'), null, { timeout: 60000, polling: 50 });
+      const render = Date.now() - t0;
+      // When ready settles, in the page's own time (from the start of navigation): a later evaluate can wait behind
+      // the busy main thread.
+      await page.evaluate(() => { itchy.engine.ready.then(() => { window.__readyAt = performance.now(); }); });
+      await instrument(page);
+      const armed = await armTap(page);
+      const kindAtTap = await page.evaluate(() => itchy.engine.kind); // which engine plays the first tap
+      const tap = Date.now() - t0;
+      await page.click('.cell[data-s="2"][data-r="2"]');
+      await page.waitForTimeout(150);
+      const heard = armed ? await tapResult(page) : { first: null };
+      const tapMs = heard.first === null ? null : tap + Math.max(0, (heard.first - heard.callAt) * 1000);
+      const ready = await page.evaluate(() => Promise.race([itchy.engine.ready, new Promise((ok) => setTimeout(() => ok('timeout'), 90000))]));
+      const readyMs = Math.round(await page.evaluate(() => window.__readyAt ?? performance.now()));
+      await cdp.send('Performance.enable');
+      const heap = (await cdp.send('Performance.getMetrics')).metrics.find((m) => m.name === 'JSHeapUsedSize').value;
+      const vendor = h2.served.filter((f) => f.path.includes('/vendor/'));
+      const sum = (list, k) => list.reduce((n, f) => n + f[k], 0);
+      const r = (results[run] = {
+        renderMs: render, firstTapHeardMs: tapMs && Math.round(tapMs), kindAtTap, ready, readyMs,
+        vendorBytes: sum(vendor, 'bytes'), vendorSentBytes: sum(vendor, 'sent'), allSentBytes: sum(h2.served, 'sent'),
+        files: h2.served.length, heapMB: +(heap / 1e6).toFixed(1),
+      });
+      console.log(`  · ${run}: renders at ${r.renderMs} ms, first tap heard at ${r.firstTapHeardMs} ms (${r.kindAtTap}), ready (${r.ready}) at ${r.readyMs} ms; ` +
+        `/vendor/ ${(r.vendorBytes / 1e6).toFixed(2)} MB (${(r.vendorSentBytes / 1e6).toFixed(2)} MB sent), everything ${(r.allSentBytes / 1e6).toFixed(2)} MB sent in ${r.files} files; JS heap ${r.heapMB} MB`);
+      if (run === 'cold') {
+        check(r.renderMs <= 3000, 'cold: the app renders within 3 s', `${r.renderMs} ms`);
+        check(tapMs !== null && tapMs <= 3000 && outputWithin(heard), 'cold: the first tap is heard within 3 s', `${r.firstTapHeardMs} ms`);
+        check(ready === 'opendaw' && r.readyMs <= 60000, 'cold: openDAW is ready within 60 s', `${ready} at ${r.readyMs} ms`);
+        check(r.vendorBytes > 0 && r.vendorBytes <= 5.5e6, 'cold: at most 5.5 MB from /vendor/', `${r.vendorBytes} bytes`);
+      } else {
+        check(ready === 'opendaw' && r.readyMs <= 4000, 'warm: openDAW is ready within 4 s', `${ready} at ${r.readyMs} ms`);
+        check(r.vendorSentBytes === 0, 'warm: nothing is fetched from /vendor/ again', `${r.vendorSentBytes} bytes`);
+      }
+      check(errors.length === 0, `${run}: no console errors or warnings`, errors.join(' | '));
+      await page.close();
+    }
+    writeFileSync(`${OUT}/budgets.json`, JSON.stringify(results, null, 2));
+  } finally {
+    await slow.close();
+    h2.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Hardening (docs/OPENDAW-PORT.md M4): when openDAW stops the music by itself (a CPU overload puts its engine to
  * sleep), the app shows it as stopped, taps still sound and Play starts it again; a page restored from the
  * back/forward cache reloads (keeping the song) on openDAW pages only; and a tab whose openDAW boot died (the
@@ -1510,6 +1592,7 @@ const sections = [
   ['robustness', robustness],
   ['staticImportGuard', staticImportGuard],
   ['isolationPaths', isolationPaths],
+  ['budgets', budgets],
   ['hardening', hardening],
   ['renderedSounds', renderedSounds],
   ['recording', recording],

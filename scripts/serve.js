@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 
 const repo = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 5173);
-const types = {
+/** Content types by file extension (also used by the checks' HTTP/2 server, tests/e2e/h2-server.js). */
+export const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json',
@@ -31,7 +32,7 @@ export function startServer(p = port, { isolate = true, root = repo } = {}) {
       if ((file !== base && !file.startsWith(base + sep)) || file.startsWith(join(base, '.git'))) { res.writeHead(403).end(); return; }
       const s = await stat(file);
       if (!s.isFile()) throw new Error('not a file');
-      res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ...extra });
+      res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ...extra });
       res.end(await readFile(file));
     } catch {
       res.writeHead(404, { 'Content-Type': 'text/plain', ...extra }).end('Not found');
