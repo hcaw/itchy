@@ -7,7 +7,7 @@
 // count of calls) and can be undone in one step; playback starts, loops, keeps steady time and stops; recording
 // works with a fake microphone and fails kindly when permission is denied; work survives a reload; example songs
 // play; keyboard controls work; in WebKit (when installed, always in CI), Safari layout holds, a tap starts the
-// sound and nothing is logged.
+// sound, the sound engine settles (openDAW or the built-in one), a tap and Play are heard, and nothing is logged.
 //
 // The port to openDAW (docs/OPENDAW-PORT.md): every page on this (cross-origin isolated) server must end on openDAW
 // and every page with ?engine=native on the built-in engine; openDAW's transport runs at the tempo and an offline
@@ -873,7 +873,7 @@ async function safariLayout() {
     const page = await ctx.newPage();
     const errors = watchConsole(page);
     await page.goto(URL_);
-    await loaded(page, '', { kind: null }); // WebKit may use either engine; M4 checks which
+    await loaded(page, '', { kind: null }); // WebKit may use either engine; the boot step below checks it settles
     for (const [i, what] of [[0, 'drum'], [1, 'tune']]) {
       await page.locator('#rail .critter-btn').nth(i).tap();
       await page.waitForTimeout(150);
@@ -892,6 +892,24 @@ async function safariLayout() {
       return { state: c?.state, advanced: (c?.currentTime ?? 0) - t };
     });
     check(clock.state === 'running' && clock.advanced > 0.1, 'a tap starts the audio clock', JSON.stringify(clock));
+    // openDAW boots here too when WebKit can run it; either way the backend must settle and be heard.
+    const boot = await page.evaluate(async () => {
+      const t = performance.now();
+      const ready = await Promise.race([itchy.engine.ready, new Promise((ok) => setTimeout(() => ok('timeout'), 30000))]);
+      return { ready, kind: itchy.engine.kind, isolated: crossOriginIsolated, ms: Math.round(performance.now() - t) };
+    });
+    console.log(`  · WebKit plays on ${boot.kind === 'opendaw' ? 'openDAW' : 'the built-in engine'} (isolated: ${boot.isolated})`);
+    check(boot.ready !== 'timeout' && boot.kind === boot.ready, 'the sound engine settles', JSON.stringify(boot));
+    await audible(page, 'a tap', () => page.locator('.cell[data-s="5"][data-r="2"]').tap());
+    await page.evaluate(() => {
+      window.__peak = 0;
+      const id = setInterval(() => { window.__peak = Math.max(window.__peak, itchy.engine.level()); }, 10);
+      setTimeout(() => clearInterval(id), 1200);
+    });
+    await page.locator('.cell[data-s="7"][data-r="1"]').tap();
+    await page.waitForTimeout(1200);
+    const tapPeak = await page.evaluate(() => window.__peak);
+    check(tapPeak > 0.01, 'a tap is heard on the level meter', `peak level ${tapPeak.toFixed(3)}`);
     await page.locator('.btn.play').tap({ force: true });
     await page.waitForTimeout(500);
     const peak = await peakLevel(page);
