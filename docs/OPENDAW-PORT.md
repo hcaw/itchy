@@ -7,7 +7,9 @@ exactly.
 
 **Source of truth for openDAW behaviour.** The published packages were built from openDAW commit
 **`9306eaab693b96c1e3000bd02b4ce59e3ed0b51e`** (the `gitHead` of studio-sdk, studio-core, studio-core-wasm,
-studio-adapters, studio-boxes, lib-dsp and lib-box) and lib-std 0.0.89 from **`652e6caf759b06e8171f49fb71257884e7cae66e`**.
+studio-adapters, studio-boxes, lib-dsp, lib-box, lib-fusion, lib-midi and lib-dawproject) and
+**`652e6caf759b06e8171f49fb71257884e7cae66e`** (lib-std, lib-dom, lib-jsx, lib-runtime, lib-xml and studio-enums;
+corrected in M1 from "lib-std only", checked with `npm view`; nam-wasm, MIT and unused, has none).
 The research clone at `3b6a9b8` (1 Nov) is two days newer and differs in 133 files, so it is **not** used as
 evidence. Every **[verified]** claim below was re-checked against the installed `dist/` files
 (`research/npm/node_modules/@opendaw/*`) or against a checkout of `9306eaab` (`scratchpad/od-9306`). Claims marked
@@ -163,8 +165,8 @@ checks and debugging: `kind` (`'native' | 'opendaw'`, can change from `'opendaw'
    ```js
    { bpm, grooveAmount, units: [{ key: layerId, sound, instrument: 'playfield'|'nano', files: [<sampleKey>...],
        rootKey, volumeDb, loop: {enabled, start, end, fade} | null, regionMute, loopPpqn,
-       revamp: { lp: {enabled, hz, q}, hp: {enabled, hz, q} },
-       delay: { enabled, wetDb, feedback, filter }, spaceSendDb,
+       revamp: { lp: {hz, q}, hp: {hz, q} },
+       delay: { wetDb, feedback, filter }, spaceSendDb,
        notes: [{ key: 's,r', position, duration, pitch, velocity }] }], masterDb }
    ```
 
@@ -186,14 +188,14 @@ checks and debugging: `kind` (`'native' | 'opendaw'`, can change from `'opendaw'
      { b.groove.refer(project.rootBoxAdapter.groove.box); b.index.setValue(0); b.host.refer(unit.midiEffects) })`.
      Never `EffectFactories.Zeitgeist.create` (it always makes a private `GrooveShuffleBox`, `useGlobal = false`
      [verified] `EffectFactories.js:70`; re-pointing would orphan it, `GrooveShuffleBox.js:12 mandatory: true`).
-   - [spike, must] `createInstrument`, `createNoteRegion`, `createNoteEvent`, `insertEffect`, direct device
-     creation and unit deletion all work in a bare transaction. If `deleteAudioUnit` deletes a file that the holder
-     still points at, apply.js deletes the unit's own boxes itself instead.
-   - Fallback: `project.editing.modify(fn, false)` followed by `editing.clear()`.
+   - [spike, must; M1: passed] `createInstrument`, `createNoteRegion`, `createNoteEvent`, `insertEffect`, direct
+     device creation and unit deletion all work in a bare transaction (and leave nothing to undo).
+     `deleteAudioUnit` keeps a file that the holder still points at (M1), so apply.js uses it as it is, and the
+     `project.editing.modify` fallback isn't needed.
    - When a transaction ends, its updates go to the WASM engine synchronously over the worklet port shared with
      the note signals, so a preview sent straight after `sync()` reaches the engine after the edits [verified
-     `WasmEngine.ts:75-109` at 9306eaab: "SyncSource (unchanged) -> SYNCHRONOUS loopback"]. M1 re-checks this
-     against the vendored bundle.
+     `WasmEngine.ts:75-109` at 9306eaab: "SyncSource (unchanged) -> SYNCHRONOUS loopback"]. M1 confirmed it in the
+     vendored bundle: the sync bytes are posted before `endTransaction()` returns, ahead of the next command.
 4. **Failure handling.** apply.js wraps every transaction. If `endTransaction()` (or any op) throws, it calls
    `onFatal(err)`; the facade falls back to native (§1c). The facade also passes
    `startAudioWorklet({ unload: e => onFatal(e), load: () => {} })`: openDAW's own handler for the worklet's
@@ -253,6 +255,15 @@ two reloads in 3 of 6 runs). Itchy's patch adds one more reload **only** in the 
 exists but the page is still not isolated, guarded by a `sessionStorage` flag (wrapped in try/catch). So a first
 visit is at most three loads. M1 measures the navigation count over 20 cold runs and the docs say "one or two
 reloads".
+
+**Two safety nets in `index.html` (added in M1).** Playwright's Linux WebKit, on a header-less server, sometimes
+broke the first visit: 4 of 140 runs ended on a blank page. Two causes were seen: a reload made while the service
+worker starts is dropped (the page stays, its scripts cancelled, and no new page arrives), and, just after the
+worker starts, every file it fetches fails ("WebKit encountered an internal error"). Whether real Safari does this
+is unknown; the real-iPad checklist (M5) watches for it. So `window.coi.doReload` reloads again if the page is still
+there after 1.5 s, 3 s, then 4.5 s (a reload that works replaces the page and its timer), and a capture-phase
+`error` listener reloads when one of the page's own scripts or stylesheets fails to load, at most twice per tab (a
+`sessionStorage` counter, cleared by a clean `load`). Neither fires on a normal visit.
 
 COEP has no effect on Itchy's own assets (font, Blob-URL ticker worker, capture worklet are same-origin;
 runtime.md §3). It rules out cross-origin embeds in future; logged.
@@ -327,7 +338,7 @@ original and made in code.
 
 | Itchy sound | openDAW instrument | PCM rendered | Notes, velocity, length |
 |---|---|---|---|
-| `kit` rows 0-3 kick, snare, clap, hat | **Playfield**; slot note `36 + 4·r + v` (v = variant 0..3; kick only v = 0); every slot `gate = 0` (Off: one-shot) and **`polyphone = true`** (default false would cut a retriggered hit, [verified] `PlayfieldSampleBox.js:218-230`, no default value) | `playDrum(kit, r)` at vel 1, 0.6 s, per variant | Sequenced notes use `v = s mod variants`, so neighbouring hits differ; previews rotate a counter. Velocity from the note [spike: Playfield velocity→gain is linear; else pre-shape in the mirror]. Length, octave, key, mood ignored, as today. |
+| `kit` rows 0-3 kick, snare, clap, hat | **Playfield**; slot note `36 + 4·r + v` (v = variant 0..3; kick only v = 0); every slot `gate = 0` (Off: one-shot) and **`polyphone = true`** (default false would cut a retriggered hit, [verified] `PlayfieldSampleBox.js:218-230`, no default value) | `playDrum(kit, r)` at vel 1, 0.6 s, per variant | Sequenced notes use `v = s mod variants`, so neighbouring hits differ; previews rotate a counter. Velocity from the note (M1: Playfield velocity→gain is linear, peaks 1 : 0.5 : 0.25 for velocity 1, 0.5, 0.25, and a slot at 0 dB is unity gain, so no pre-shaping). Length, octave, key, mood ignored, as today. |
 | `tinykit` | **Playfield**, its own unit and files | `playDrum(tinykit, r)` | as above |
 | `bells` (base 72) | **Nano**, `rootKey` = reference pitch 79 | `playTune('bells', 79)`, 1.8 s | One-shot (§4d). Attack 0.001 s, release 0.05 s. |
 | `pluck` (base 60) | **Nano**, rootKey 67 | `playTune('pluck', 67)`, 1.0 s | One-shot. |
@@ -343,8 +354,10 @@ make tunes and recordings 3 dB quieter than their PCM (the reviewer's spike: a 0
 `key` (0..11), and −31..+45 with `octave` (−2..2, `project.js:148`, no UI yet), while `len` can be 32 steps at
 60 BPM (8 s). No fixed hold covers that (+21 st needs 27 s of sample). Nano's crossfaded loop (`loop`,
 `loopStart`, `loopEnd`, `loopFade` fields, present in the published `NanoDeviceBox`; voice.rs: a voice finishes
-only when "the region ran out unlooped, or the release elapsed") sustains any length. [spike: audible loop quality
-in the listening check.] **Fallback** if the loop is not clean: a Vaporisateur preset written in code
+only when "the region ran out unlooped, or the release elapsed") sustains any length. [M1: a 4 s note on a 1 s
+sample with a crossfaded loop sustains at full level with no sample jump larger than the sine's own, and is silent
+after the release; audible loop quality is judged in the listening check.] **Fallback** if the loop is not clean:
+a Vaporisateur preset written in code
 (saw+sine with filter envelope; detuned saw/triangle unison 3 ± 9 ct, attack 0.12 s, release 1 s).
 
 **Pitch for tunes:** `pitch = base + rowSemitones(r, mood) + key + 12·octave`, clamped to 0..127, as in
@@ -372,7 +385,8 @@ Nano's gain is `playback.gain · velocity`, linear like Itchy's [verified at 930
 ### 4c. Notes and loop lengths
 
 - One `NoteRegionBox` per unit: position 0, `loopDuration = steps·240` (`PPQN.SemiQuaver` = one step), `duration`
-  2^30 pulses [spike: the timeline keeps playing past `durationInPulses`; else raise it].
+  2^30 pulses (M1: the timeline keeps playing and sounding past `durationInPulses`, 491520 by default, so it is
+  left alone).
 - The timeline `loopArea` stays **disabled**: a transport wrap releases held notes, region cycles do not, and a note
   keeps its full duration across a cycle end by default (`truncateNotesAtRegionEnd` false) [verified at 9306eaab:
   `note_sequencer.rs:112-115`]. Matches today.
@@ -395,7 +409,8 @@ Nano's gain is `playback.gain · velocity`, linear like Itchy's [verified at 930
 SampleLoaderManager.d.ts`]) with the exported `DefaultSampleLoader`, calling `setLoaded(audioData, peaks, meta)`
 from a `Map` keyed by UUID string.
 
-- Peaks: a minimal empty `Peaks` object [spike], else `Workers.Peak.generateAsync` (off the main thread).
+- Peaks: the bundle's own empty `SamplePeaks.None` (M1: works; every probe sample loads and sounds with it), so
+  `Workers.Peak.generateAsync` isn't needed.
 - Avoids `GlobalSampleLoaderManager`, which writes every sample to OPFS, `console.warn`s on failure and never cleans
   up. Fallback: that manager with stable UUIDs plus a boot-time sweep of unknown `samples/v2` entries.
 - UUIDs are computed asynchronously **before** any `sync()` needs them: built-ins at boot (§3.5), recordings inside
@@ -407,21 +422,29 @@ from a `Map` keyed by UUID string.
 ### 4f. Effects ("charms")
 
 Chain per critter unit: **Zeitgeist (MIDI) → instrument → Revamp → Delay**, plus an `AuxSendBox` to Space, built
-once when the unit is created. Disabled devices use `enabled = false` (every device box has it). [spike: toggling
-`enabled` doesn't click; else keep enabled at neutral values.]
+once when the unit is created. **M1 found that toggling `enabled` clicks** (Delay and a Revamp pass, while a tone
+sounds), so, like today's native chain, the devices stay enabled at neutral values: the Revamp low-pass at 20 kHz and
+high-pass at 20 Hz (Revamp's range is 20 Hz to 20 kHz) when the tone doesn't use them, and the Delay at
+`wet = −∞` dB, `feedback = 0` when echo is 0. `enabled` is never toggled.
 
 | Itchy charm | openDAW mapping (same formulas as `applyLayer`) |
 |---|---|
 | **Tone**, at unit creation | `EffectFactories.Revamp` defaults are order 1 (24 dB/oct) on both passes and the high-pass **on** at 40 Hz ([verified] `EffectParameterDefaults.js:7,9,24`). apply.js sets `highPass.order = 0`, `lowPass.order = 0` (order is 0..3 → 1..4 biquad sections, so 0 = one 12 dB/oct biquad) and `highPass.enabled = false`, `lowPass.enabled = false` explicitly. |
 | **Tone** `tone < 0` (dark) | `lowPass.enabled = true`, `frequency = clamp(180·2^((1+tone)·6.8), 20, 20000)`, `q = 0.7 + 5·(−tone)` |
 | **Tone** `tone > 0` (bright) | `highPass.enabled = true`, `frequency = clamp(20·2^(tone·7.3), 20, 20000)`, `q = 0.7 + 4·tone` |
-| **Tone** `tone == 0` | both passes disabled |
-| **Echo** `e` | `Delay.delayMusical = 13` (3/16, follows the tempo). `feedback = e > 0 ? 0.3 + 0.42·e : 0`; `wet = 20·log10(0.75·e)` dB; `dry = 0`; `cross = 0` (default 1.0 is ping-pong); `preSyncTimeLeft = preSyncTimeRight = 0` (default left is index 8); `delayMillis = 0`; `filter` chosen to approximate Itchy's 3.5 kHz lowpass [spike: measure]. `e == 0` → disabled. [M1 re-checks the Delay index table and defaults against the vendored dist.] |
+| **Tone** `tone == 0` | both passes stay enabled at neutral (low-pass 20 kHz, high-pass 20 Hz, `q = 0.7`), as native keeps its biquads at 20 kHz / 10 Hz; never toggled (M1: `enabled` clicks) |
+| **Echo** `e` | `Delay.delayMusical = 13` (3/16, follows the tempo). `feedback = e > 0 ? 0.3 + 0.42·e : 0`; `wet = 20·log10(0.75·e)` dB; `dry = 0`; `cross = 0` (default 1.0 is ping-pong); `preSyncTimeLeft = preSyncTimeRight = 0` (default left is index 8); `delayMillis = 0`; `filter = log(3500/20)/log(1000) − 1 = −0.2523` (M1 measured: `filter < 0` is a low-pass on the echo at `20·1000^(1+filter)` Hz, Q 0.707, so −0.2523 is 3.5 kHz; −3.4 dB there, −16 dB at 8 kHz). `e == 0` → `wet = −∞`, `feedback = 0`, still enabled (M1: toggling clicks). Index table and defaults re-checked in M1 against the vendored dist (`DelayDeviceBoxAdapter.Fractions`: index 13 = 3/16, 8 = 1/16; defaults `delayMusical` 13, `feedback` 0.5, `cross` 1, `filter` 0, `wet` −6 dB, `dry` 0 dB, `preSyncTimeLeft` 8, `preSyncTimeRight` 0). |
 | **Space** `sp` | One aux bus "Space" (`AudioBusFactory.create(skeleton, 'Space', IconSymbol.Effects, AudioUnitType.Aux, Colors.green)`) with a **Convolver** whose file is the stereo seeded impulse (2.4 s): `normalize = true`, `wet = 0 dB`, `dry = −∞`; aux volume `20·log10(0.9)`. Each critter: `AuxSendBox { routing: Post, sendGain: 20·log10(1.1·sp) }`, −∞ when `sp == 0`. The echo also feeds the reverb (post-chain send); logged. ReverbDeviceBox is the fallback. |
 | Master | `primaryAudioUnitBox.volume = 20·log10(0.8)` dB. openDAW's default master Maximizer replaces the DynamicsCompressor; its **5 ms lookahead** (a bool field, on by default; [verified at 9306eaab] `device-maximizer/src/lib.rs:7,37`) stays on and is counted in the latency budget (§10b). **Never use the Compressor device** (GPL, outside the commercial licence). |
 
-Charm drags write a few float fields per move. [spike: Revamp, Delay and send-gain changes are smoothed.] If they
-click, apply.js limits charm writes to one per animation frame (never notes).
+Charm drags write a few float fields per move. **M1 measured** (largest sample jump on a 440 Hz tone, steady about
+0.05): Delay `feedback` and unit `volume` are smoothed (0.05 during six abrupt writes), but Revamp `frequency`
+(600 ↔ 2000 Hz: 0.56) and Delay `wet` (−20 ↔ −3 dB: 0.38) are **not**. Drag-sized writes, one per animation frame,
+stay close to steady (wet 0.5 dB a frame: 0.075; low-pass 3% a frame: 0.10). So apply.js writes charm fields at most
+once per animation frame (never notes), and when a value jumps further than that (undo, dice, opening a song) it
+glides Revamp `frequency`/`q` (in octaves) and Delay `wet` (in dB) over about 100 ms of frames, like native's 30 ms
+`setTargetAtTime`. Send gain wasn't measured in M1; it gets the same glide unless M3 measures it smoothed. The
+listening check (§10c) confirms.
 
 ### 4g. Swing
 
@@ -437,7 +460,9 @@ click, apply.js limits charm writes to one per animation frame (never notes).
   puts the odd sixteenth at `0.5 + swing/4` of the cell, which is today's `swing·dur·0.5` delay. Without it the
   reviewer measured 3528 samples instead of 3600 at swing 1 (100 BPM, 48 kHz); with it, 3599.
 - It works on absolute positions, so it swings on global step parity, as today.
-- Swing 0 gives `h = 0.5` exactly (straight) [spike: bit-exact; else disable the device at 0].
+- Swing 0 gives `h = 0.5` exactly (straight). M1 rendered it offline (16 onsets, 100 BPM): straight within 1 sample
+  at swing 0, and the corrected formula within 1 sample at swing 0.5 and 1 (the uncorrected amount puts the odd step
+  3528 samples late at 1 instead of 3600, as the reviewer found), so the device stays enabled at 0.
 
 ### 4h. Tempo and transport
 
@@ -447,8 +472,8 @@ click, apply.js limits charm writes to one per animation frame (never notes).
   out. In the shipped 0.0.25 worklet, `stop(true)`, or any stop while not transporting, calls `engine.stop()`, which
   rewinds and **resets every plugin at once** (no fade; the clone's `stop_faded` doesn't exist in 0.0.25:
   `grep -c stop_faded dist/wasm-processor.js` = 0). The facade therefore never sends a stop while not transporting.
-  [spike: `stop(false)` → `setPosition(0)` → `play()` restarts at step 0, and `setPosition` while paused doesn't
-  reset plugins. If not, accept cut tails on restart only.]
+  M1 confirmed: `stop(false)` holds the position, `setPosition(0)` while paused moves it to 0, `play()` restarts
+  from 0, and a Nano tail keeps sounding after the stop.
 
 ---
 
@@ -463,8 +488,9 @@ click, apply.js limits charm writes to one per animation frame (never notes).
 - **The first tap before openDAW is ready** plays on native.
 - **Choosing a new sound and previewing it in one tap** (`panel.js:88-90`): `store.change` → `sync()` re-points the
   file or replaces the unit in one transaction → the audition. Ordering is guaranteed (§1d.3), and the sample is
-  already loaded because the library holder keeps every built-in file loaded (§1d.3). [spike, must: an audition in
-  the same task as unit creation, and after delete-then-recreate, is heard. If not, send it on the next microtask.]
+  already loaded because the library holder keeps every built-in file loaded (§1d.3). [spike, must; M1: passed.
+  An audition in the same task as unit creation, and after delete-then-recreate, is heard, so no microtask delay
+  is needed.]
 
 ---
 
@@ -505,8 +531,8 @@ plus 4 for "my sounds".
   hits}` as today (`hits` from `notesAtStep`, muted layers left out). `app.js` needs no changes.
 - Edge cases (unit-tested): several steps in one frame emitted in order; a jump of more than 8 steps emits only the
   latest; a backwards position resets; stop clears.
-- `ctx.suspend()` freezes the worklet, so the playhead holds still for `screenshots.mjs` `playTo()` [spike: no SDK
-  warning, engine not stopped].
+- `ctx.suspend()` freezes the worklet, so the playhead holds still for `screenshots.mjs` `playTo()` (M1: position
+  frozen, `isPlaying` stays true, no warning, moves again after `resume()`).
 - `level()` reads the facade's analyser (§1c).
 
 ---
@@ -564,7 +590,9 @@ backends; peak ≤ 0.18, so no limiting needed.
   `src/audio/opendaw/**` mentions `vendor/`, and `src/audio/engine.js` has no static import from `./opendaw/`**.
 - **`tests/deploy.test.js`**: `.vercelignore` whitelists every `SHIPPED` entry; `pages.yml` runs
   `collect-site.mjs`.
-- Optional (decided in M1): `tests/apply.test.js` if the bundle imports in Node with stubs.
+- `tests/apply.test.js` (decided in M1: yes). The bundle imports in Node with two stubs (`AudioWorkletNode` and
+  `localStorage`), and `Project.new` builds a real box graph there (`tests/vendor.test.js` shows it), so apply.js's
+  ops are unit-tested against openDAW's own boxes, with no worklet.
 
 ### 10b. `npm run check` (Playwright)
 
@@ -619,6 +647,8 @@ backends; peak ≤ 0.18, so no limiting needed.
     window than Playwright's `serviceWorkers: 'block'`, which itself logs a warning) → `kind === 'native'`; the
     native subset passes (counted sounds, the old 1e-6 `playStep` timing check, level > 0.01).
   - *Forced:* `?engine=native` on the isolated server runs the same subset.
+  - *First-visit safety nets (from M1):* with the first `location.reload()` swallowed once, and with `styles.css`
+    aborted once by `page.route`, the page still ends isolated and running within 3 loads.
 - **Budgets** (CDP: Fast 3G, 4× CPU, cold cache, serve.js without compression, so worse than Pages): the app
   renders and the first tap is audible within 3 s (native bridge); `ready` resolves within 60 s; vendor bytes
   ≤ 5.5 MB. Warm cache, 4× CPU: `ready` within 4 s. JS heap after boot recorded (CDP `Performance.getMetrics`).
@@ -709,8 +739,9 @@ example songs on both and note differences.
   `package.json` `license: MIT` keep describing Itchy's own code.
 - **Obligations:** keep openDAW's notices (`vendor/opendaw/<v>/LICENSE`, `NOTICE.md`); make the Corresponding Source
   available: the public repository with `scripts/vendor-opendaw.mjs`, the pinned `scripts/opendaw/package*.json`,
-  and **the per-package openDAW commits from the published `gitHead`s** (`9306eaab…` for most packages,
-  `652e6caf…` for lib-std) in `VERSIONS.json` and `NOTICE.md`, not the research clone's HEAD; say in the README that
+  and **the per-package openDAW commits from the published `gitHead`s** (`9306eaab…` for ten packages,
+  `652e6caf…` for lib-std, lib-dom, lib-jsx, lib-runtime, lib-xml and studio-enums) in `VERSIONS.json` and
+  `NOTICE.md`, not the research clone's HEAD; say in the README that
   the app includes AGPL components; optionally a "source" link outside the children's UI.
 - **Consequences:** forks that ship the engine must stay AGPL-compliant; a closed fork would remove openDAW (the
   native engine makes that easy) or buy openDAW's commercial licence, which excludes the Compressor
@@ -728,8 +759,8 @@ example songs on both and note differences.
 | 3 | API churn (0.0.x; four releases in Oct 2026) | High / medium | Exact pins, versioned vendor folder, hashes, gitHeads, one boundary file (`apply.js`), `vendor.test.js` |
 | 4 | Download weight ≈ 2.7 MB on Pages, 80 MB per classroom | Certain / medium | Dynamic import after probe; native bridge; no loading screen; offline worker lazy; budgets measured |
 | 5 | A throwing transaction or worklet error mid-session | Low-medium / high | Library holder and direct device creation avoid known orphan rules; every failure → native at once (§1d.4), checked |
-| 6 | `stop(false)` + `setPosition(0)` misbehaves | Low / low | [spike] accept cut tails on restart |
-| 7 | Charm drags click, tempo writes glitch | Medium / medium | [spike] one write per frame |
+| 6 | `stop(false)` + `setPosition(0)` misbehaves | Low / low | M1: works (restarts at 0, tails ring); closed |
+| 7 | Charm drags click, tempo writes glitch | Medium / medium | M1: abrupt Revamp frequency, Delay wet and `enabled` writes click; one write per frame, glides for jumps, `enabled` never toggled (§4f) |
 | 8 | CPU with up to ~18 units (6 critters, ≤ 10 tray, library, aux) on tablets | Medium / medium | Lazy tray units; idle units carry no notes; measure `engine.cpuLoad`; overload → surface as a stop |
 | 9 | SDK console warnings fail checks | Medium / low | Never create a file without its PCM; never orphan a box; checks catch regressions |
 | 10 | Repitching changes tune envelopes; loops audible | Certain / low-medium | Listening check; Vaporisateur or two-root bells fallbacks |
@@ -821,6 +852,50 @@ Acceptance:
 - Header-less server: isolated in all 20 runs within 3 loads; counts recorded.
 - App behaviour, sounds and screenshots unchanged (`npm run screenshots` leaves `git status` clean).
 - Go/no-go recorded; a failed "must" stops the port and is reported.
+
+Done. **Go/no-go: GO.** Every "must" item passed in Chromium and in WebKit (`npm run check`, 312 checks locally,
+317 with WebKit as CI runs it), so the port continues. Findings and changes to the plan:
+- **Must items** (all pass): `crossOriginIsolated`; boot through `import()` with `ensureReady` true (about 0.6 s
+  warm); Playfield peak 0.64 and Nano peak 0.50 through Itchy's in-memory manager (stereo Nano 0.39); the library
+  holder (a lone `AudioFileBox` throws "requires an edge" and the transaction rolls back; held files load;
+  re-pointing a Nano file works and keeps the old file; deleting a unit keeps the held file, and recreating it and
+  auditioning in the same task is heard); a direct `ZeitgeistDeviceBox` on the global groove (no new groove box,
+  audible); every edit in a bare transaction, leaving nothing to undo; a muted-region audition while stopped is
+  heard (and the muted region plays nothing while playing); an audition in the same task as unit creation; a forced
+  throw is caught, rolled back, and the engine **keeps sounding** (Itchy still switches to native on any failure,
+  to be safe); a dispatched worklet `error` reaches `restart.unload` with no restart, and openDAW's
+  `console.warn(event)` is the only output.
+- **Report items** (`test-output/opendaw-probe.json`): restart at 0 after `stop(false)` → `setPosition(0)` →
+  `play()`, with tails ringing (§4h); playing past `durationInPulses` (§4c); `ctx.suspend()` freezes with no
+  warning (§7); swing within 1 sample offline, straight at 0 (§4g); `enabled` toggles and abrupt Revamp frequency
+  and Delay wet writes click, feedback and unit volume don't (§4f, risk 7: **changed**: devices stay enabled at
+  neutral values, jumps glide); Nano loop sustains cleanly (§4); Nano at 0 dB and a Playfield slot at 0 dB are
+  unity gain, Nano's default is −3 dB; Playfield `polyphone` overlap 1.40 (≈ √2); Revamp order 0 is 12 dB/oct
+  (−3 dB at the cutoff), order 1 24 dB/oct; Revamp factory defaults as cited; the metronome preference is false;
+  the master holds one Maximizer at 0 dB; the Delay `filter` is a low-pass at `20·1000^(1+f)` Hz (§4f: −0.2523 for
+  3.5 kHz); Playfield velocity is linear (§4); the sync loopback is synchronous in the vendored bundle (§1d.3).
+- **[verified] re-check:** every citation was re-read in the installed 0.0.180 `dist/` (the same versions the
+  vendoring script pins) and in `od-9306`; all hold. Corrected: six packages, not only lib-std, come from
+  `652e6caf…` (header and §12); the Delay index table and defaults are now quoted from the dist (§4f).
+- **Node:** the bundle imports in Node with two stubs and builds a real box graph, so `tests/apply.test.js` goes
+  ahead in M3 (§10a).
+- **coi navigations** on a server without headers (`collect-site.mjs` output, `isolate: false`), cold runs, counted
+  until the page is isolated **and** the app has started. Chromium, 20 runs: 2 loads in all 20 (an earlier batch of
+  20: 2 in 16, 3 in 4). WebKit, 120 runs with the final code: 2 loads in 114, 3 in 6, all isolated and running; the
+  dropped-reload retry rescued 2 of them, within 2.5 s. Before the safety nets, WebKit left 4 of 140 runs blank (see
+  "Two safety nets" in §2). The only console output in those rare runs is WebKit's own "Failed to load resource";
+  normal runs log nothing. With `?engine=native`, or when the probe fails, coi never registers (1 load, no worker).
+- `npm run vendor:opendaw` run twice gives byte-identical files, equal to the committed ones.
+- **Screenshots:** serving the page cross-origin isolated moves 12 pixels of one cell edge in
+  `assets/social-card.png` (invisible, the same on every run; main's server without the headers renders the old
+  card), so the card was re-rendered and committed. The tablet shot's play-button glow follows the live output
+  level, varies between runs, and differs from the committed shot on `main` too, so it is left as committed; that
+  flake predates the port.
+- **Deviations:** the probe lives in `tests/e2e/opendaw-probe.js`, imported by `check.mjs` in the page, rather than
+  inline in `check.mjs`; `tests/probe.test.js` landed with the isolation commit; the coi count was a one-off script
+  (its results are recorded here and in the decisions log, and M4's isolation checks cover the same path in CI).
+  **New:** the two first-visit safety nets in `index.html` (§2), because WebKit failed the "all runs isolated"
+  acceptance without them.
 
 ### M2. Facade, injected native engine and pure mirror (still native)
 

@@ -71,7 +71,9 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 
 - **Name "Itchy"** — it's the repository's name and sounds like a toy.
 - **No framework, no build** — lightest setup; the UI is small enough for hand-written DOM code, and it runs on
-  any school machine with a browser and Node (or any static server).
+  any school machine with a browser and Node (or any static server). *Amended for the openDAW port:* there is
+  still no runtime build and nothing to install; openDAW is a committed, prebuilt bundle, and a plain static server
+  without the COOP/COEP headers gives the built-in engine only.
 - **One critter edited at a time, others shown as cards with mini-maps** — calmer than a full DAW view, still
   shows every layer at a glance.
 - **Default mood is major pentatonic** — no two notes clash, so random tapping always sounds good.
@@ -80,7 +82,8 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   first tap on the grid makes a pretty note.
 - **Mute is "sleep"** (eyes closed + speaker icon) — two cues, not colour alone.
 - **Filter is one Dark↔Bright control with a neutral middle** — one handle, two directions, like a DJ filter.
-- **Echo and Space are shared buses with per-critter send** — cheaper on Chromebooks than one reverb per critter.
+- **Echo is per critter; Space is one shared reverb with a per-critter send** — cheaper on Chromebooks than one
+  reverb per critter.
 - **Recordings are stored as raw PCM in IndexedDB, referenced by id from the project JSON** — keeps the project
   small and serialisable; recordings are immutable so undo just swaps references.
 - **Recorded sounds are tune sounds** (pitched across the grid rows) — one rule that covers singing *and*
@@ -88,7 +91,8 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Undo = snapshots of the project JSON** (up to 100); a whole drag counts as one step.
 - **The songbook keeps every song**; opening an example or a new song never overwrites the current one.
 - **Timer is a Web Worker tick (fallback `setInterval`)** — only *wakes* the scheduler; all note times come from
-  the audio clock with 120 ms lookahead.
+  the audio clock with 120 ms lookahead. *Amended for the openDAW port:* still how the built-in engine keeps time;
+  once openDAW plays the song, it sequences it on the audio thread instead.
 - **Up to 6 critters per song** — enough for rich songs, stays calm on screen and light on Chromebooks.
 - **Buttons act on pointer-down** — the sound comes the instant a finger lands. Controls that sit in scrolling
   areas (sleep buttons, songbook cards) act on click instead, so scrolling never triggers them. A global guard
@@ -154,3 +158,23 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **CI runs the browser checks in WebKit as well as Chromium, and fails if WebKit won't start** — many children use
   iPads, and Safari is the browser most likely to differ; Playwright's Linux WebKit runs real audio, so CI also checks
   that a tap starts the sound there. Locally WebKit stays optional.
+- **openDAW's SDK is becoming Itchy's song engine (port in progress, `docs/OPENDAW-PORT.md`)** — the owner asked
+  for the port, and it adds offline rendering for a future export. The costs: about 2.7 MB on a first visit to
+  GitHub Pages (about 65 times today's JS), AGPL-3.0 terms for the deployed app (Itchy's own code stays MIT),
+  cross-origin isolation is required, and two engines to maintain. This is the strong reason for the new
+  dependency and its vendoring tool.
+- **openDAW is vendored as a prebuilt bundle in a versioned folder (`vendor/opendaw/<version>/`), made by a
+  hand-run esbuild script (`npm run vendor:opendaw`)** — the published packages can't load in a browser unbundled;
+  the app keeps no runtime build; versioned paths stop old and new files mixing in a cache; two runs give identical
+  bytes, and `VERSIONS.json` records each file's hash and the openDAW commit it came from.
+- **Cross-origin isolation: headers from `npm start` and on Vercel, coi-serviceworker on GitHub Pages, registered
+  only on devices that pass the capability probe** — openDAW needs `SharedArrayBuffer`; Pages can't send headers;
+  a device that could never run openDAW is never reloaded. Measured on a header-less server: isolated and
+  running after 2 page loads in all 20 cold visits in Chromium, and 2 in 114 and 3 in 6 of 120 in WebKit.
+- **A first visit that goes wrong reloads by itself** — WebKit sometimes drops the service worker's reload or fails
+  the files it fetches just after starting, which left a blank page in about 1 visit in 35; the page retries the
+  reload and reloads when its own scripts fail (twice per tab at most), because a child can't fix a blank page.
+- **COEP rules out cross-origin embeds and assets** — everything the app loads must stay same-origin (it already is).
+- **Dependabot alerts for `scripts/opendaw/package-lock.json` are expected and handled at the next openDAW
+  upgrade** — the lock only feeds the vendoring script, and nothing in it reaches the browser except through the
+  committed bundle; a lock-only bump would no longer match the vendored files.

@@ -214,3 +214,13 @@ Found a security or privacy problem? Please report it privately, as described in
 
 Itchy is [MIT licensed](LICENSE). The bundled [Nunito](https://github.com/googlefonts/nunito) font is under the
 [SIL Open Font License](assets/fonts/OFL.txt). All critters, icons and sounds are original and made in code.
+
+Itchy is being ported to play its music with [openDAW](https://github.com/andremichelle/openDAW), which is licensed
+under the **GNU Affero General Public License v3.0 or later**. Its prebuilt files are in
+[`vendor/opendaw/`](vendor/opendaw/), with openDAW's licence and a [notice](vendor/opendaw/0.0.180/NOTICE.md) that
+lists the exact openDAW commits they were built from; `npm run vendor:opendaw` rebuilds them byte for byte from the
+pins in `scripts/opendaw/`. Itchy's own code stays MIT, but a deployment of Itchy that includes `vendor/opendaw/` is a
+combined work distributed under the AGPL-3.0: anyone who changes and deploys it must also offer its source. This
+repository is that source. `coi-serviceworker.js` is
+[coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) 0.1.7 (MIT), with Itchy's changes marked in the
+file.
