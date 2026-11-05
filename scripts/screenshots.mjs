@@ -158,6 +158,10 @@ async function openApp({ width, height, touch = false, scale = 2 }) {
   const page = await ctx.newPage();
   await page.goto(URL_);
   await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
+  // Every picture is taken on one named sound engine (openDAW: this server is cross-origin isolated), so the play
+  // button's glow, which follows the sound level, comes from the same mix every time.
+  const kind = await page.evaluate(() => window.itchy.engine.ready);
+  if (kind !== 'opendaw') throw new Error(`screenshots need the openDAW engine, but the app is using '${kind}'`);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400); // let the fade-in finish
   return { ctx, page };
