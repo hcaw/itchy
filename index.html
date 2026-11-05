@@ -40,7 +40,29 @@
       quiet: true,
       coepCredentialless: () => false, // Safari has no "credentialless", so every browser gets require-corp
       shouldRegister: () => !window.crossOriginIsolated && itchyProbe() && !/[?&]engine=native/.test(location.search),
+      // WebKit now and then drops a reload made while the service worker starts up, leaving this page with its
+      // scripts cancelled and nothing on screen. A page that is still here after a moment reloads again (3 times
+      // at most); a reload that works replaces the page, and its timer with it.
+      doReload: () => {
+        let tries = 0;
+        const reload = () => { if (tries++ < 4) { location.reload(); setTimeout(reload, 1500 * tries); } };
+        reload();
+      },
     };
+    // WebKit also now and then fails every file the service worker fetches just after it starts, which would leave
+    // a blank page. If one of the page's own scripts or stylesheets fails to load, reload (twice per tab at most).
+    (function () {
+      var key = 'itchy-load-retries', failed = false;
+      function store(f) { try { return f(window.sessionStorage); } catch (e) { return null; } }
+      document.addEventListener('error', function (e) {
+        var el = e.target, url = el && (el.tagName === 'SCRIPT' ? el.src : el.tagName === 'LINK' ? el.href : '');
+        if (failed || !url || new URL(url, location.href).origin !== location.origin) return;
+        failed = true;
+        var tries = Number(store(function (s) { return s.getItem(key); }) || 0);
+        if (tries < 2 && store(function (s) { s.setItem(key, String(tries + 1)); return true; })) location.reload();
+      }, true);
+      window.addEventListener('load', function () { if (!failed) store(function (s) { s.removeItem(key); }); });
+    })();
   </script>
   <script src="coi-serviceworker.js"></script>
 </head>
