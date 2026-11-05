@@ -134,8 +134,9 @@ checks and debugging: `kind` (`'native' | 'opendaw'`, can change from `'opendaw'
 - `preview()` and phrases call `this.voice(...)`, UI calls `engine.uiSound(...)`, so the check's counting wrapper
   still counts them. **One preview is exactly one `voice()` call.**
 - **Routing inside `voice(layer, note, t, dur, preview)`** on the openDAW backend:
-  - `t ≤ now + 0.02` → openDAW audition (§5).
-  - `t > now + 0.02` → the native engine's `voice()`, which schedules with `start(t)` through that layer's native
+  - `t ≤ now + 0.015` → openDAW audition (§5). (M3: 0.015, not 0.02, so a phrase's first note at `now + 0.02`
+    goes native with the rest of its phrase; interface voices whose id starts `__` always go native.)
+  - `t > now + 0.015` → the native engine's `voice()`, which schedules with `start(t)` through that layer's native
     chain. The native engine's `sync()` is called on every facade `sync()` on both backends (it is cheap), so its
     chains always carry the critter's current charms. Its scheduler never runs while openDAW is the backend.
 - **`playing` and the play/stop race.** `playing` is a synchronous flag. `play()` sets `playing = true`, takes
@@ -283,7 +284,8 @@ Started by the facade at page load, only when the context was created at load (�
    `Promise.withResolvers` (roughly Safari/iPadOS 17.4+, Chrome 119+, Firefox 121+). Missing → native.
 2. **Crash guard:** if `sessionStorage['itchy-opendaw-booting']` is set, the previous load in this tab died during
    or shortly after boot (for example an iPad memory-pressure reload) → native for this tab. Otherwise set it, and
-   clear it 20 s after `ready`.
+   clear it 20 s after `ready`. (M3: also cleared on `pagehide`, which a killed tab never gets, so an ordinary
+   reload within 20 s keeps openDAW; M4's crash-flag check must set the flag after that, e.g. in an init script.)
 3. `const od = await import(VENDOR + 'opendaw.js')` where `VENDOR` is the absolute URL of
    `vendor/opendaw/0.0.180/` (works under `/itchy/`).
 4. In order: `od.AnimationFrame.start(window)` (otherwise `engine.position` never moves);
@@ -346,7 +348,7 @@ original and made in code.
 | `cloud` (base 60) | **Nano**, rootKey 67, `loop` on, `loopFade` 0.1 s | `playTune('cloud', 67)` with a 2.5 s hold | duration `max(len·240, secondsToPulses(0.5))`. Attack 0.001 s (the 120 ms fade-in is baked in), release 1.0 s. |
 | `rec:<id>` (mic) | **Nano**, `rootKey` 60 | the recorded clip (§9) | `pitch = 60 + rowSemitones(r) − rowSemitones(3) + 12·octave`; whole clip (§4d). Attack 0.004 s, release 0.03 s. |
 
-**Every Nano unit sets `volume = 0 dB`.** The default is −3 dB ([verified] `NanoDeviceBox.js:146`), which would
+**Every Nano unit sets its `volume` explicitly** (M3: to the sound's level trim, §10c, not always 0 dB). The default is −3 dB ([verified] `NanoDeviceBox.js:146`), which would
 make tunes and recordings 3 dB quieter than their PCM (the reviewer's spike: a 0.5 sine peaked at 0.354).
 
 **Why loops for bass and cloud.** Nano repitches by read rate `2^((pitch−rootKey)/12)` [verified at 9306eaab:
@@ -430,11 +432,11 @@ high-pass at 20 Hz (Revamp's range is 20 Hz to 20 kHz) when the tone doesn't use
 | Itchy charm | openDAW mapping (same formulas as `applyLayer`) |
 |---|---|
 | **Tone**, at unit creation | `EffectFactories.Revamp` defaults are order 1 (24 dB/oct) on both passes and the high-pass **on** at 40 Hz ([verified] `EffectParameterDefaults.js:7,9,24`). apply.js sets `highPass.order = 0`, `lowPass.order = 0` (order is 0..3 → 1..4 biquad sections, so 0 = one 12 dB/oct biquad) and `highPass.enabled = true`, `lowPass.enabled = true` explicitly, at their neutral ends (next rows; corrected in M2: the earlier "both disabled" predates M1's finding that `enabled` clicks). |
-| **Tone** `tone < 0` (dark) | `lowPass.enabled = true`, `frequency = clamp(180·2^((1+tone)·6.8), 20, 20000)`, `q = 0.7 + 5·(−tone)` |
-| **Tone** `tone > 0` (bright) | `highPass.enabled = true`, `frequency = clamp(20·2^(tone·7.3), 20, 20000)`, `q = 0.7 + 4·tone` |
+| **Tone** `tone < 0` (dark) | `lowPass.enabled = true`, `frequency = clamp(180·2^((1+tone)·6.8), 20, 20000)`, `q = 10^((0.7 + 5·(−tone))/20)` (M3: Web Audio reads a low-/high-pass Q in dB, Revamp's q is linear) |
+| **Tone** `tone > 0` (bright) | `highPass.enabled = true`, `frequency = clamp(20·2^(tone·7.3), 20, 20000)`, `q = 10^((0.7 + 4·tone)/20)` |
 | **Tone** `tone == 0` | both passes stay enabled at neutral (low-pass 20 kHz, high-pass 20 Hz, `q = 0.7`), as native keeps its biquads at 20 kHz / 10 Hz; never toggled (M1: `enabled` clicks) |
 | **Echo** `e` | `Delay.delayMusical = 13` (3/16, follows the tempo). `feedback = e > 0 ? 0.3 + 0.42·e : 0`; `wet = 20·log10(0.75·e)` dB; `dry = 0`; `cross = 0` (default 1.0 is ping-pong); `preSyncTimeLeft = preSyncTimeRight = 0` (default left is index 8); `delayMillis = 0`; `filter = log(3500/20)/log(1000) − 1 = −0.2523` (M1 measured: `filter < 0` is a low-pass on the echo at `20·1000^(1+filter)` Hz, Q 0.707, so −0.2523 is 3.5 kHz; −3.4 dB there, −16 dB at 8 kHz). `e == 0` → `wet = −∞`, `feedback = 0`, still enabled (M1: toggling clicks). Index table and defaults re-checked in M1 against the vendored dist (`DelayDeviceBoxAdapter.Fractions`: index 13 = 3/16, 8 = 1/16; defaults `delayMusical` 13, `feedback` 0.5, `cross` 1, `filter` 0, `wet` −6 dB, `dry` 0 dB, `preSyncTimeLeft` 8, `preSyncTimeRight` 0). |
-| **Space** `sp` | One aux bus "Space" (`AudioBusFactory.create(skeleton, 'Space', IconSymbol.Effects, AudioUnitType.Aux, Colors.green)`) with a **Convolver** whose file is the stereo seeded impulse (2.4 s): `normalize = true`, `wet = 0 dB`, `dry = −∞`; aux volume `20·log10(0.9)`. Each critter: `AuxSendBox { routing: Post, sendGain: 20·log10(1.1·sp) }`, −∞ when `sp == 0`. The echo also feeds the reverb (post-chain send); logged. ReverbDeviceBox is the fallback. |
+| **Space** `sp` | One aux bus "Space" (`AudioBusFactory.create(skeleton, 'Space', IconSymbol.Effects, AudioUnitType.Aux, Colors.green)`) with a **Convolver** whose file is the stereo seeded impulse (2.4 s): `normalize = false` with the PCM pre-scaled by Web Audio's ConvolverNode normalisation (M3: openDAW's normalise targets a 0 dB spectral peak, far quieter), `wet = 0 dB`, `dry = −∞`; aux volume `20·log10(0.9)`. Each critter: `AuxSendBox { routing: Post, sendGain: 20·log10(1.1·sp) }`, −∞ when `sp == 0`. The echo also feeds the reverb (post-chain send); logged. ReverbDeviceBox is the fallback. |
 | Master | `primaryAudioUnitBox.volume = 20·log10(0.8)` dB. openDAW's default master Maximizer replaces the DynamicsCompressor; its **5 ms lookahead** (a bool field, on by default; [verified at 9306eaab] `device-maximizer/src/lib.rs:7,37`) stays on and is counted in the latency budget (§10b). **Never use the Compressor device** (GPL, outside the commercial licence). |
 
 Charm drags write a few float fields per move. **M1 measured** (largest sample jump on a 440 Hz tone, steady about
@@ -628,7 +630,8 @@ backends; peak ≤ 0.18, so no limiting needed.
 - **Phrases:** the dice preview and mood arpeggio are audible while stopped; on openDAW they are counted as native
   scheduled sources (spy on the native engine's `voice`) with their exact target times.
 - **Robustness:**
-  - *Bad op:* the check calls `itchy.engine.openDaw.applyOps([orphaning op])`; then `kind === 'native'`, the next
+  - *Bad op:* the check calls `itchy.engine.openDaw.transact(g => <a lone AudioFileBox>)` (M3: the same guarded
+    transaction `applyOps` uses); then `kind === 'native'`, the next
     tap is audible, Play gives level > 0.01, and the only console output is one `console.info`.
   - *Worklet error:* the check dispatches an `error` event on `itchy.engine.openDaw.worklet`; then `kind ===
     'native'` and the next tap is audible. openDAW's own single `console.warn(event)` is the one allowed warning in
@@ -1003,6 +1006,56 @@ Acceptance:
 - `npm test` passes; `tests/surprise.test.js` still imports `processClip` in Node.
 - `npm run screenshots`: clean, or reviewed glow-only changes committed.
 - The PR describes parity and latency per sound.
+
+Done. On the isolated server openDAW plays the song, every preview and recordings; the built-in engine bridges the
+boot, plays the timed phrases and takes over on any failure. `npm test`: 69 passed (62 before, plus 7 in the new
+`tests/apply.test.js`, which drives apply.js against openDAW's real box graph in Node). `npm run check`: 556 passed,
+0 failed (343 before); with WebKit as CI runs it, WebKit also boots openDAW here (isolated, `ready === 'opendaw'`,
+sound and a moving playhead). Files: `src/audio/opendaw/apply.js` and `engine.js` (new), the facade, `boot.js`,
+`mirror.js` (`describeVoice`, linear Q, trims), `render-sounds.js` (`impulseScale`, trims), `src/ui/mic.js` (awaits
+`addRecording`), `tests/e2e/check.mjs`, `scripts/screenshots.mjs`, the README, CONCEPT, CLAUDE.md and CONTRIBUTING.
+- **Measured.** Tap to first sound (median of 5, from `pointerdown` to the first loud frame of the mix, in this
+  container): grid tap 12.7 ms on openDAW vs 17.3 ms built-in; sound change 10.1 vs 25.9 ms; tray tap (finger)
+  1.4 vs 17.3 ms. Transport slope within 0.5% at 100 and 140 BPM. Offline grid: 16 onsets within 1 sample, straight
+  and fully swung. Boot to `ready` about 0.8 s warm.
+- **Parity (§10c)**, loudest 300 ms of one note, openDAW minus built-in, with the trims: kit −0.3..+1.5 dB, tinykit
+  −0.1..+1.3, bells +1.5 / 0.0 / −2.1 (rows 0/3/7), pluck +1.9 / +0.2 / −2.1, bass +0.8 / −0.2 (rows 0/7), cloud
+  +0.3 / −0.2, a 22050 Hz recording −0.1..+0.1, echo 0.6 +0.1, space 0.8 −0.4..+1.6 (the built-in impulse is new
+  random noise on every run), dark +1.3, bright +0.3, a whole kit beat −2.3. All within ±3 dB, kept so by the `parity()` check. Two kicks 94 ms apart overlap (both minus the
+  second alone equals the first's tail). Bass and cloud held 6 s at the bottom and top rows: level within 0.4 dB of
+  the sample's first pass, no sample jump larger than in that first pass (no loop click), silent after the release.
+  The repitched envelopes of bells and pluck shorten upward (−2.1 dB at row 7), the one audible difference; no
+  human listening was possible here, so the owner's listening pass stays on the M5 checklist.
+- **Choices (logged):** keep the crossfaded loops for bass and cloud (no Vaporisateur); keep one reference pitch for
+  bells (no two-root fallback).
+- **Deviations:**
+  1. *Level trims instead of 0 dB everywhere.* The built-in mix ends in a DynamicsCompressor whose automatic make-up
+     gain lifts quiet sounds about 1.7 dB and squashes loud hits; openDAW's Maximizer does neither, so tunes came out
+     2 to 4 dB quieter and tinykit 2 to 3 dB louder. Each sound now has a `gainDb` (Nano `volume`, Playfield slot
+     `volume`): tinykit −2, bells +1.7, pluck +1, bass +2.8, cloud +3, recordings +2.2, kit 0.
+  2. *Tone's Q* is converted with `10^(Q/20)` (Web Audio's low/high-pass Q is in dB; Revamp's is linear). Without it
+     the dark side rang about 11 dB hotter at its resonance.
+  3. *Space:* `normalize` off, with the impulse pre-scaled by Web Audio's normalisation (`impulseScale`), so the reverb
+     is as loud as before (space 0.8: within 1.6 dB).
+  4. *"Now" is 15 ms* (§1c), and interface voices (`__hello`, `__mood`) always go native.
+  5. *The crash flag is also cleared on `pagehide`* (§3): without it every reload within 20 s of a boot fell back to
+     the built-in engine (the first full check run caught it).
+  6. *The playhead after Play* ignores openDAW's position until it has jumped back near 0: for a frame or two the
+     position is still the old paused one, which made the first step shown 67, not 0.
+  7. *The suspended start:* headless Chromium lets an `AudioContext` run without a gesture whatever the autoplay flag
+     says, so the no-flag browser's contexts also get an init script that starts every context suspended and lets
+     `resume()` work only with user activation, as a tablet does.
+  8. *The Play/Stop race* checks "stopped, no steps, not transporting" after 300 ms and silence after 1 s.
+  9. *Parity metric:* the loudest 300 ms window (total energy is reported too: a repitched one-shot gets shorter or
+     longer); the drum overlap uses two kicks a step apart at 160 BPM (94 ms) and a difference of renders, because
+     a snare's tail is too quiet to see under the second hit.
+  10. *`renderOffline({ project, steps, sampleRate })`* builds a fresh openDAW project from any Itchy JSON (the current
+      song by default), so the checks render test songs without touching the live one.
+  11. *The no-`/vendor/` guard* covers `?engine=native` and a header-less server with `navigator.serviceWorker`
+      removed (the M4 approach); a 5 s bundle delay keeps the app up and the first tap audible on the built-in engine.
+  12. *Glides:* each glide fixes its step when it starts (at least 0.08 octave, 0.25 of Q or 0.6 dB a frame, at most
+      6 frames), so any jump lands within about 100 ms; in a hidden tab they run on microtasks.
+  13. `CHECK_ONLY` and `CHECK_PORT` let a section of `npm run check` run on its own while working on it.
 
 ### M4. Isolation paths, budgets and hardening
 

@@ -19,8 +19,8 @@ no build step.
   `store.change(fn, gestureKey)`; call `store.seal()` when a drag ends.
 - **Keep the project format plain JSON.** Add new fields with defaults in `createLayer()`/`createProject()`, and clamp
   them in `migrate()` so old saves still load.
-- **Musical timing comes only from the scheduler on the audio clock** (`src/audio/scheduler.js`). Never use timers for
-  note timing.
+- **Musical timing comes only from the scheduler on the audio clock** (openDAW's engine, or `src/audio/scheduler.js`
+  in the built-in engine). Never use timers for note timing.
 - **No tracking or analytics. No new runtime dependencies or build tools** without a strong reason logged in the
   decisions list.
 - **Only original or licensed art and sounds**; synthesise sounds in code. Never reuse Scratch's characters, art or

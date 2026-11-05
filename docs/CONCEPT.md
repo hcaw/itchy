@@ -53,14 +53,21 @@ On a portrait tablet the critter column becomes a row under the top bar. Every c
 
 ## Technology & structure
 
-Plain HTML/CSS/JavaScript ES modules, Web Audio API, **no runtime dependencies and no build step**. A tiny
-zero-dependency Node static server (`npm start`) because ES modules don't load from `file://`. Tests use Node's
-built-in test runner; browser checks use the pre-installed Playwright.
+Plain HTML/CSS/JavaScript ES modules, Web Audio API, **no build step and nothing to install**. The one runtime
+dependency is the openDAW SDK, committed as a prebuilt bundle (`vendor/opendaw/<version>/`) and loaded with
+`import()` only on pages that can run it; everywhere else Itchy's own Web Audio engine plays. A tiny zero-dependency
+Node static server (`npm start`) because ES modules don't load from `file://`; it also sends the cross-origin
+isolation headers openDAW needs. Tests use Node's built-in test runner; browser checks use the pre-installed
+Playwright.
 
 ```
-index.html, styles.css
-src/audio/    engine.js (facade: context, unlock, output, events), native/engine.js (buses, voices),
-              scheduler.js (pure lookahead), instruments.js, recorder.js, ticker.js (worker clock)
+index.html, styles.css, coi-serviceworker.js (isolation on GitHub Pages)
+src/audio/    engine.js (facade: context, unlock, output, events; picks the backend), mirror.js (project → openDAW
+              scene, pure), playhead.js (openDAW position → steps, pure), probe.js, render-sounds.js (sounds → PCM),
+              native/engine.js (the built-in engine: buses, voices), scheduler.js (pure lookahead),
+              instruments.js, recorder.js, ticker.js (worker clock)
+src/audio/opendaw/  boot.js, engine.js (the openDAW backend), apply.js (scene ops → boxes), samples.js (PCM in memory)
+vendor/opendaw/<version>/  the vendored openDAW build (scripts/vendor-opendaw.mjs)
 src/model/    project.js (JSON data model + migrate), scales.js, history.js (undo), surprise.js, examples.js
 src/storage/  storage.js (async interface: IndexedDB → localStorage → memory)
 src/ui/       app.js and one module per screen region; critters.js draws the SVG creatures
@@ -158,7 +165,7 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **CI runs the browser checks in WebKit as well as Chromium, and fails if WebKit won't start** — many children use
   iPads, and Safari is the browser most likely to differ; Playwright's Linux WebKit runs real audio, so CI also checks
   that a tap starts the sound there. Locally WebKit stays optional.
-- **openDAW's SDK is becoming Itchy's song engine (port in progress, `docs/OPENDAW-PORT.md`)** — the owner asked
+- **openDAW's SDK is Itchy's song engine (`docs/OPENDAW-PORT.md`)** — the owner asked
   for the port, and it adds offline rendering for a future export. The costs: about 2.7 MB on a first visit to
   GitHub Pages (about 65 times today's JS), AGPL-3.0 terms for the deployed app (Itchy's own code stays MIT),
   cross-origin isolation is required, and two engines to maintain. This is the strong reason for the new
@@ -178,3 +185,47 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Dependabot alerts for `scripts/opendaw/package-lock.json` are expected and handled at the next openDAW
   upgrade** — the lock only feeds the vendoring script, and nothing in it reaches the browser except through the
   committed bundle; a lock-only bump would no longer match the vendored files.
+- **The built-in engine stays: it is the fallback, the bridge while openDAW boots, the safety net and the player of
+  the timed phrases** — a page that can't isolate or can't run openDAW still plays, the first tap sounds before the
+  5 MB engine has arrived, and an openDAW failure never leaves a child in silence.
+- **Itchy's JSON is mirrored one way into an in-memory openDAW project that keeps no undo** — the plain JSON,
+  `migrate()` and `store.change` stay the only truth; every change is described again and only the difference is
+  written, in one transaction.
+- **Sounds are still Itchy's own synthesis, rendered to PCM with seeded noise at every boot; noisy drums get four
+  variants that alternate** — the sounds stay original and made in code, every boot gives the same samples, and a
+  hi-hat line doesn't sound like a machine gun.
+- **Bass and cloud sustain with a crossfaded loop over a steady stretch of their sample** — a note of any length
+  holds at any pitch; the parity check measures 6 s notes at the bottom and top rows with no click and an
+  unchanged level, so the Vaporisateur fallback isn't needed.
+- **Bells keep one reference pitch** — the parity check finds every row within 2.1 dB of the built-in bells, so
+  two reference pitches (two units per bells critter) would add cost for nothing audible.
+- **A hidden library unit holds every sample file** — openDAW refuses a file nothing points at; it also keeps every
+  sound loaded, so a newly chosen sound plays on the first tap.
+- **Asleep critters mute their region, not their channel** — the loop goes quiet while taps and previews still
+  sound, as before; notes already ringing finish instead of ducking.
+- **Swing uses openDAW's Zeitgeist on the project's groove with amount (0.5 + swing/4 − 0.01)/0.98** — it undoes
+  openDAW's squash margin, so the odd step lands exactly where the built-in swing puts it (checked to 2 samples).
+- **Timed interface phrases (hello, mood arpeggio, dice preview) play on the built-in engine** — openDAW can only
+  play a live note at once; the built-in engine schedules each note exactly on the audio clock, with the critter's
+  charms, through its own mix. Anything due within 15 ms counts as "now" and goes to openDAW.
+- **Tray previews use hidden tray units with the critter's charms** — an openDAW unit holds one instrument, and a
+  tray tap must sound through the critter's echo, space and tone before the sound is chosen.
+- **Space is fed from after the echo** — openDAW sends are post-chain, so echoes reach the reverb too: slightly
+  wetter than before.
+- **No openDAW Compressor device, ever** — it is GPL-licensed and outside openDAW's commercial licence; the master
+  Maximizer limits the mix.
+- **Each sound gets a small level trim on openDAW** (tinykit −2 dB, bells +1.7, pluck +1, bass +2.8, cloud +3,
+  recordings +2.2) — the built-in mix ends in a compressor whose make-up gain lifts quiet sounds and squashes loud
+  hits, openDAW's Maximizer does neither; with the trims every sound measures within ±3 dB of the built-in engine
+  (the parity check in `npm run check` keeps it so).
+- **The Space impulse is pre-scaled the way Web Audio normalises one, and loaded with openDAW's normalise off** —
+  openDAW normalises an impulse to a 0 dB spectral peak, far quieter than Web Audio; this keeps the reverb as loud
+  as before.
+- **Tone's resonance is converted from Web Audio's decibels to a plain filter Q** (10^(Q/20)) — Web Audio reads a
+  low- or high-pass Q in dB, openDAW's Revamp in plain units; without it the Dark side rang 11 dB hotter.
+- **Any openDAW failure switches to the built-in engine for the rest of the session** — a failed edit or a worklet
+  error is caught, the built-in engine takes over at once (still playing if the music was), and the console says
+  so once; a child never meets silence.
+- **A tab whose openDAW boot died uses the built-in engine next time** — a session flag set during boot and for
+  20 s after, cleared on a normal unload, catches an iPad killing the tab under memory pressure without costing an
+  ordinary reload anything.

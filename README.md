@@ -45,7 +45,8 @@ patterns, polyrhythms, spooky soundscapes and songs built from their own claps a
 - **Sounds good by default.** Every note is in tune with the mood, so random poking makes music.
 - **Nothing can go wrong.** Undo is always one tap away, and work saves itself.
 - **Private by design.** Songs and recordings stay on the device. No accounts, adverts, analytics or tracking.
-- **Light and open.** No dependencies, no build step, MIT licensed. Every sound and picture is made in code.
+- **Light and open.** Nothing to install, no build step, and Itchy's own code is MIT licensed (the openDAW engine it
+  plays on is AGPL; see [Licence](#licence)). Every sound and picture is made in code.
 
 The goal, audience, design principles and constraints are in [`docs/BRIEF.md`](docs/BRIEF.md). How Itchy meets them,
 and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
@@ -94,12 +95,15 @@ npm start
 ```
 
 Then open <http://localhost:5173/>. You need Node 18 or newer. There is nothing to install: Itchy has no
-dependencies and no build step. Any static file server works too, for example `python3 -m http.server`. Opening
+dependencies to install and no build step. `npm start` sends the cross-origin isolation headers that openDAW's
+engine needs; any other static file server works too, for example `python3 -m http.server`, but without those
+headers Itchy plays on its built-in engine. Opening
 `index.html` straight from disk won't work, because browsers block ES modules on `file://`.
 
-To put it on your own site, copy `index.html`, `manifest.webmanifest`, `styles.css`, `src/` and `assets/` to any
-static host. The [Pages workflow](.github/workflows/pages.yml) does exactly this for <https://hcaw.github.io/itchy/>
-on every push to `main`.
+To put it on your own site, copy what `node scripts/collect-site.mjs <folder>` collects (`index.html`,
+`manifest.webmanifest`, `styles.css`, `coi-serviceworker.js`, `src/`, `assets/` and `vendor/`) to any static host.
+The [Pages workflow](.github/workflows/pages.yml) does exactly this for <https://hcaw.github.io/itchy/> on every
+push to `main`.
 
 Every pull request also gets its own preview on Vercel, so you can try a change before it's merged: Vercel's bot
 posts the link on the pull request. Each preview has its own web address, so songs saved there never touch the ones
@@ -117,17 +121,29 @@ npm run screenshots  # re-render the logo, icons and README screenshots from the
 ## Architecture
 
 ```
-index.html, styles.css      styles.css starts with the design tokens (colours, radii, shadows, motion)
+index.html, styles.css      styles.css starts with the design tokens (colours, radii, shadows, motion); index.html
+                            also holds the capability probe and the coi-serviceworker setup
+coi-serviceworker.js        makes the page cross-origin isolated on GitHub Pages (vendored, MIT)
 assets/fonts/               Nunito (SIL Open Font License), bundled so it looks the same on every machine
 src/main.js                 boot: open storage → load the last song → start the app
 src/audio/
+  engine.js                 the facade the app talks to: AudioContext, unlock on first touch, output and level meter,
+                            visual event queue, interface blips; picks the backend (openDAW or built-in) and falls
+                            back to the built-in one if openDAW fails
+  probe.js                  can this browser run openDAW? (AudioWorklet, WebAssembly SIMD, isolation)
+  mirror.js                 pure: the project JSON → a description of the openDAW project, and the edits between two
+  playhead.js               pure: openDAW's transport position → the steps the screen shows
+  render-sounds.js          renders every built-in sound to PCM (seeded, the same on every boot) for openDAW to play
+  opendaw/                  the openDAW backend, loaded with import() only where it can run:
+    boot.js, engine.js      boot openDAW on Itchy's context; sync, play, stop, previews, recordings, offline renders
+    apply.js                the only file that touches openDAW's boxes: applies the mirror's edits in one transaction
+    samples.js              Itchy's PCM held in memory for openDAW (nothing written to disk)
+  native/engine.js          the built-in engine: per-critter chains, reverb bus, limiter, the scheduler's notes
   scheduler.js              pure lookahead scheduler (no Web Audio inside it, so it can be tested on a fake clock)
   ticker.js                 Web Worker timer that only wakes the scheduler
-  engine.js                 the facade the app talks to: AudioContext, unlock on first touch, output and level meter,
-                            visual event queue, interface blips; hands the music to the built-in engine
-  native/engine.js          the built-in engine: per-critter chains, reverb bus, limiter, the scheduler's notes
   instruments.js            every sound, made in code (two drum kits, bells, pluck, bass, cloud, sample playback, reverb impulse)
   recorder.js + capture-worklet.js   mic capture with an AudioWorklet; trim, normalise, fade
+vendor/opendaw/<version>/   the openDAW engine (AGPL-3.0), prebuilt by scripts/vendor-opendaw.mjs; never edited by hand
 src/model/                  plain data, no DOM or audio
   project.js                the JSON project format, migrate() (repairs anything), helpers
   scales.js, sounds.js      moods and the sound catalogue
@@ -142,17 +158,31 @@ src/ui/                     hand-written DOM, no framework
   plugins.js                features that plug into the regions: charms.js, experiments.js (mood, dice), mic.js, songbook.js,
                             delight.js (blinking, eyes that follow you, the mood-tinted room, the Itchy hello)
   critters.js, icons.js, widgets.js         original SVG art and small UI helpers
-scripts/serve.js            the tiny static server behind npm start
+scripts/serve.js            the tiny static server behind npm start (sends the cross-origin isolation headers)
+scripts/collect-site.mjs    copies exactly the files the site ships (for GitHub Pages and the checks)
+scripts/vendor-opendaw.mjs  rebuilds vendor/opendaw/ from pinned packages (npm run vendor:opendaw)
 scripts/screenshots.mjs     renders the logo, icons, social card and README screenshots from the real app
 tests/                      unit tests (node --test) and tests/e2e/check.mjs (Playwright)
 docs/                       the brief, the concept and decisions log, and the README's pictures (docs/images/)
 ```
 
-**Timing.** A worker ticks about every 25 ms. On each tick the scheduler queues every 16th-note step that falls in
-the next 120 ms, at exact times on the audio clock. Tempo is read on every step, so a change lands on the next step
-without drift. Swing only moves the off-beats. If the tab freezes, the scheduler skips ahead instead of firing a
-burst of stale notes. The UI draws each step when its sound reaches the speakers: the scheduled time plus the
-output latency.
+**Sound engines.** On a page that can run it (cross-origin isolated, with AudioWorklet and WebAssembly SIMD: Safari
+and iPadOS 17.4+, Chrome 119+, Firefox 121+), [openDAW](https://github.com/andremichelle/openDAW)'s engine plays
+the song and every preview. Itchy's sounds are still made in code: at start-up each one is rendered to a sample,
+which openDAW's samplers play. After every change the song's JSON is described again (`mirror.js`) and only the
+difference is written into openDAW's project. Everywhere else, and for the first moments while openDAW loads,
+Itchy's own Web Audio engine plays, so the first tap always sounds; if openDAW ever fails, the built-in engine takes
+over at once.
+
+**Timing.** On openDAW the song is sequenced on the audio thread, sample-exact, and tempo and swing are part of its
+project. A tap or a preview is played at the next audio block (about 2 to 11 ms from the touch). The few sounds
+timed into the future (the hello, the mood arpeggio, the dice preview) go to the built-in engine, which schedules
+them exactly on the audio clock. The built-in engine keeps time like this: a worker ticks about every 25 ms; on each
+tick the scheduler queues every 16th-note step that falls in the next 120 ms, at exact times on the audio clock.
+Tempo is read on every step, so a change lands on the next step without drift. Swing only moves the off-beats. If
+the tab freezes, the scheduler skips ahead instead of firing a burst of stale notes. Either way, the UI draws each
+step when its sound reaches the speakers, allowing for the output latency (on openDAW, from its transport position
+every frame).
 
 **Data.** A song is plain JSON: tempo, swing, mood and key, plus a list of layers. Each layer has a sound, a colour, a
 loop length, mute, volume, octave, effects, and notes `{s, r, len, vel}`. Recordings are raw PCM, stored separately by
@@ -217,7 +247,7 @@ Found a security or privacy problem? Please report it privately, as described in
 Itchy is [MIT licensed](LICENSE). The bundled [Nunito](https://github.com/googlefonts/nunito) font is under the
 [SIL Open Font License](assets/fonts/OFL.txt). All critters, icons and sounds are original and made in code.
 
-Itchy is being ported to play its music with [openDAW](https://github.com/andremichelle/openDAW), which is licensed
+Itchy plays its music with [openDAW](https://github.com/andremichelle/openDAW) where the browser can run it, which is licensed
 under the **GNU Affero General Public License v3.0 or later**. Its prebuilt files are in
 [`vendor/opendaw/`](vendor/opendaw/), with openDAW's licence and a [notice](vendor/opendaw/0.0.180/NOTICE.md) that
 lists the exact openDAW commits they were built from; `npm run vendor:opendaw` rebuilds them byte for byte from the
