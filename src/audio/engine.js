@@ -1,213 +1,116 @@
-// The audio engine: one AudioContext, a lookahead scheduler on its clock, a mixing chain per
-// critter (layer) with its charms (effects), and a queue of "what just played" for the UI.
+// The audio engine the app talks to (a facade). It owns the one AudioContext, unlocks it in the first gesture,
+// owns the output buses and the level meter, the visual queue of "what just played", the transport flag and the
+// interface blips, and hands the music to a backend:
 //
-//   layer voices → [volume] → [lowpass] → [highpass] ─┬─► master → limiter → speakers
-//                                                    ├─► echo (per layer: delay + feedback) ─► master
-//                                                    └─► space send ─► shared reverb ─► master
+//   native  (src/audio/native/engine.js)  the built-in Web Audio engine; plays everything today
+//   openDAW (src/audio/opendaw/, from milestone M3 of docs/OPENDAW-PORT.md)  the song engine on isolated pages
+//
+//   native engine → nativeOut (1) ─┬─► speakers
+//   interface blips → uiBus (0.8) ─┤
+//                                  └─► analyser (level)
+//
+// This file must never statically import openDAW's code or the vendored bundle: they are loaded with `await import()`
+// only on pages that can run them (tests/vendor.test.js checks this).
 
-import { Scheduler, stepDuration } from './scheduler.js';
-import { createTicker } from './ticker.js';
-import { playDrum, playTune, playSample, makeImpulse } from './instruments.js';
-import { rowSemitones } from '../model/scales.js';
-import { soundInfo, soundKind, recordingId } from '../model/sounds.js';
+import { stepDuration } from './scheduler.js';
+import { NativeEngine } from './native/engine.js';
+import { canUseOpenDaw } from './probe.js';
 import { notesAtStep } from '../model/project.js';
-
-const SMOOTH = 0.03; // seconds: parameter changes glide instead of clicking
 
 export class Engine {
   constructor(getProject) {
     this.getProject = getProject;
     this.ctx = null;
-    this.chains = new Map();    // layerId → nodes
-    this.buffers = new Map();   // recordingId → AudioBuffer
-    this.pendingRecordings = new Map();
-    this.events = [];           // visual queue: {time, index, dur, steps:{layerId: step}, hits:{layerId: rows[]}}
+    this.native = null;          // the NativeEngine, made with the context
+    /** Which backend plays the music: 'native' or 'opendaw'. Can change from 'opendaw' to 'native' after a failure. */
+    this.kind = 'native';
+    /** The OpenDawEngine, or null. */
+    this.openDaw = null;
+    /** Settles with the first final kind. (openDAW isn't wired in yet, so it is always the built-in engine.) */
+    this.ready = Promise.resolve('native');
+    this.playing = false;        // the transport, as the app sees it; set at once by play() and stop()
+    this.gen = 0;                // play/stop generation: an async play() that finishes after a stop() does nothing
+    this.unlocked = false;       // has the iOS unlock buffer been played (in a gesture)?
+    this.pendingRecordings = new Map(); // recordings added before there is a context
+    this.events = [];            // visual queue: {time, index, dur, steps:{layerId: step}, hits:{layerId: rows[]}}
     this.listeners = new Set();
-    this.scheduler = null;
-    this.ticker = null;
+    // openDAW needs the context before the first gesture so it can boot meanwhile (it starts suspended). Other pages
+    // make it lazily in the first gesture, as before, so old iPads keep the path they know.
+    if (typeof window !== 'undefined' && canUseOpenDaw(window)) this.createContext();
   }
 
-  /** Create or wake the audio context. Must be called from a user gesture the first time. */
+  createContext() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 512;
+    this.nativeOut = ctx.createGain();
+    this.uiBus = ctx.createGain();
+    this.uiBus.gain.value = 0.8;
+    for (const bus of [this.nativeOut, this.uiBus]) {
+      bus.connect(ctx.destination);
+      bus.connect(this.analyser);
+    }
+    this.native = new NativeEngine(this.getProject, { ctx, out: this.nativeOut, onStep: (i, t, d) => this.playStep(i, t, d) });
+    for (const [id, rec] of this.pendingRecordings) this.native.addRecording(id, rec);
+    this.pendingRecordings.clear();
+  }
+
+  /** Create or wake the audio context. Call it from a user gesture before the first sound. */
   ensure() {
-    if (!this.ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AC({ latencyHint: 'interactive' });
-      this.build();
-      // iOS Safari only unlocks after a sound has started inside the gesture.
+    if (!this.ctx) this.createContext();
+    if (!this.unlocked) {
+      // iOS Safari only unlocks after a sound has started inside a gesture, however old the context is.
+      this.unlocked = true;
       const s = this.ctx.createBufferSource();
       s.buffer = this.ctx.createBuffer(1, 1, 22050);
       s.connect(this.ctx.destination);
       s.start(0);
     }
     if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    this.native.ensure();
     return this.ctx;
   }
 
-  build() {
-    const ctx = this.ctx;
-    this.master = ctx.createGain();
-    this.master.gain.value = 0.8;
-    this.limiter = ctx.createDynamicsCompressor();
-    this.limiter.threshold.value = -8;
-    this.limiter.knee.value = 6;
-    this.limiter.ratio.value = 12;
-    this.limiter.attack.value = 0.003;
-    this.limiter.release.value = 0.15;
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 512;
-    this.master.connect(this.limiter).connect(this.analyser).connect(ctx.destination);
-
-    this.spaceIn = ctx.createGain();
-    this.reverb = ctx.createConvolver();
-    this.reverb.buffer = makeImpulse(ctx);
-    const spaceOut = ctx.createGain();
-    spaceOut.gain.value = 0.9;
-    this.spaceIn.connect(this.reverb).connect(spaceOut).connect(this.master);
-
-    this.scheduler = new Scheduler({
-      now: () => ctx.currentTime,
-      getTempo: () => this.getProject().tempo,
-      getSwing: () => this.getProject().swing,
-      onStep: (i, t, d) => this.playStep(i, t, d),
-    });
-    this.ticker = createTicker(() => this.scheduler.tick());
-
-    for (const [id, rec] of this.pendingRecordings) this.addRecording(id, rec);
-    this.pendingRecordings.clear();
-  }
-
   get now() { return this.ctx ? this.ctx.currentTime : 0; }
-  get playing() { return !!(this.scheduler && this.scheduler.running); }
+  /** Recordings ready to play: recordingId → audio. */
+  get buffers() { return this.native ? this.native.buffers : new Map(); }
 
   // ------------------------------------------------------------ transport
 
   play() {
     this.ensure();
-    this.sync();
+    this.gen++;
+    this.playing = true;
     this.events = [];
-    const t = this.ctx.currentTime;
-    for (const c of this.chains.values()) {
-      c.stopper.gain.cancelScheduledValues(t);
-      c.stopper.gain.setValueAtTime(1, t);
-    }
-    this.scheduler.start();
-    this.ticker.start();
+    this.native.play();
     this.emit('play');
   }
 
   stop() {
-    if (!this.scheduler) return;
-    this.scheduler.stop();
-    this.ticker.stop();
-    // Let ringing notes fade rather than chop them: duck each layer briefly, then restore.
-    const t = this.ctx.currentTime;
-    for (const c of this.chains.values()) {
-      c.stopper.gain.cancelScheduledValues(t);
-      c.stopper.gain.setTargetAtTime(0, t, 0.05);
-      c.stopper.gain.setTargetAtTime(1, t + 0.4, 0.01);
-    }
+    if (!this.native?.built) return;
+    this.gen++;
+    this.playing = false;
+    this.native.stop();
     this.events = [];
     this.emit('stop');
   }
 
-  // ------------------------------------------------------------ per-layer chains
-
-  chain(layer) {
-    let c = this.chains.get(layer.id);
-    if (c) return c;
-    const ctx = this.ctx;
-    c = {
-      input: ctx.createGain(),
-      stopper: ctx.createGain(),
-      volume: ctx.createGain(),
-      lowpass: ctx.createBiquadFilter(),
-      highpass: ctx.createBiquadFilter(),
-      echoSend: ctx.createGain(),
-      delay: ctx.createDelay(2),
-      feedback: ctx.createGain(),
-      echoTone: ctx.createBiquadFilter(),
-      spaceSend: ctx.createGain(),
-      previewIn: ctx.createGain(), // taps and previews: heard even when the critter is asleep
-    };
-    c.lowpass.type = 'lowpass';
-    c.lowpass.frequency.value = 20000;
-    c.highpass.type = 'highpass';
-    c.highpass.frequency.value = 10;
-    c.echoTone.type = 'lowpass';
-    c.echoTone.frequency.value = 3500;
-    c.echoSend.gain.value = 0;
-    c.spaceSend.gain.value = 0;
-    c.input.connect(c.stopper).connect(c.volume).connect(c.lowpass).connect(c.highpass);
-    c.previewIn.connect(c.lowpass);
-    c.highpass.connect(this.master);
-    c.highpass.connect(c.echoSend).connect(c.delay).connect(c.echoTone).connect(c.feedback).connect(c.delay);
-    c.echoTone.connect(this.master);
-    c.highpass.connect(c.spaceSend).connect(this.spaceIn);
-    this.chains.set(layer.id, c);
-    this.applyLayer(layer, c);
-    return c;
-  }
-
-  applyLayer(layer, c = this.chains.get(layer.id)) {
-    if (!c) return;
-    const t = this.ctx.currentTime;
-    const p = this.getProject();
-    const tone = layer.fx.tone;
-    c.volume.gain.setTargetAtTime(layer.muted ? 0 : layer.volume, t, SMOOTH);
-    c.previewIn.gain.setTargetAtTime(layer.volume, t, SMOOTH);
-    // Dark ↔ Bright: below zero closes a resonant lowpass, above zero opens a highpass.
-    const lp = tone < 0 ? 180 * Math.pow(2, (1 + tone) * 6.8) : 20000;
-    const hp = tone > 0 ? 20 * Math.pow(2, tone * 7.3) : 10;
-    c.lowpass.frequency.setTargetAtTime(Math.min(20000, lp), t, SMOOTH);
-    c.highpass.frequency.setTargetAtTime(hp, t, SMOOTH);
-    c.lowpass.Q.setTargetAtTime(0.7 + Math.max(0, -tone) * 5, t, SMOOTH);
-    c.highpass.Q.setTargetAtTime(0.7 + Math.max(0, tone) * 4, t, SMOOTH);
-    // Echo: one handle sets both how loud and how long the echoes are.
-    const e = layer.fx.echo;
-    c.echoSend.gain.setTargetAtTime(e * 0.75, t, SMOOTH);
-    c.feedback.gain.setTargetAtTime(e > 0 ? 0.3 + e * 0.42 : 0, t, SMOOTH);
-    c.delay.delayTime.setTargetAtTime(stepDuration(p.tempo) * 3, t, 0.1); // dotted eighth, follows tempo
-    c.spaceSend.gain.setTargetAtTime(layer.fx.space * 1.1, t, SMOOTH);
-  }
-
-  /** Bring chains in line with the project (call after any change). Cheap; safe to call often. */
+  /** Bring the backend in line with the project (call after any change). Cheap; safe to call often. */
   sync() {
-    if (!this.ctx) return;
-    const p = this.getProject();
-    const ids = new Set(p.layers.map((l) => l.id));
-    for (const [id, c] of this.chains) {
-      // Chains for interface voices (ids starting "__", e.g. the mood arpeggio) are kept, so a
-      // sync straight after them doesn't cut their echo short.
-      if (!ids.has(id) && !id.startsWith('__')) {
-        c.input.disconnect();
-        c.previewIn.disconnect();
-        c.highpass.disconnect();
-        c.echoTone.disconnect();
-        this.chains.delete(id);
-      }
-    }
-    for (const l of p.layers) this.applyLayer(l, this.chain(l));
+    this.native?.sync();
   }
 
   // ------------------------------------------------------------ notes
 
-  /** Schedule one note of a layer at audio time t. */
+  /**
+   * Play one note of a layer at audio time t. Every note goes through here (song steps, previews, phrases), so
+   * the checks can count sounds. For now the built-in engine plays them all; from M3, on openDAW, a note due now
+   * is an openDAW audition and a note in the future goes to the built-in engine, which schedules it exactly.
+   */
   voice(layer, note, t, dur, preview = false) {
-    const c = this.chain(layer);
-    const out = preview ? c.previewIn : c.input;
-    const p = this.getProject();
-    const kind = soundKind(layer.sound);
-    const vel = note.vel ?? 1;
-    if (kind === 'beat') return playDrum(this.ctx, layer.sound, note.r, t, vel, out);
-    const semis = rowSemitones(note.r, p.mood) + p.key + 12 * layer.octave;
-    const recId = recordingId(layer.sound);
-    if (recId) {
-      const buf = this.buffers.get(recId);
-      // Row 3 plays the recording at its own pitch; rows above and below sing higher and lower.
-      if (buf) playSample(this.ctx, buf, semis - rowSemitones(3, p.mood) - p.key, t, vel, out);
-      return;
-    }
-    playTune(this.ctx, layer.sound, soundInfo(layer.sound).base + semis, t, vel, dur * (note.len || 1), out);
+    if (!this.native) return;
+    return this.native.voice(layer, note, t, dur, preview);
   }
 
   playStep(index, time, dur) {
@@ -252,7 +155,7 @@ export class Engine {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    o.connect(g).connect(this.master);
+    o.connect(g).connect(this.uiBus);
     o.start(t);
     o.stop(t + len + 0.02);
   }
@@ -280,13 +183,11 @@ export class Engine {
   // ------------------------------------------------------------ recordings
 
   addRecording(id, rec) {
-    if (!this.ctx) { this.pendingRecordings.set(id, rec); return; }
-    const buf = this.ctx.createBuffer(1, rec.data.length, rec.sampleRate);
-    buf.copyToChannel(rec.data, 0);
-    this.buffers.set(id, buf);
+    if (!this.native) { this.pendingRecordings.set(id, rec); return; }
+    this.native.addRecording(id, rec);
   }
   hasRecording(id) {
-    return this.buffers.has(id) || this.pendingRecordings.has(id);
+    return !!this.native?.hasRecording(id) || this.pendingRecordings.has(id);
   }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }

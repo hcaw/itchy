@@ -59,8 +59,8 @@ built-in test runner; browser checks use the pre-installed Playwright.
 
 ```
 index.html, styles.css
-src/audio/    engine.js (context, unlock, buses, voices), scheduler.js (pure lookahead), instruments.js,
-              recorder.js, ticker.js (worker clock)
+src/audio/    engine.js (facade: context, unlock, output, events), native/engine.js (buses, voices),
+              scheduler.js (pure lookahead), instruments.js, recorder.js, ticker.js (worker clock)
 src/model/    project.js (JSON data model + migrate), scales.js, history.js (undo), surprise.js, examples.js
 src/storage/  storage.js (async interface: IndexedDB → localStorage → memory)
 src/ui/       app.js and one module per screen region; critters.js draws the SVG creatures

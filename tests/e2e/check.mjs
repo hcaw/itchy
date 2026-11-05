@@ -6,7 +6,9 @@
 // starts, loops, keeps steady time and stops; recording works with a fake microphone and
 // fails kindly when permission is denied; work survives a reload; example songs play;
 // keyboard controls work; in WebKit (when installed, always in CI), Safari layout holds, a tap
-// starts the sound and nothing is logged. The openDAW probe (tests/e2e/opendaw-probe.js) boots the
+// starts the sound and nothing is logged. The audio facade picks the built-in engine and plays
+// the iOS unlock buffer in the first gesture, and each sound rendered for openDAW is non-silent
+// and the same every time. The openDAW probe (tests/e2e/opendaw-probe.js) boots the
 // vendored openDAW engine inside Itchy's page and must pass every go/no-go item of the port's M1.
 
 import { createRequire } from 'node:module';
@@ -35,11 +37,11 @@ try {
   browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream'] });
 }
 
-async function openPage({ width, height, touch = false, mic = true }) {
+async function openPage({ width, height, touch = false, mic = true, query = '' }) {
   const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: touch, permissions: mic ? ['microphone'] : [] });
   const page = await ctx.newPage();
   const errors = watchConsole(page);
-  await page.goto(URL_);
+  await page.goto(URL_ + query);
   await page.waitForSelector('.cell');
   await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
   await instrument(page);
@@ -292,6 +294,43 @@ async function playback() {
   check(await page.evaluate(() => itchy.engine.playing), 'Space starts playback again');
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
+}
+
+/**
+ * The audio facade (openDAW port, M2). It still plays everything on the built-in engine. On an isolated page it
+ * makes the AudioContext at load (so openDAW can boot before the first gesture); elsewhere, lazily in the first
+ * gesture, as before. Either way the iOS unlock buffer (one sample) plays in the first gesture, and only then.
+ */
+async function audioFacade() {
+  console.log('\nAudio engine facade');
+  for (const [where, query] of [['isolated page', ''], ['built-in engine forced', '?engine=native']]) {
+    for (const touch of [false, true]) {
+      const how = `${where}, ${touch ? 'finger' : 'mouse'}`;
+      const { ctx, page, errors } = await openPage({ width: 1024, height: 768, touch, query });
+      const before = await page.evaluate(async () => {
+        const e = itchy.engine;
+        window.__unlocks = [];
+        const start = AudioBufferSourceNode.prototype.start;
+        AudioBufferSourceNode.prototype.start = function (...a) {
+          if (this.buffer?.length === 1) window.__unlocks.push(navigator.userActivation?.isActive ?? null);
+          return start.apply(this, a);
+        };
+        return { kind: e.kind, ready: await e.ready, openDaw: e.openDaw, hasCtx: !!e.ctx, isolated: crossOriginIsolated };
+      });
+      check(before.kind === 'native' && before.ready === 'native' && before.openDaw === null, `${how}: the built-in engine plays`, JSON.stringify(before));
+      check(before.hasCtx === (query === '' && before.isolated), `${how}: the context is made ${query ? 'in the first gesture' : 'at load'}`, JSON.stringify(before));
+      const inp = input(page, touch);
+      const n = await sounds(page);
+      await inp.tap('.cell');
+      const first = await page.evaluate(() => ({ unlocks: [...window.__unlocks], state: itchy.engine.ctx?.state }));
+      check((await sounds(page)) > n && first.state === 'running', `${how}: the first tap sounds`, JSON.stringify(first));
+      check(first.unlocks.length === 1 && (touch || first.unlocks[0] === true), `${how}: the unlock buffer plays in the first gesture`, JSON.stringify(first.unlocks));
+      await inp.tap('.cell');
+      check((await page.evaluate(() => window.__unlocks.length)) === 1, `${how}: and only then`);
+      check(errors.length === 0, `${how}: no console errors or warnings`, errors.join(' | '));
+      await ctx.close();
+    }
+  }
 }
 
 async function recording() {
@@ -631,6 +670,7 @@ try {
   await interactions('tablet-portrait', { width: 768, height: 1024, touch: true });
   await interactions('chromebook-touch', { width: 1280, height: 800, touch: true });
   await playback();
+  await audioFacade();
   await recording();
   await persistence();
   await keyboard();

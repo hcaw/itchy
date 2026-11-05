@@ -123,7 +123,9 @@ src/main.js                 boot: open storage → load the last song → start 
 src/audio/
   scheduler.js              pure lookahead scheduler (no Web Audio inside it, so it can be tested on a fake clock)
   ticker.js                 Web Worker timer that only wakes the scheduler
-  engine.js                 AudioContext, unlock on first touch, per-critter chains, reverb bus, limiter, visual event queue
+  engine.js                 the facade the app talks to: AudioContext, unlock on first touch, output and level meter,
+                            visual event queue, interface blips; hands the music to the built-in engine
+  native/engine.js          the built-in engine: per-critter chains, reverb bus, limiter, the scheduler's notes
   instruments.js            every sound, made in code (two drum kits, bells, pluck, bass, cloud, sample playback, reverb impulse)
   recorder.js + capture-worklet.js   mic capture with an AudioWorklet; trim, normalise, fade
 src/model/                  plain data, no DOM or audio
