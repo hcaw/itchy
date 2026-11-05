@@ -95,6 +95,27 @@ export class OpenDawEngine {
       ? (fn) => (document.hidden ? queueMicrotask(fn) : requestAnimationFrame(fn))
       : null;
     this.applier = new SceneApplier({ od: this.od, project: this.project, samples: this.samples, onFatal: (e) => this.fatal(e), frame });
+    /** Called when openDAW stops the music by itself (see watchTransport). */
+    this.onHalt = () => {};
+    this.expectPlaying = false; // play() was sent and no stop() since
+    this.seenPlaying = false;   // and openDAW has reported the transport running since
+    this.watchTransport();
+  }
+
+  /**
+   * openDAW stops the transport by itself when the device can't keep up: after 30 overloaded render quanta in a row
+   * it puts the engine to sleep (no sound at all, not even taps). Wake it, so taps sound again, and report the stop,
+   * so the app shows the music as stopped and a child can simply press Play again.
+   */
+  watchTransport() {
+    this.project.engine.isPlaying.subscribe((o) => {
+      if (o.getValue()) { if (this.expectPlaying) this.seenPlaying = true; return; }
+      if (!this.expectPlaying || !this.seenPlaying || this.failed) return;
+      this.expectPlaying = false;
+      this.seenPlaying = false;
+      this.project.engine.wake();
+      this.onHalt();
+    });
   }
 
   /** openDAW failed: stop using it at once and tell the facade (once). */
@@ -124,6 +145,8 @@ export class OpenDawEngine {
 
   play() {
     if (this.failed) return;
+    this.expectPlaying = true;
+    this.seenPlaying = false;
     this.project.engine.setPosition(0);
     this.project.engine.play();
   }
@@ -131,6 +154,7 @@ export class OpenDawEngine {
   /** Pause: held notes are released and echo and reverb tails ring out. Only ever sent while transporting. */
   stop() {
     if (this.failed) return;
+    this.expectPlaying = false;
     this.project.engine.stop(false);
   }
 

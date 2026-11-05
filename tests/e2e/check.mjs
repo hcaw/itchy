@@ -15,8 +15,9 @@
 // first tap and the first Play are heard on a context that starts suspended; failures (a bad edit, a worklet
 // error, a missing bundle) end on the built-in engine with sound; the bundle is never requested where it can't
 // be used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first
-// gesture; each sound rendered for openDAW is non-silent and the same every time; and the M1 probe
-// (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
+// gesture; each sound rendered for openDAW is non-silent and the same every time; a CPU overload shows as a stop, a
+// page restored from the back/forward cache reloads, and a tab whose boot died plays on the built-in engine; and the
+// M1 probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
 
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -1191,6 +1192,76 @@ async function staticImportGuard() {
 }
 
 /**
+ * Hardening (docs/OPENDAW-PORT.md M4): when openDAW stops the music by itself (a CPU overload puts its engine to
+ * sleep), the app shows it as stopped, taps still sound and Play starts it again; a page restored from the
+ * back/forward cache reloads (keeping the song) on openDAW pages only; and a tab whose openDAW boot died (the
+ * crash flag is still set) uses the built-in engine without fetching openDAW again.
+ */
+async function hardening() {
+  console.log('\nHardening: CPU overload, back/forward cache, crash flag');
+  {
+    const { ctx, page, errors } = await openPage({ width: 1024, height: 768 });
+    await page.click('.btn.play', { force: true });
+    await page.waitForTimeout(600);
+    check((await peakLevel(page)) > 0.01, 'overload: the music was playing');
+    await page.evaluate(() => itchy.engine.openDaw.project.handleCpuOverload()); // what openDAW does on overload
+    await page.waitForTimeout(300);
+    const st = await page.evaluate(() => ({
+      playing: itchy.engine.playing, button: document.querySelector('.btn.play').classList.contains('playing'),
+      playhead: document.querySelectorAll('.cell.now').length, kind: itchy.engine.kind,
+    }));
+    check(!st.playing && !st.button && st.playhead === 0 && st.kind === 'opendaw', 'overload: the app shows the music as stopped (still on openDAW)', JSON.stringify(st));
+    check(errors.infos.length === 1 && /too busy/.test(errors.infos[0]), 'overload: the console says why, once', errors.infos.join(' | '));
+    await audible(page, 'overload: the next tap (openDAW is awake again)', () => page.click('.cell[data-s="5"][data-r="2"]'));
+    await page.click('.btn.undo');
+    await page.click('.btn.play', { force: true });
+    await page.waitForTimeout(600);
+    const lvl = await peakLevel(page);
+    check((await page.evaluate(() => itchy.engine.playing)) && lvl > 0.01, 'overload: Play starts the music again', `level ${lvl.toFixed(3)}`);
+    await page.click('.btn.play', { force: true });
+    check(errors.length === 0, 'overload: no console errors or warnings', errors.join(' | '));
+    await ctx.close();
+  }
+  for (const query of ['', '?engine=native']) {
+    const { ctx, page, errors } = await openPage({ width: 1024, height: 768, query });
+    const where = query ? 'built-in engine forced' : 'openDAW';
+    await page.click('.cell[data-s="9"][data-r="5"]');
+    const song = await project(page);
+    let navigated = 0;
+    page.on('framenavigated', (f) => { if (f === page.mainFrame()) navigated++; });
+    await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })));
+    await page.waitForTimeout(400);
+    check(navigated === 0, `back/forward cache, ${where}: an ordinary pageshow doesn’t reload`);
+    await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+    await page.waitForTimeout(1500);
+    if (query) check(navigated === 0, `back/forward cache, ${where}: a restored page carries on (no reload)`);
+    else {
+      check(navigated === 1, 'back/forward cache, openDAW: a restored page reloads', `${navigated} navigations`);
+      await loaded(page);
+      check((await project(page)) === song, 'back/forward cache, openDAW: the song is kept');
+    }
+    check(errors.length === 0, `back/forward cache, ${where}: no console errors or warnings`, errors.join(' | '));
+    await ctx.close();
+  }
+  {
+    // A tab that died while openDAW booted keeps the session flag (a killed tab gets no pagehide to clear it).
+    const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    await ctx.addInitScript(() => sessionStorage.setItem('itchy-opendaw-booting', String(Date.now())));
+    const page = await ctx.newPage();
+    const errors = watchConsole(page);
+    const vendor = [];
+    page.on('request', (r) => { if (r.url().includes('/vendor/')) vendor.push(r.url()); });
+    await page.goto(URL_);
+    await loaded(page, '', { kind: 'native' });
+    await audible(page, 'crash flag: a tap', () => page.click('.cell[data-s="2"][data-r="2"]'));
+    check(vendor.length === 0, 'crash flag: openDAW isn’t fetched again', vendor.join(', '));
+    check(errors.infos.length === 1 && /did not survive/.test(errors.infos[0]), 'crash flag: the console says why, once', errors.infos.join(' | '));
+    check(errors.length === 0, 'crash flag: no console errors or warnings', errors.join(' | '));
+    await ctx.close();
+  }
+}
+
+/**
  * Parity between the engines (docs/OPENDAW-PORT.md §10c): every sound rendered offline on both, one note at a time,
  * must be equally loud (its loudest 300 ms within ±3 dB; total energy is reported too, as repitching a one-shot
  * sample shortens or lengthens it); two quick hits of a drum must overlap; a long bass or cloud
@@ -1331,6 +1402,7 @@ const sections = [
   ['suspendedContext', suspendedContext],
   ['robustness', robustness],
   ['staticImportGuard', staticImportGuard],
+  ['hardening', hardening],
   ['renderedSounds', renderedSounds],
   ['recording', recording],
   ['persistence', persistence],

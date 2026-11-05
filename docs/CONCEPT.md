@@ -229,6 +229,11 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **A tab whose openDAW boot died uses the built-in engine next time** — a session flag set during boot and for
   20 s after, cleared on a normal unload, catches an iPad killing the tab under memory pressure without costing an
   ordinary reload anything.
+- **When openDAW stops the music because the device can't keep up, Itchy shows it as stopped** — openDAW puts
+  its engine to sleep after a CPU overload; Itchy wakes it so taps still sound and turns Play back off, so the
+  music never looks as if it plays in silence, and pressing Play simply starts it again.
+- **On openDAW pages, a page restored from the back/forward cache reloads** — Chromium can bring the audio worklet
+  back running at half speed; the song was saved when the page was hidden, so the reload costs nothing.
 - **`index.html` preloads every module the app starts with (`<link rel="modulepreload">`)** — with no bundler each
   level of imports costs a network round trip; on Fast 3G the listed modules arrive at once, and the app renders in
   about 2.2 s instead of 3.6 s. A unit test keeps the list complete, and openDAW is never on it.

@@ -59,6 +59,9 @@ export class Engine {
     if (typeof window !== 'undefined' && canUseOpenDaw(window)) {
       this.createContext();
       this.bootOpenDaw();
+      // A page restored from the back/forward cache can come back with Chromium's audio worklet clock running at
+      // half speed. Reload it instead: the song was saved when the page was hidden, so nothing is lost.
+      addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     } else {
       this.settle('native');
     }
@@ -71,6 +74,7 @@ export class Engine {
       const { startOpenDaw } = await import('./opendaw/engine.js');
       od = await startOpenDaw(this.ctx, { getProject: this.getProject, recordings: this.recordings, onFatal: (e) => this.fail(e) });
       od.worklet.connect(this.analyser);
+      od.onHalt = () => this.halted();
     } catch (e) {
       console.info('Itchy: playing with the built-in sound engine.', reason(e));
       this.settle('native');
@@ -108,6 +112,17 @@ export class Engine {
       this.native.play();
     }
     this.settle('native');
+  }
+
+  /**
+   * openDAW stopped the music by itself because the device couldn't keep up (a CPU overload): show it as stopped,
+   * exactly as if Stop had been pressed, so pressing Play starts it again.
+   */
+  halted() {
+    if (!this.playing || this.kind !== 'opendaw') return;
+    console.info('Itchy: the music stopped because the device was too busy to keep playing it.');
+    this.sentPlay = false; // openDAW has stopped already
+    this.stop();
   }
 
   createContext() {
