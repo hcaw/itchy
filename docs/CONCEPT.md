@@ -229,6 +229,11 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **A tab whose openDAW boot died uses the built-in engine next time** — a session flag set during boot and for
   20 s after, cleared on a normal unload, catches an iPad killing the tab under memory pressure without costing an
   ordinary reload anything.
+- **Load budgets are checked on DevTools' Fast 3G with a 4× slower CPU, over HTTP/2 with gzip as GitHub Pages and
+  Vercel serve** — a slow school tablet is the case that matters. Measured: renders in about 2.2 s and the first
+  tap is heard in about 2.4 s (on the built-in engine), openDAW is ready in about 20 s cold and 2.3 s with a warm
+  cache, 5.1 MB from `/vendor/` (2.6 MB sent). Over HTTP/1.1 even the app before the port took 4.7 s to render, so
+  those numbers would say nothing about what children get.
 - **When openDAW stops the music because the device can't keep up, Itchy shows it as stopped** — openDAW puts
   its engine to sleep after a CPU overload; Itchy wakes it so taps still sound and turns Play back off, so the
   music never looks as if it plays in silence, and pressing Play simply starts it again.

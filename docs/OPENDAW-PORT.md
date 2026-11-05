@@ -315,7 +315,8 @@ Started by the facade at page load, only when the context was created at load (�
 `.wasm`, so a first visit there transfers about **0.71 MB of gzipped JS + 1.95 MB of raw WASM ≈ 2.7 MB**, about 65
 times today's 41 KB. The offline worker (1.36 MB) is fetched only by `renderOffline`. The browser cache serves
 repeat visits. A classroom of 30 devices fetches about 80 MB on first use; logged. There is no loading screen: the
-native engine plays until openDAW is ready.
+native engine plays until openDAW is ready. (M4, measured on the HTTP/2 budget server with gzip as Pages serves it:
+5.14 MB from `/vendor/`, 2.61 MB sent; 2.75 MB for the whole first visit, in 80 files.)
 
 ---
 
@@ -640,7 +641,8 @@ backends; peak ≤ 0.18, so no limiting needed.
     'native'`, sound, one `console.info`.
   - *Static-import guard:* on the forced native path (`?engine=native`) and the not-isolated path, **no request to
     `/vendor/` is made**; with `/vendor/` responses delayed 5 s on the isolated server, the app renders and the
-    first tap sounds before the bundle arrives.
+    first tap sounds before the bundle arrives. (M4: the not-isolated path moved to the isolation scenarios below,
+    on the collected site.)
 - **Determinism:** each sound rendered twice by `render-sounds.js` is byte-identical.
 - **Recording** (from M3): after recording, output rises when tapping rows 0, 3 and 7 while stopped; a song using
   the recording is audible; after reload `hasRecording` and an audible tap; the injected 22050 Hz clip plays.
@@ -650,10 +652,16 @@ backends; peak ≤ 0.18, so no limiting needed.
   - *No service worker:* an `addInitScript` makes `navigator.serviceWorker` undefined (closer to a Firefox private
     window than Playwright's `serviceWorkers: 'block'`, which itself logs a warning) → `kind === 'native'`; the
     native subset passes (counted sounds, the old 1e-6 `playStep` timing check, level > 0.01).
-  - *Forced:* `?engine=native` on the isolated server runs the same subset.
+  - *Forced:* `?engine=native` on the isolated server runs the same subset. (M4: also on the header-less collected
+    site, where it must register no service worker and never reload; and so must a device that fails the probe,
+    stood in for by deleting `Promise.withResolvers`, as on iPadOS before 17.4. Deleting `AudioWorkletNode`
+    instead would also remove the checks' own output tap.)
   - *First-visit safety nets (from M1):* with the first `location.reload()` swallowed once, and with `styles.css`
-    aborted once by `page.route`, the page still ends isolated and running within 3 loads.
-- **Budgets** (CDP: Fast 3G, 4× CPU, cold cache, serve.js without compression, so worse than Pages): the app
+    aborted once by `page.route`, the page still ends isolated and running within 3 loads. (M4: `location.reload`
+    can't be replaced from a script, so `window.coi` gets a one-line seam, `reload: () => location.reload()`, which
+    `doReload` calls and the check drops once.)
+- **Budgets** (CDP: Fast 3G, 4× CPU, cold cache, ~~serve.js without compression, so worse than Pages~~ **M4: an
+  HTTP/2 test server with gzip and `max-age=600`, as Pages and Vercel serve**, see M4's note): the app
   renders and the first tap is audible within 3 s (native bridge); `ready` resolves within 60 s; vendor bytes
   ≤ 5.5 MB. Warm cache, 4× CPU: `ready` within 4 s. JS heap after boot recorded (CDP `Performance.getMetrics`).
   The measured numbers go in the PR and the README.
@@ -765,10 +773,10 @@ example songs on both and note differences.
 | 5 | A throwing transaction or worklet error mid-session | Low-medium / high | Library holder and direct device creation avoid known orphan rules; every failure → native at once (§1d.4), checked |
 | 6 | `stop(false)` + `setPosition(0)` misbehaves | Low / low | M1: works (restarts at 0, tails ring); closed |
 | 7 | Charm drags click, tempo writes glitch | Medium / medium | M1: abrupt Revamp frequency, Delay wet and `enabled` writes click; one write per frame, glides for jumps, `enabled` never toggled (§4f) |
-| 8 | CPU with up to ~18 units (6 critters, ≤ 10 tray, library, aux) on tablets | Medium / medium | Lazy tray units; idle units carry no notes; measure `engine.cpuLoad`; overload → surface as a stop |
+| 8 | CPU with up to ~18 units (6 critters, ≤ 10 tray, library, aux) on tablets | Medium / medium | Lazy tray units; idle units carry no notes; measure `engine.cpuLoad`; overload → surface as a stop (M4: done; openDAW's own overload sleep is woken and shown as a stop) |
 | 9 | SDK console warnings fail checks | Medium / low | Never create a file without its PCM; never orphan a box; checks catch regressions |
 | 10 | Repitching changes tune envelopes; loops audible | Certain / low-medium | Listening check; Vaporisateur or two-root bells fallbacks |
-| 11 | Chromium half-speed worklet clock after bfcache restore | Low / medium | `pageshow` with `persisted` → reload (autosaved) |
+| 11 | Chromium half-speed worklet clock after bfcache restore | Low / medium | `pageshow` with `persisted` → reload (autosaved) (M4: done, on openDAW pages) |
 | 12 | Two engines to maintain | Certain / medium | Native frozen; decisions log records when it could go |
 | 13 | Git history +6.5 MB per upgrade | Certain / low | Upgrade rarely; `.gitattributes` |
 | 14 | AGPL | Certain / owner's call | §12; sign-off before merge |
@@ -1074,6 +1082,60 @@ Acceptance:
 - Budgets met: render and first tap within 3 s, `ready` within 60 s on Fast 3G + 4× CPU cold; within 4 s warm;
   vendor bytes ≤ 5.5 MB.
 - `npm test` and `npm run check` pass; in CI (when pushed) the WebKit step passes.
+
+Done. Every way in is checked, the budgets are met and measured, and the remaining edge cases are handled.
+`npm test`: 70 passed (69 at M3, plus the preload test).
+`npm run check`: 654 passed, 0 failed as CI runs it (WebKit installed, `CI=true`), in about 6 minutes here.
+Files: `index.html` (modulepreload list, the `window.coi.reload` seam), `src/audio/engine.js` (bfcache guard,
+`halted()`), `src/audio/opendaw/engine.js` (`watchTransport()`), `scripts/serve.js` (exports `TYPES`),
+`tests/e2e/h2-server.js` (new), `tests/e2e/check.mjs` (sections `isolationPaths`, `budgets`, `hardening`, the WebKit
+boot step, `nativeTiming()` shared with `playbackNative`), `tests/deploy.test.js` (the preload test), CONCEPT,
+CONTRIBUTING.
+- **Isolation paths** (the collected site served without headers, 3 runs each, the same every time): the service
+  worker isolates the page and openDAW plays after **2 loads**; with the first reload dropped, **2 loads** (the
+  1.5 s retry); with `styles.css` failing once, **3 loads**. Without a service worker, with `?engine=native` and
+  without `Promise.withResolvers`: the built-in engine, 1 load, no registration, no `/vendor/` request, the context
+  made in the first gesture as before, steps exactly on the grid (1e-6 s), a tap heard within 50 ms and undone.
+- **Budgets** (Fast 3G: 562.5 ms round trips, 180 kB/s down; CPU 4× slower; 4-core container; 3 runs):
+  | | renders | first tap heard | `ready` | from `/vendor/` | JS heap |
+  |---|---|---|---|---|---|
+  | cold | 2.08–2.28 s | 2.20–2.44 s (built-in engine) | 19.4–20.0 s (`opendaw`) | 5.14 MB (2.61 MB sent) | 9.6–9.8 MB |
+  | warm | 0.39–0.44 s | 1.2–1.3 s | 2.22–2.34 s (`opendaw`) | nothing fetched | 11.6–12.4 MB |
+
+  The heap is the page's main thread only (not the worklet, workers or WASM memory).
+- **WebKit** (Playwright's Linux WebKit, as in CI): isolated on the check server, boots openDAW, `ready` settles to
+  `kind`, a tap comes out of the mix within 50 ms and shows on the level meter, Play is heard.
+- **Hardening.** *CPU overload:* openDAW already stops itself after 30 overloaded render quanta in a row
+  (`Project.handleCpuOverload`, on by default) by putting its engine to **sleep**, which silences taps too, and
+  Itchy didn't notice (Play still showed "playing"). The openDAW backend now watches `engine.isPlaying`; when it
+  drops after a `play()` without a `stop()`, it calls `engine.wake()` and the facade stops as if Stop were pressed
+  (one `console.info`). Checked by calling `handleCpuOverload()`: the app shows stopped, a tap is heard (a mutation
+  without `wake()` makes it silent), Play works again. *bfcache:* on openDAW pages (context made at load),
+  `pageshow` with `persisted` reloads; checked with a synthetic event (Playwright's Chromium disables the bfcache):
+  reload, song kept; no reload for a plain `pageshow` or on `?engine=native`. *Crash flag:* set before load by an
+  init script → the built-in engine, one `console.info`, a tap heard, and no `/vendor/` request.
+- **Deviations:**
+  1. *The budgets run over HTTP/2, not on serve.js.* Over HTTP/1.1 a browser opens six connections and DevTools'
+     throttling adds a round trip to every file, so with ~37 files at start even `main`, before the port, rendered
+     at **4.7 s** cold (this branch: 5.5 s; 4.9 s with the preloads below; `ready` 31.7 s). Pages and Vercel serve
+     HTTP/2 with compression, so the budget server (`tests/e2e/h2-server.js`) does too: TLS with a throwaway
+     `openssl` certificate whose key hash Chromium is told to trust (`--ignore-certificate-errors-spki-list`; with
+     `ignoreHTTPSErrors` instead, Chromium caches nothing and "warm" re-downloads everything), gzip for text but not
+     `.wasm`, `max-age=600` as Pages sends, and COOP/COEP as Vercel sends. Without `openssl` the section is skipped
+     locally and fails in CI.
+  2. *`<link rel="modulepreload">` for every startup module (new, `index.html`).* Even over HTTP/2 the unbundled
+     import chain cost a round trip per level: render 3.6 s and first tap 4.1 s, over budget. With the 31 modules
+     `src/main.js` imports listed, they arrive together: render 2.2 s. `tests/deploy.test.js` keeps the list equal
+     to the static import graph and openDAW off it; CONTRIBUTING says to add a line per new startup module; logged.
+  3. *The overload stop also wakes openDAW's engine*: openDAW's sleep silences auditions as well, which would break
+     "every action makes a sound" until the next Play.
+  4. *The bfcache guard is only on openDAW-capable pages*, so older devices keep today's behaviour.
+  5. *Ready time is read in the page* (`performance.now()` when `engine.ready` settles), because an evaluate after
+     boot can wait behind the 4×-throttled main thread for a second or more.
+  6. *The "incapable device" scenario deletes `Promise.withResolvers`*, and the forced and incapable scenarios run on
+     the header-less collected site; the isolated-server `?engine=native` run stays in `playbackNative`.
+  7. *WebKit's service-worker path is not in CI*: M1 measured it (2 or 3 loads, with the safety nets); the iPad
+     checklist (M5) covers it on real hardware.
 
 ### M5. Docs, licence wrap-up and the merge gate
 
