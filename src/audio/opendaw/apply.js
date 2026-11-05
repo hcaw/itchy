@@ -206,6 +206,7 @@ export class SceneApplier {
         b.index.setValue(s.note);
         b.gate.setValue(s.gate);
         b.polyphone.setValue(s.polyphone);
+        b.volume.setValue(s.volumeDb);
       }));
       return;
     }

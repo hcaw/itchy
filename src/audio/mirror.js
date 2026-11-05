@@ -55,12 +55,18 @@ export const NEUTRAL_LOW_PASS = 20000;
 export const NEUTRAL_HIGH_PASS = 20;
 
 /**
+ * Web Audio reads a low- or high-pass filter's Q in decibels (the spec's α = sin ω / (2·10^(Q/20))); Revamp's q is
+ * the plain biquad Q. So the built-in engine's Q of `db` is a Revamp q of 10^(db/20).
+ */
+export const linearQ = (db) => Math.pow(10, db / 20);
+
+/**
  * Tone (−1 dark .. 1 bright) as Revamp's two passes, with the built-in engine's formulas. Both passes stay enabled
  * at order 0 (one 12 dB/oct biquad): switching `enabled` clicks (M1), so an unused pass sits at its neutral end.
  */
 export function revamp(tone) {
-  const lp = tone < 0 ? { hz: clamp(180 * Math.pow(2, (1 + tone) * 6.8), 20, 20000), q: 0.7 + 5 * -tone } : { hz: NEUTRAL_LOW_PASS, q: 0.7 };
-  const hp = tone > 0 ? { hz: clamp(20 * Math.pow(2, tone * 7.3), 20, 20000), q: 0.7 + 4 * tone } : { hz: NEUTRAL_HIGH_PASS, q: 0.7 };
+  const lp = tone < 0 ? { hz: clamp(180 * Math.pow(2, (1 + tone) * 6.8), 20, 20000), q: linearQ(0.7 + 5 * -tone) } : { hz: NEUTRAL_LOW_PASS, q: linearQ(0.7) };
+  const hp = tone > 0 ? { hz: clamp(20 * Math.pow(2, tone * 7.3), 20, 20000), q: linearQ(0.7 + 4 * tone) } : { hz: NEUTRAL_HIGH_PASS, q: linearQ(0.7) };
   return { lowPass: { enabled: true, order: 0, ...lp }, highPass: { enabled: true, order: 0, ...hp } };
 }
 
@@ -123,17 +129,18 @@ export function describeInstrument(sound, env) {
   const recId = recordingId(sound);
   if (recId) {
     const rec = env.recordings?.[recId];
-    return { type: 'nano', file: rec ? sound : null, seconds: rec ? rec.seconds : 0, rootKey: env.recording.rootKey, volumeDb: 0, attack: env.recording.attack, release: env.recording.release, loop: null, sustain: null };
+    return { type: 'nano', file: rec ? sound : null, seconds: rec ? rec.seconds : 0, rootKey: env.recording.rootKey, volumeDb: env.recording.gainDb ?? 0, attack: env.recording.attack, release: env.recording.release, loop: null, sustain: null };
   }
   const s = env.sounds[sound] || env.sounds.bells;
   if (s.instrument === 'playfield') {
     // gate 0 (Off): every hit plays to its end. polyphone: a quick second hit doesn't cut the first one off.
-    const slots = s.rows.flatMap((r, row) => r.files.map((file, v) => ({ note: drumPitch(row, v), file, gate: 0, polyphone: true })));
+    const slots = s.rows.flatMap((r, row) => r.files.map((file, v) => ({ note: drumPitch(row, v), file, gate: 0, polyphone: true, volumeDb: s.gainDb ?? 0 })));
     return { type: 'playfield', slots, variants: s.rows.map((r) => r.variants) };
   }
-  // Every Nano unit plays at 0 dB (openDAW's default is −3 dB). A held sound loops a steady stretch of its sample.
+  // A Nano unit plays at the sound's trim (openDAW's default is −3 dB, so it is always set). A held sound loops a
+  // steady stretch of its sample.
   const loop = s.loop ? { enabled: true, start: s.loop.start / s.seconds, end: s.loop.end / s.seconds, fade: s.loop.fade } : null;
-  return { type: 'nano', file: s.file, seconds: s.seconds, rootKey: s.rootKey, volumeDb: 0, attack: s.attack, release: s.release, loop, sustain: s.sustain };
+  return { type: 'nano', file: s.file, seconds: s.seconds, rootKey: s.rootKey, volumeDb: s.gainDb ?? 0, attack: s.attack, release: s.release, loop, sustain: s.sustain };
 }
 
 const instrumentFiles = (inst) => (inst.type === 'playfield' ? inst.slots.map((s) => s.file) : inst.file ? [inst.file] : []);
@@ -150,6 +157,14 @@ function describeNote(n, layer, inst, project) {
   const pitch = recordingId(layer.sound) ? recordingPitch(n.r, project, layer.octave) : tunePitch(layer.sound, n.r, project, layer.octave);
   const duration = inst.sustain ? heldPulses(n.len || 1, inst.sustain, project.tempo) : oneShotPulses(inst.seconds, pitch, inst.rootKey);
   return { ...base, pitch, duration };
+}
+
+/**
+ * One note played live (a preview or a tap): its MIDI pitch, length in pulses and velocity, as the song would play
+ * it; or null when it can't sound yet (a recording that isn't loaded). `note.s` picks a noisy drum's variant.
+ */
+export function describeVoice(layer, note, project, env) {
+  return describeNote({ s: 0, r: 0, ...note }, layer, describeInstrument(layer.sound, env), project);
 }
 
 /** One critter as an openDAW unit: Zeitgeist → instrument → Revamp → Delay, with a send to Space. */

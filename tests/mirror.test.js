@@ -7,7 +7,7 @@ import {
   gainToDb, grooveAmount, squash, moebiusEase, revamp, delay, ECHO_FILTER, drumPitch, tunePitch, recordingPitch,
   playbackRate, oneShotPulses, MASTER_DB,
 } from '../src/audio/mirror.js';
-import { soundCatalogue, TUNE_RENDERS, DRUM_VARIANTS } from '../src/audio/render-sounds.js';
+import { soundCatalogue, TUNE_RENDERS, DRUM_VARIANTS, DRUM_GAIN_DB, RECORDING_PLAY } from '../src/audio/render-sounds.js';
 import { swingOffset, stepDuration } from '../src/audio/scheduler.js';
 import { createProject, createLayer, migrate, clone, TEMPO_MAX } from '../src/model/project.js';
 import { EXAMPLES } from '../src/model/examples.js';
@@ -44,7 +44,7 @@ test('drum notes pick Playfield slot 36 + 4·row + variant, and noisy pieces alt
     }
     // One slot per row and variant; every slot one-shot (gate off) and polyphonic.
     assert.equal(u.instrument.slots.length, DRUM_VARIANTS[kit].reduce((a, b) => a + b, 0));
-    assert.ok(u.instrument.slots.every((sl) => sl.gate === 0 && sl.polyphone === true), 'every slot gate 0 and polyphone');
+    assert.ok(u.instrument.slots.every((sl) => sl.gate === 0 && sl.polyphone === true && sl.volumeDb === DRUM_GAIN_DB[kit]), 'every slot gate 0, polyphone, at the kit’s trim');
     assert.deepEqual(new Set(u.instrument.slots.map((sl) => sl.note)).size, u.instrument.slots.length, 'slot notes are unique');
   }
   assert.equal(drumPitch(0, 0), 36);
@@ -103,11 +103,12 @@ test('volume, send and master levels in decibels', () => {
   assert.equal(gainToDb(0), -Infinity);
 });
 
-test('every Nano unit plays at 0 dB, and every held sound loops inside its sample', () => {
+test('every Nano unit plays at its sound’s level trim (never openDAW’s −3 dB default), and every held sound loops inside its sample', () => {
   const p = song([...TUNE_SOUNDS.map((sound) => ({ sound, notes: [{ s: 0, r: 0 }] })), { sound: 'rec:x', notes: [] }]);
   for (const u of describe(p, env({ x: { seconds: 0.5 } })).units) {
     assert.equal(u.instrument.type, 'nano');
-    assert.equal(u.instrument.volumeDb, 0, `${u.sound}: openDAW's default is −3 dB`);
+    assert.equal(u.instrument.volumeDb, (TUNE_RENDERS[u.sound] ?? RECORDING_PLAY).gainDb, `${u.sound}: set explicitly; openDAW's default is −3 dB`);
+    assert.ok(Math.abs(u.instrument.volumeDb) <= 4, 'a trim is small');
     const held = !!TUNE_RENDERS[u.sound]?.sustain;
     assert.equal(!!u.instrument.loop?.enabled, held, `${u.sound} loops only if held`);
     if (held) {
@@ -120,17 +121,17 @@ test('every Nano unit plays at 0 dB, and every held sound loops inside its sampl
 
 test('tone: Revamp passes at order 0, always enabled, neutral when unused, with the built-in formulas', () => {
   const flat = revamp(0);
-  assert.deepEqual(flat, { lowPass: { enabled: true, order: 0, hz: 20000, q: 0.7 }, highPass: { enabled: true, order: 0, hz: 20, q: 0.7 } });
+  assert.deepEqual(flat, { lowPass: { enabled: true, order: 0, hz: 20000, q: 10 ** (0.7 / 20) }, highPass: { enabled: true, order: 0, hz: 20, q: 10 ** (0.7 / 20) } });
   for (const tone of [-1, -0.5, -0.1]) {
     const r = revamp(tone);
     near(r.lowPass.hz, Math.min(20000, 180 * Math.pow(2, (1 + tone) * 6.8)), 1e-9, `lp ${tone}`);
-    near(r.lowPass.q, 0.7 + 5 * -tone, 1e-12);
+    near(r.lowPass.q, 10 ** ((0.7 + 5 * -tone) / 20), 1e-12, 'Web Audio’s Q is in dB; Revamp’s is linear');
     assert.deepEqual(r.highPass, flat.highPass);
   }
   for (const tone of [0.1, 0.5, 1]) {
     const r = revamp(tone);
     near(r.highPass.hz, 20 * Math.pow(2, tone * 7.3), 1e-9, `hp ${tone}`);
-    near(r.highPass.q, 0.7 + 4 * tone, 1e-12);
+    near(r.highPass.q, 10 ** ((0.7 + 4 * tone) / 20), 1e-12);
     assert.deepEqual(r.lowPass, flat.lowPass);
   }
   assert.equal(revamp(-1e-9).lowPass.hz, 20000, 'no jump just below neutral');

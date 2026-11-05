@@ -18,6 +18,14 @@ import { midiToHz } from '../model/scales.js';
 export const DRUM_VARIANTS = { kit: [1, 4, 4, 4], tinykit: [1, 4, 1, 1] };
 export const DRUM_SECONDS = 0.6;
 
+/**
+ * Level trims (dB) on openDAW, so each sound is as loud as on the built-in engine. The built-in mix ends in a
+ * DynamicsCompressor whose automatic make-up gain lifts quiet sounds and squashes loud hits; openDAW ends in a
+ * Maximizer that does neither. The parity check in tests/e2e/check.mjs measures every sound on both engines and
+ * keeps each within ±3 dB (docs/OPENDAW-PORT.md §10c); these are the trims it was tuned with.
+ */
+export const DRUM_GAIN_DB = { kit: 0, tinykit: -2 };
+
 /** A whole number of periods of `hz` close to `seconds`, so a loop's two ends meet in phase. */
 const periods = (seconds, hz) => Math.round(seconds * hz) / hz;
 
@@ -31,19 +39,19 @@ const cloudBeat = 1 / (midiToHz(CLOUD_ROOT) * (Math.pow(2, 9 / 1200) - 1));
  * holds (as in instruments.js: bass holds 0.9 × its length, at least 0.12 s; cloud its length, at least 0.5 s).
  */
 export const TUNE_RENDERS = {
-  bells: { rootKey: 79, seconds: 1.8, attack: 0.001, release: 0.05 },
-  pluck: { rootKey: 67, seconds: 1.0, attack: 0.001, release: 0.05 },
+  bells: { rootKey: 79, seconds: 1.8, attack: 0.001, release: 0.05, gainDb: 1.7 },
+  pluck: { rootKey: 67, seconds: 1.0, attack: 0.001, release: 0.05, gainDb: 1 },
   bass: {
-    rootKey: 43, seconds: 1.85, hold: 1.5, attack: 0.001, release: 0.12, sustain: { factor: 0.9, minSeconds: 0.12 },
+    rootKey: 43, seconds: 1.85, hold: 1.5, attack: 0.001, release: 0.12, gainDb: 2.8, sustain: { factor: 0.9, minSeconds: 0.12 },
     loop: { start: 0.6, end: 0.6 + periods(0.8, midiToHz(43)), fade: 0.05 },
   },
   cloud: {
-    rootKey: CLOUD_ROOT, seconds: 3.0, hold: 2.5, attack: 0.001, release: 1.0, sustain: { factor: 1, minSeconds: 0.5 },
+    rootKey: CLOUD_ROOT, seconds: 3.0, hold: 2.5, attack: 0.001, release: 1.0, gainDb: 3, sustain: { factor: 1, minSeconds: 0.5 },
     loop: { start: 0.25, end: 0.25 + periods(4 * cloudBeat, midiToHz(CLOUD_ROOT)), fade: 0.1 },
   },
 };
 /** A mic recording plays on Nano at its own pitch on row 3. */
-export const RECORDING_PLAY = { rootKey: 60, attack: 0.004, release: 0.03 };
+export const RECORDING_PLAY = { rootKey: 60, attack: 0.004, release: 0.03, gainDb: 2.2 };
 export const SPACE_SECONDS = 2.4;
 
 /**
@@ -74,14 +82,14 @@ export function soundCatalogue(sampleRate = 48000) {
   const sounds = {};
   for (const kit of DRUM_KITS) {
     sounds[kit] = {
-      instrument: 'playfield',
+      instrument: 'playfield', gainDb: DRUM_GAIN_DB[kit],
       rows: DRUM_VARIANTS[kit].map((variants, row) => ({ variants, files: Array.from({ length: variants }, (_, v) => drumFile(kit, row, v)) })),
     };
   }
   for (const [id, t] of Object.entries(TUNE_RENDERS)) {
     sounds[id] = {
       instrument: 'nano', file: id, rootKey: t.rootKey, seconds: frames(t.seconds) / sampleRate,
-      attack: t.attack, release: t.release, loop: t.loop || null, sustain: t.sustain || null,
+      attack: t.attack, release: t.release, gainDb: t.gainDb, loop: t.loop || null, sustain: t.sustain || null,
     };
   }
   return { sampleRate, sounds, recording: RECORDING_PLAY, space: { file: SPACE_FILE, seconds: frames(SPACE_SECONDS) / sampleRate, channels: 2 } };

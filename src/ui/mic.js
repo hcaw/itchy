@@ -22,7 +22,7 @@ export function micPlugin(storage) {
     for (const id of ids) {
       if (engine.hasRecording(id)) continue;
       const r = await storage.loadRecording(id).catch(() => null);
-      if (r) engine.addRecording(id, r);
+      if (r) await engine.addRecording(id, r);
     }
   }
 
@@ -125,7 +125,7 @@ export function micPlugin(storage) {
         return;
       }
       const id = makeId('r');
-      engine.addRecording(id, clip);
+      await engine.addRecording(id, clip);
       await storage.saveRecording(id, { ...clip, created: Date.now() }).catch((e) => console.warn('Itchy: recording not saved', e));
       const target = findLayer(store.project, layer.id) || store.layer;
       store.change(() => { target.sound = `rec:${id}`; });

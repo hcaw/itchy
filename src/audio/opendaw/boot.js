@@ -5,7 +5,7 @@
 // never be fetched by a browser that can't run it. A failure anywhere here rejects the returned promise, so the
 // caller stays on the built-in engine. See docs/OPENDAW-PORT.md §3.
 //
-// Not yet wired into the app (milestone M1): tests/e2e/opendaw-probe.js boots it to prove it works.
+// ./engine.js boots it for the app (startOpenDaw); tests/e2e/opendaw-probe.js boots it on its own to probe openDAW.
 import { canUseOpenDaw } from '../probe.js';
 import { ItchySamples, noSoundfonts } from './samples.js';
 

@@ -81,8 +81,9 @@ test('each critter unit has Zeitgeist on the global groove, Revamp at order 0 an
     assert.equal(h.send.routing.getValue(), od.AudioSendRouting.Post);
     assert.equal(h.send.targetBus.targetVertex.unwrap(), t.applier.space.busBox.input);
     assert.equal(h.notes.size, l.notes.length);
-    if (h.type === 'nano') assert.equal(h.instrumentBox.volume.getValue(), 0, 'Nano at 0 dB');
-    else assert.ok(h.slots.every((s) => s.polyphone.getValue() === true && s.gate.getValue() === 0));
+    const trim = t.scene.units.find((x) => x.key === l.id).instrument;
+    if (h.type === 'nano') assert.ok(Math.abs(h.instrumentBox.volume.getValue() - trim.volumeDb) < 1e-6, 'Nano at its trim, never the −3 dB default');
+    else assert.ok(h.slots.every((s, i) => s.polyphone.getValue() === true && s.gate.getValue() === 0 && Math.abs(s.volume.getValue() - trim.slots[i].volumeDb) < 1e-6));
   }
   t.project.terminate();
 });
