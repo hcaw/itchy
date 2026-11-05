@@ -46,6 +46,21 @@ export const TUNE_RENDERS = {
 export const RECORDING_PLAY = { rootKey: 60, attack: 0.004, release: 0.03 };
 export const SPACE_SECONDS = 2.4;
 
+/**
+ * The gain Web Audio's ConvolverNode applies to an impulse when `normalize` is true (the Web Audio spec's
+ * calculateNormalizationScale). openDAW's Convolver normalises differently (to a 0 dB spectral peak), so the
+ * Space impulse is pre-scaled by this and loaded with normalize off: the reverb is as loud as the built-in one.
+ */
+export function impulseScale(channels, sampleRate) {
+  let power = 0;
+  for (const c of channels) for (let i = 0; i < c.length; i++) power += c[i] * c[i];
+  power = Math.sqrt(power / (channels.length * channels[0].length));
+  if (!Number.isFinite(power) || power < 0.000125) power = 0.000125;
+  let scale = (1 / power) * 0.00125 * (44100 / sampleRate);
+  if (channels.length === 4) scale *= 0.5;
+  return scale;
+}
+
 /** File ids: what the openDAW side registers each rendered PCM under. */
 export const drumFile = (kit, row, variant) => `${kit}.${DRUM_PIECES[row]}.${variant}`;
 export const SPACE_FILE = 'space';

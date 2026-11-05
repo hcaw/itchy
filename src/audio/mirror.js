@@ -183,7 +183,9 @@ export function describe(project, env) {
     groove: { duration: GROOVE_PULSES, amount: grooveAmount(project.swing) },
     masterDb: MASTER_DB,
     library: libraryFiles(env),
-    space: { file: env.space.file, returnDb: SPACE_RETURN_DB, normalize: true, wetDb: 0, dryDb: -Infinity },
+    // normalize off: openDAW scales an impulse to a 0 dB spectral peak, much quieter than Web Audio's ConvolverNode,
+    // so boot pre-scales the PCM the way Web Audio does (impulseScale in render-sounds.js) and the reverb matches.
+    space: { file: env.space.file, returnDb: SPACE_RETURN_DB, normalize: false, wetDb: 0, dryDb: -Infinity },
     units: project.layers.map((l) => describeUnit(l, project, env)),
   };
 }
