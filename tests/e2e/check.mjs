@@ -333,6 +333,57 @@ async function audioFacade() {
   }
 }
 
+/**
+ * The sounds rendered for openDAW (src/audio/render-sounds.js): each is non-silent and byte-identical when rendered
+ * again; only the noisy drum pieces have variants, and they differ; the held tunes' loops sit on a steady part.
+ */
+async function renderedSounds() {
+  console.log('\nSounds rendered for openDAW');
+  const { ctx, page, errors } = await openPage({ width: 1024, height: 768 });
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/audio/render-sounds.js');
+    const sampleRate = 48000;
+    const bytes = (f) => f.channels.map((c) => new Uint8Array(c.buffer, c.byteOffset, c.byteLength));
+    const same = (x, y) => { const a = bytes(x), b = bytes(y); return a.length === b.length && a.every((c, i) => c.length === b[i].length && c.every((v, k) => v === b[i][k])); };
+    const peak = (f) => Math.max(...f.channels.map((c) => c.reduce((p, v) => Math.max(p, Math.abs(v)), 0)));
+    const t0 = performance.now();
+    const first = await m.renderSounds({ sampleRate });
+    const ms = performance.now() - t0;
+    const again = await m.renderSounds({ sampleRate });
+    const files = [...first.values()].map((f) => ({ id: f.id, channels: f.channels.length, peak: peak(f), same: same(f, again.get(f.id)) }));
+    const cat = m.soundCatalogue(sampleRate);
+    const noise = [];
+    for (const [kit, s] of Object.entries(cat.sounds)) {
+      if (!s.rows) continue;
+      for (const row of s.rows) {
+        const reseeded = await m.renderFile(row.files[0], { sampleRate, seed: 'another seed' });
+        const variantsDiffer = row.files.every((a, i) => row.files.every((b, k) => k <= i || !same(first.get(a), first.get(b))));
+        noise.push({ file: row.files[0], variants: row.variants, reseededSame: same(first.get(row.files[0]), reseeded), variantsDiffer });
+      }
+    }
+    const rmsDb = (c, at) => { let s = 0; const a = Math.round(at * sampleRate), n = Math.round(0.05 * sampleRate); for (let i = a; i < a + n; i++) s += c[i] * c[i]; return 10 * Math.log10(s / n); };
+    const loops = Object.entries(cat.sounds).filter(([, s]) => s.loop).map(([id, s]) => {
+      const c = first.get(id).channels[0];
+      return { id, inside: s.loop.end <= m.TUNE_RENDERS[id].hold && s.loop.end < s.seconds, startDb: rmsDb(c, s.loop.start), endDb: rmsDb(c, s.loop.end - 0.05) };
+    });
+    return { ms, files, noise, loops, space: cat.space };
+  });
+  console.log(`  · ${r.files.length} files rendered in ${Math.round(r.ms)} ms`);
+  const quiet = r.files.filter((f) => !(f.peak > 0.01)).map((f) => `${f.id} ${f.peak}`);
+  check(quiet.length === 0, 'every rendered sound is non-silent', quiet.join(', '));
+  const differ = r.files.filter((f) => !f.same).map((f) => f.id);
+  check(differ.length === 0, 'every rendered sound is byte-identical when rendered again', differ.join(', '));
+  const space = r.files.find((f) => f.id === r.space.file);
+  check(space?.channels === 2, 'the Space impulse is stereo');
+  const wrong = r.noise.filter((n) => (n.variants === 1) !== n.reseededSame || !n.variantsDiffer);
+  check(wrong.length === 0, 'only the noisy drum pieces have variants, and each variant differs', JSON.stringify(wrong));
+  for (const l of r.loops) {
+    check(l.inside && Math.abs(l.startDb - l.endDb) < 1, `${l.id}: the loop lies on a steady part of the held note`, JSON.stringify(l));
+  }
+  check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
+  await ctx.close();
+}
+
 async function recording() {
   console.log('\nRecording (fake microphone)');
   {
@@ -671,6 +722,7 @@ try {
   await interactions('chromebook-touch', { width: 1280, height: 800, touch: true });
   await playback();
   await audioFacade();
+  await renderedSounds();
   await recording();
   await persistence();
   await keyboard();
