@@ -46,7 +46,42 @@ The source for this object code is:
 
 2. The build: `scripts/opendaw/package.json` and `package-lock.json` (the exact packages installed),
    `scripts/opendaw/entry.js` (what is bundled) and `scripts/vendor-opendaw.mjs` (how), all in Itchy's public
-   repository. To rebuild this folder byte for byte: `npm run vendor:opendaw` with Node 18 or later.
+   repository, https://github.com/hcaw/itchy. To rebuild this folder byte for byte: `npm run vendor:opendaw` with Node 18 or later.
+
+3. The rest of the combined work: Itchy's own source, in the same repository at the commit that was deployed. The
+   site at https://hcaw.github.io/itchy/ is built from the `main` branch; nothing is compiled, so the files
+   served are the files in the repository.
+
+Nothing in this folder is modified: `opendaw.js` is a bundle of the unmodified published packages, and every other
+file is copied from them unchanged.
+
+## WebAssembly that contains code under other licences
+
+- `wasm/engine.wasm`: contains a modified Rust port of Signalsmith Stretch (https://github.com/Signalsmith-Audio/signalsmith-stretch, MIT; its notice is below).
+- `wasm/plugins/device_compressor.wasm`: openDAW's Compressor, a port of CTAGDRC (https://github.com/p-hlp/CTAGDRC, GPL-3.0). openDAW excludes it from its commercial licence. Itchy never creates this device.
+- `wasm/plugins/device_tubular.wasm`: openDAW's Tubular FM instrument, a port of parts of Dexed (https://github.com/asb2m10/dexed, Pascal Gauthier, GPL-3.0) and its msfa engine (Google, Apache-2.0). Itchy never creates this device.
+
+GPL-3.0 and AGPL-3.0 allow their code to be combined into one work (section 13 of each licence); each part keeps its
+own licence. The source of all three files is in the openDAW repository at the commits above (`crates/`).
+
+Signalsmith Stretch's MIT notice:
+
+```
+Copyright (c) 2022 Geraint Luff / Signalsmith Audio Ltd.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
 
 `opendaw.js` also contains these third-party packages, under their own licences: `dropbox` 10.47.0 (MIT), `jszip` 3.10.2 (MIT OR GPL-3.0-or-later), `lib0` 0.2.119 (MIT), `soundfont2` 0.5.0 (MIT), `y-protocols` 1.0.7 (MIT), `y-websocket` 1.5.4 (MIT), `yjs` 13.6.33 (MIT), `zod` 4.6.7 (MIT).
 jszip is dual-licensed and is used here under MIT. Licence comments from bundled code are kept at the end of

@@ -21,6 +21,30 @@ const pins = join(repo, 'scripts', 'opendaw');
 const pkg = JSON.parse(readFileSync(join(pins, 'package.json'), 'utf8'));
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
+// WebAssembly files whose source, at the vendored commits, ports code under a licence other than openDAW's own (from
+// the crates' doc comments and openDAW's README; not an audit of every line). Itchy creates neither the Compressor
+// nor Tubular, but openDAW's engine loads every plugin, so all of these are conveyed. Re-check this list on every
+// upgrade (CONTRIBUTING, "Upgrading openDAW").
+const WASM_LICENCES = {
+  'wasm/engine.wasm': 'contains a modified Rust port of Signalsmith Stretch (https://github.com/Signalsmith-Audio/signalsmith-stretch, MIT; its notice is below).',
+  'wasm/plugins/device_compressor.wasm': 'openDAW\'s Compressor, a port of CTAGDRC (https://github.com/p-hlp/CTAGDRC, GPL-3.0). openDAW excludes it from its commercial licence. Itchy never creates this device.',
+  'wasm/plugins/device_tubular.wasm': 'openDAW\'s Tubular FM instrument, a port of parts of Dexed (https://github.com/asb2m10/dexed, Pascal Gauthier, GPL-3.0) and its msfa engine (Google, Apache-2.0). Itchy never creates this device.',
+};
+const SIGNALSMITH_MIT = `Copyright (c) 2022 Geraint Luff / Signalsmith Audio Ltd.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`;
+
 // 1. Install the pinned packages in a fresh temporary folder.
 const work = mkdtempSync(join(tmpdir(), 'itchy-opendaw-'));
 try {
@@ -82,7 +106,12 @@ try {
     .map((p) => p.match(/node_modules\/((?:@[^/]+\/)?[^/]+)\//)?.[1]).filter(Boolean))].sort()
     .map((name) => { const m = manifest(name); return [name, `${m.version} ${m.license}`]; }));
   const commits = [...new Set(Object.values(packages).map((p) => p.gitHead).filter(Boolean))].sort();
-  writeFileSync(join(out, 'NOTICE.md'), notice({ sdkVersion, packages, bundled, repoUrl, commits, esbuildVersion: manifest('esbuild').version }));
+  const itchy = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
+  const itchyUrl = (itchy.repository?.url ?? itchy.repository).replace(/^git\+/, '').replace(/\.git$/, '');
+  for (const f of Object.keys(WASM_LICENCES)) {
+    if (!existsSync(join(out, f))) throw new Error(`${f} is gone: update WASM_LICENCES in scripts/vendor-opendaw.mjs.`);
+  }
+  writeFileSync(join(out, 'NOTICE.md'), notice({ sdkVersion, packages, bundled, repoUrl, commits, esbuildVersion: manifest('esbuild').version, itchyUrl, siteUrl: itchy.homepage }));
   const files = {};
   for (const f of walk(out)) files[f] = sha256(readFileSync(join(out, f)));
   const versions = {
@@ -111,7 +140,7 @@ function walk(dir, base = dir) {
   return list.sort();
 }
 
-function notice({ sdkVersion, packages, bundled, repoUrl, commits, esbuildVersion }) {
+function notice({ sdkVersion, packages, bundled, repoUrl, commits, esbuildVersion, itchyUrl, siteUrl }) {
   const others = Object.entries(bundled).filter(([n]) => !n.startsWith('@opendaw/')).map(([n, v]) => { const [ver, ...lic] = v.split(' '); return `\`${n}\` ${ver} (${lic.join(' ').replace(/^\((.*)\)$/, '$1')})`; });
   const rows = Object.entries(packages).map(([n, p]) => `| \`${n}\` | ${p.version} | ${p.license} | ${p.gitHead ? `\`${p.gitHead}\`` : 'none published'} |`);
   return `# openDAW in Itchy: notices
@@ -146,7 +175,27 @@ ${rows.join('\n')}
 
 2. The build: \`scripts/opendaw/package.json\` and \`package-lock.json\` (the exact packages installed),
    \`scripts/opendaw/entry.js\` (what is bundled) and \`scripts/vendor-opendaw.mjs\` (how), all in Itchy's public
-   repository. To rebuild this folder byte for byte: \`npm run vendor:opendaw\` with Node 18 or later.
+   repository, ${itchyUrl}. To rebuild this folder byte for byte: \`npm run vendor:opendaw\` with Node 18 or later.
+
+3. The rest of the combined work: Itchy's own source, in the same repository at the commit that was deployed. The
+   site at ${siteUrl} is built from the \`main\` branch; nothing is compiled, so the files
+   served are the files in the repository.
+
+Nothing in this folder is modified: \`opendaw.js\` is a bundle of the unmodified published packages, and every other
+file is copied from them unchanged.
+
+## WebAssembly that contains code under other licences
+
+${Object.entries(WASM_LICENCES).map(([f, text]) => `- \`${f}\`: ${text}`).join('\n')}
+
+GPL-3.0 and AGPL-3.0 allow their code to be combined into one work (section 13 of each licence); each part keeps its
+own licence. The source of all three files is in the openDAW repository at the commits above (\`crates/\`).
+
+Signalsmith Stretch's MIT notice:
+
+\`\`\`
+${SIGNALSMITH_MIT}
+\`\`\`
 
 \`opendaw.js\` also contains these third-party packages, under their own licences: ${others.join(', ')}.
 jszip is dual-licensed and is used here under MIT. Licence comments from bundled code are kept at the end of

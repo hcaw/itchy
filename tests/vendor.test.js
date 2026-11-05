@@ -43,6 +43,10 @@ test('every AGPL package records the openDAW commit it was built from, and NOTIC
     assert.ok(notice.includes(`| \`${name}\` | ${p.version} | ${p.license} | \`${p.gitHead}\` |`), `NOTICE.md lists ${name} at ${p.gitHead}`);
   }
   assert.match(readFileSync(join(dir, 'LICENSE'), 'utf8'), /GNU AFFERO GENERAL PUBLIC LICENSE\s+Version 3/);
+  // Where the rest of the Corresponding Source is, and the GPL-3.0 code the engine always loads.
+  const { repository } = JSON.parse(read('package.json'));
+  assert.ok(notice.includes(repository.url.replace(/^git\+/, '').replace(/\.git$/, '')), 'NOTICE.md links Itchy\'s repository');
+  assert.match(notice, /`wasm\/plugins\/device_compressor\.wasm`: .*GPL-3\.0/);
 });
 
 test('every vendored file is listed with its sha256, and nothing else is there', () => {

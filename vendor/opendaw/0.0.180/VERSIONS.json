@@ -116,7 +116,7 @@
   },
   "files": {
     "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
-    "NOTICE.md": "59ac325d5df6881c4adeba1d89ef777583a22f4aacd52908e02abc35ebdf4e0b",
+    "NOTICE.md": "821f71a5646d55b4a7427c2275891c3d2226d955bd9d03b3618725ecb8131a0a",
     "opendaw.js": "064917f36e554eff84bbafbcd9af9c31f6537c4564e744b21a014a8f3e37bbd6",
     "wasm-offline-worker.js": "ba5501b043d419e6a3d87fa96b0b5a2c6f598ba1c29d91066893d2d39fc6e3fe",
     "wasm-processor.js": "f04644ada073d59a429a9ed5c843b44a802b827dfa4e1958f897fce482084caf",
