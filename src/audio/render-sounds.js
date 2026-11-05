@@ -27,17 +27,18 @@ const cloudBeat = 1 / (midiToHz(CLOUD_ROOT) * (Math.pow(2, 9 / 1200) - 1));
 
 /**
  * How each tune is rendered and played: reference pitch, length, Nano envelope (the sound's own envelope is baked
- * into the PCM, so Nano's attack is short) and, for the held sounds, loop points in seconds.
+ * into the PCM, so Nano's attack is short) and, for the held sounds, loop points in seconds and how long a note
+ * holds (as in instruments.js: bass holds 0.9 × its length, at least 0.12 s; cloud its length, at least 0.5 s).
  */
 export const TUNE_RENDERS = {
   bells: { rootKey: 79, seconds: 1.8, attack: 0.001, release: 0.05 },
   pluck: { rootKey: 67, seconds: 1.0, attack: 0.001, release: 0.05 },
   bass: {
-    rootKey: 43, seconds: 1.85, hold: 1.5, attack: 0.001, release: 0.12,
+    rootKey: 43, seconds: 1.85, hold: 1.5, attack: 0.001, release: 0.12, sustain: { factor: 0.9, minSeconds: 0.12 },
     loop: { start: 0.6, end: 0.6 + periods(0.8, midiToHz(43)), fade: 0.05 },
   },
   cloud: {
-    rootKey: CLOUD_ROOT, seconds: 3.0, hold: 2.5, attack: 0.001, release: 1.0,
+    rootKey: CLOUD_ROOT, seconds: 3.0, hold: 2.5, attack: 0.001, release: 1.0, sustain: { factor: 1, minSeconds: 0.5 },
     loop: { start: 0.25, end: 0.25 + periods(4 * cloudBeat, midiToHz(CLOUD_ROOT)), fade: 0.1 },
   },
 };
@@ -63,9 +64,12 @@ export function soundCatalogue(sampleRate = 48000) {
     };
   }
   for (const [id, t] of Object.entries(TUNE_RENDERS)) {
-    sounds[id] = { instrument: 'nano', file: id, rootKey: t.rootKey, seconds: frames(t.seconds) / sampleRate, attack: t.attack, release: t.release, loop: t.loop || null };
+    sounds[id] = {
+      instrument: 'nano', file: id, rootKey: t.rootKey, seconds: frames(t.seconds) / sampleRate,
+      attack: t.attack, release: t.release, loop: t.loop || null, sustain: t.sustain || null,
+    };
   }
-  return { sampleRate, sounds, space: { file: SPACE_FILE, seconds: frames(SPACE_SECONDS) / sampleRate, channels: 2 } };
+  return { sampleRate, sounds, recording: RECORDING_PLAY, space: { file: SPACE_FILE, seconds: frames(SPACE_SECONDS) / sampleRate, channels: 2 } };
 }
 
 /** A small, fast seeded random source (mulberry32), returning 0 ≤ x < 1. */

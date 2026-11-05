@@ -15,6 +15,7 @@
 import { stepDuration } from './scheduler.js';
 import { NativeEngine } from './native/engine.js';
 import { canUseOpenDaw } from './probe.js';
+import { stepEvent } from './playhead.js';
 import { notesAtStep } from '../model/project.js';
 
 export class Engine {
@@ -113,17 +114,13 @@ export class Engine {
     return this.native.voice(layer, note, t, dur, preview);
   }
 
+  /** One step of the song: queue its visual event and play its notes (the built-in engine's scheduler calls it). */
   playStep(index, time, dur) {
     const p = this.getProject();
-    const ev = { time, index, dur, steps: {}, hits: {} };
+    const ev = stepEvent(p, index, time, dur);
     for (const layer of p.layers) {
-      const step = index % layer.steps;
-      ev.steps[layer.id] = step;
-      if (layer.muted) continue;
-      const notes = notesAtStep(layer, step);
-      if (!notes.length) continue;
-      ev.hits[layer.id] = notes.map((n) => n.r);
-      for (const n of notes) this.voice(layer, n, time, dur);
+      if (!ev.hits[layer.id]) continue;
+      for (const n of notesAtStep(layer, ev.steps[layer.id])) this.voice(layer, n, time, dur);
     }
     this.events.push(ev);
   }
