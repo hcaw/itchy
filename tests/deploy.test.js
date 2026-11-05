@@ -1,15 +1,34 @@
 // Every place Itchy is served must ship the same files and, where it can, the cross-origin isolation headers
 // openDAW's engine needs: npm start (scripts/serve.js), Vercel previews (vercel.json, .vercelignore) and GitHub
-// Pages (scripts/collect-site.mjs in pages.yml; Pages gets isolation from coi-serviceworker.js instead).
+// Pages (scripts/collect-site.mjs in pages.yml; Pages gets isolation from coi-serviceworker.js instead). And
+// index.html preloads every module the app starts with, so a slow network fetches them at once.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SHIPPED, collectSite } from '../scripts/collect-site.mjs';
 import { startServer, ISOLATION_HEADERS } from '../scripts/serve.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+const root = fileURLToPath(new URL('../', import.meta.url));
+
+/** Every module src/main.js imports statically, directly or not (repo-relative paths, main.js itself left out). */
+function startupModules() {
+  const seen = new Set();
+  const walk = (file) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const src = readFileSync(join(root, file), 'utf8');
+    for (const m of src.matchAll(/^\s*(?:import|export)\s[^;]*?from\s+['"](\.[^'"]+)['"]|^\s*import\s+['"](\.[^'"]+)['"]/gm)) {
+      walk(relative(root, resolve(dirname(join(root, file)), m[1] || m[2])).split('\\').join('/'));
+    }
+  };
+  walk('src/main.js');
+  seen.delete('src/main.js');
+  return [...seen].sort();
+}
 
 test('.vercelignore lets every shipped file through', () => {
   const allowed = read('.vercelignore').split('\n').filter((l) => l.startsWith('!')).map((l) => l.slice(1));
@@ -55,4 +74,18 @@ test('serve.js isolates by default, can serve like Pages, and types .wasm', asyn
       assert.equal((await fetch(`${base}/.git/config`)).status, 403);
     } finally { server.close(); }
   }
+});
+
+test('index.html preloads exactly the modules the app imports at start', () => {
+  // A slow network then fetches them all at once instead of one level of imports at a time. A module missing here
+  // still loads (only later); a module listed but no longer imported is fetched for nothing.
+  const html = read('index.html');
+  const preloaded = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map((m) => m[1]);
+  const want = startupModules();
+  assert.ok(want.length > 20 && want.includes('src/ui/app.js'), 'found the startup modules');
+  const line = (f) => `<link rel="modulepreload" href="${f}">`;
+  for (const f of want) assert.ok(preloaded.includes(f), `index.html preloads ${f}: add ${line(f)}`);
+  for (const f of preloaded) assert.ok(want.includes(f), `index.html preloads ${f}, which src/main.js no longer imports: remove it`);
+  assert.equal(new Set(preloaded).size, preloaded.length, 'no module is listed twice');
+  assert.ok(!preloaded.some((f) => /opendaw|vendor/.test(f)), 'openDAW is never preloaded: it loads only where it can run');
 });

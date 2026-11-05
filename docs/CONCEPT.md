@@ -229,3 +229,6 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **A tab whose openDAW boot died uses the built-in engine next time** — a session flag set during boot and for
   20 s after, cleared on a normal unload, catches an iPad killing the tab under memory pressure without costing an
   ordinary reload anything.
+- **`index.html` preloads every module the app starts with (`<link rel="modulepreload">`)** — with no bundler each
+  level of imports costs a network round trip; on Fast 3G the listed modules arrive at once, and the app renders in
+  about 2.2 s instead of 3.6 s. A unit test keeps the list complete, and openDAW is never on it.

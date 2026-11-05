@@ -75,6 +75,9 @@ These keep Itchy simple on the surface and deep underneath.
 When you add an interaction, extend [`tests/e2e/check.mjs`](tests/e2e/check.mjs) so it's checked with mouse and
 touch, makes a sound, and undoes in one step.
 
+When you add a module that the app imports at start (directly or through another module), add a
+`<link rel="modulepreload">` line for it to `index.html`; `npm test` names any that are missing or no longer used.
+
 ## Screenshots and the logo
 
 The logo and screenshots in the README, the favicon, the home-screen icons and the link-preview image are all
