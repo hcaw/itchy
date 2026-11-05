@@ -1,5 +1,6 @@
-// Timing check for the lookahead scheduler, using a fake audio clock and a deliberately
-// jittery, late, sometimes-frozen timer. The music must stay on a perfect grid regardless.
+// Timing check for the built-in engine's lookahead scheduler (the fallback wherever openDAW can't run, and the bridge
+// while it boots), using a fake audio clock and a deliberately jittery, late, sometimes-frozen timer. The music must
+// stay on a perfect grid regardless. (Where openDAW plays the song, it sequences on the audio thread instead.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Scheduler, stepDuration, swingOffset } from '../src/audio/scheduler.js';

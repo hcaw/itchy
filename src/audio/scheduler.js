@@ -1,4 +1,6 @@
-// Lookahead step scheduler ("a tale of two clocks").
+// Lookahead step scheduler ("a tale of two clocks") for the built-in engine (native/engine.js), which plays the song
+// wherever openDAW can't run and while it boots. Where openDAW plays the song, its engine sequences the notes on the
+// audio thread and this scheduler stays idle (docs/OPENDAW-PORT.md §1c).
 //
 // A coarse timer (see ticker.js) calls tick() every ~25 ms. Each tick schedules every
 // step whose start time falls inside the lookahead window, using times read from the

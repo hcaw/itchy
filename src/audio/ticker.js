@@ -1,6 +1,6 @@
-// A steady "wake up" signal for the scheduler. A Web Worker timer keeps ticking even when
-// the main thread is busy drawing, and is throttled less in background tabs. It only wakes
-// the scheduler; musical timing always comes from the audio clock.
+// A steady "wake up" signal for the built-in engine's scheduler (scheduler.js); openDAW's engine needs none.
+// A Web Worker timer keeps ticking even when the main thread is busy drawing, and is throttled less in
+// background tabs. It only wakes the scheduler; musical timing always comes from the audio clock.
 
 export function createTicker(callback, intervalMs = 25) {
   let worker = null;
