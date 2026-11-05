@@ -76,10 +76,12 @@
       shouldRegister: () => !window.crossOriginIsolated && itchyProbe() && !/[?&]engine=native/.test(location.search),
       // WebKit now and then drops a reload made while the service worker starts up, leaving this page with its
       // scripts cancelled and nothing on screen. A page that is still here after a moment reloads again (3 times
-      // at most); a reload that works replaces the page, and its timer with it.
+      // at most); a reload that works replaces the page, and its timer with it. (The checks drop the first
+      // window.coi.reload() of a visit to test this.)
+      reload: () => location.reload(),
       doReload: () => {
         let tries = 0;
-        const reload = () => { if (tries++ < 4) { location.reload(); setTimeout(reload, 1500 * tries); } };
+        const reload = () => { if (tries++ < 4) { window.coi.reload(); setTimeout(reload, 1500 * tries); } };
         reload();
       },
     };

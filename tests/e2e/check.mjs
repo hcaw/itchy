@@ -15,14 +15,19 @@
 // first tap and the first Play are heard on a context that starts suspended; failures (a bad edit, a worklet
 // error, a missing bundle) end on the built-in engine with sound; the bundle is never requested where it can't
 // be used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first
-// gesture; each sound rendered for openDAW is non-silent and the same every time; a CPU overload shows as a stop, a
-// page restored from the back/forward cache reloads, and a tab whose boot died plays on the built-in engine; and the
-// M1 probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
+// gesture; each sound rendered for openDAW is non-silent and the same every time; on the site served without
+// isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads, and without a
+// service worker, forced, or on a device that can't run openDAW, the built-in engine plays with exact timing and no
+// reload; a CPU overload shows as a stop, a page restored from the back/forward cache reloads, and a tab whose boot
+// died plays on the built-in engine; and the M1 probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
 
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
+import { collectSite } from '../../scripts/collect-site.mjs';
 
 const { chromium, webkit } = createRequire(import.meta.url)('playwright');
 const OUT = fileURLToPath(new URL('../../test-output/', import.meta.url));
@@ -447,10 +452,12 @@ async function playback() {
   await ctx.close();
 }
 
-/** The built-in engine's scheduler: every step is scheduled ahead, exactly on the grid (forced with ?engine=native). */
-async function playbackNative() {
-  console.log('\nPlayback and timing, built-in engine (real audio clock)');
-  const { ctx, page, errors } = await openPage({ width: 1366, height: 768, query: '?engine=native' });
+/**
+ * Play on the built-in engine and check its scheduler: steps keep coming, none skipped or doubled, every one
+ * scheduled ahead and exactly on the grid, the loop wraps, and sound comes out. Leaves the music playing.
+ */
+async function nativeTiming(page, pre = '') {
+  const check_ = (ok, what, detail) => check(ok, pre ? `${pre}: ${what}` : what, detail);
   await page.evaluate(() => {
     const e = window.itchy.engine;
     window.__steps = [];
@@ -461,21 +468,28 @@ async function playbackNative() {
   await page.click('.btn.play', { force: true });
   await page.waitForTimeout(3500); // 100 BPM: 0.15 s per step → more than one 16-step loop
   const steps = await page.evaluate(() => window.__steps);
-  check(steps.length >= 20, 'steps keep coming', `${steps.length} steps`);
-  const d = steps[0].d;
+  check_(steps.length >= 20, 'steps keep coming', `${steps.length} steps`);
+  const d = steps[0]?.d;
   let maxErr = 0, consecutive = true;
   for (let k = 1; k < steps.length; k++) {
     maxErr = Math.max(maxErr, Math.abs(steps[k].t - steps[0].t - (steps[k].i - steps[0].i) * d));
     if (steps[k].i !== steps[k - 1].i + 1) consecutive = false;
   }
-  check(consecutive, 'no step skipped or doubled');
-  check(maxErr < 1e-6, 'every step lands exactly on the grid', `max error ${maxErr}s`);
-  check(steps.every((s) => s.lead > 0), 'every step is scheduled ahead of time', `min lead ${Math.min(...steps.map((s) => s.lead)).toFixed(4)}s`);
+  check_(consecutive, 'no step skipped or doubled');
+  check_(maxErr < 1e-6, 'every step lands exactly on the grid', `max error ${maxErr}s`);
+  check_(steps.every((s) => s.lead > 0), 'every step is scheduled ahead of time', `min lead ${Math.min(...steps.map((s) => s.lead)).toFixed(4)}s`);
   const layerId = await page.evaluate(() => itchy.store.project.layers[0].id);
   const locals = steps.map((s) => s.local[layerId]);
-  check(locals.includes(15) && locals.lastIndexOf(0) > locals.indexOf(15), 'the loop wraps from the last step back to the first');
+  check_(locals.includes(15) && locals.lastIndexOf(0) > locals.indexOf(15), 'the loop wraps from the last step back to the first');
   const hits = await peakLevel(page);
-  check(hits > 0.01, 'sound is coming out', `peak level ${hits.toFixed(3)}`);
+  check_(hits > 0.01, 'sound is coming out', `peak level ${hits.toFixed(3)}`);
+}
+
+/** The built-in engine's scheduler: every step is scheduled ahead, exactly on the grid (forced with ?engine=native). */
+async function playbackNative() {
+  console.log('\nPlayback and timing, built-in engine (real audio clock)');
+  const { ctx, page, errors } = await openPage({ width: 1366, height: 768, query: '?engine=native' });
+  await nativeTiming(page);
   // tempo change mid-play: no hiccup
   await page.evaluate(() => { itchy.store.change((p) => { p.tempo = 140; }); window.__steps.length = 0; });
   await page.waitForTimeout(1500);
@@ -1145,34 +1159,26 @@ async function robustness() {
 }
 
 /**
- * The bundle is never loaded where it can't be used: with ?engine=native, and on a page that isn't isolated (no
- * service worker to isolate it), no request goes to /vendor/. And a slow bundle never delays the app or the first
- * sound: the built-in engine plays until openDAW is ready.
+ * The bundle is never loaded where it can't be used: with ?engine=native no request goes to /vendor/ (pages that
+ * aren't isolated are checked in isolationPaths()). And a slow bundle never delays the app or the first sound: the
+ * built-in engine plays until openDAW is ready.
  */
 async function staticImportGuard() {
   console.log('\nThe openDAW bundle loads only where it is used');
-  const PLAIN = PORT + 1;
-  const plain = await startServer(PLAIN, { isolate: false });
-  try {
-    for (const [what, url, init] of [
-      ['?engine=native', `${URL_}?engine=native`, null],
-      ['a page that is not isolated', `http://localhost:${PLAIN}/`, () => { Object.defineProperty(navigator, 'serviceWorker', { value: undefined }); }],
-    ]) {
-      const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
-      if (init) await ctx.addInitScript(init);
-      const page = await ctx.newPage();
-      const errors = watchConsole(page);
-      const vendor = [];
-      page.on('request', (r) => { if (r.url().includes('/vendor/')) vendor.push(r.url()); });
-      await page.goto(url);
-      await loaded(page, '?engine=native');
-      await audible(page, `${what}: a tap`, () => page.click('.cell[data-s="2"][data-r="2"]'));
-      await page.waitForTimeout(300);
-      check(vendor.length === 0, `${what}: no request to /vendor/`, vendor.join(', '));
-      check(errors.length === 0, `${what}: no console errors or warnings`, errors.join(' | '));
-      await ctx.close();
-    }
-  } finally { plain.close(); }
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    const page = await ctx.newPage();
+    const errors = watchConsole(page);
+    const vendor = [];
+    page.on('request', (r) => { if (r.url().includes('/vendor/')) vendor.push(r.url()); });
+    await page.goto(`${URL_}?engine=native`);
+    await loaded(page, '?engine=native');
+    await audible(page, '?engine=native: a tap', () => page.click('.cell[data-s="2"][data-r="2"]'));
+    await page.waitForTimeout(300);
+    check(vendor.length === 0, '?engine=native: no request to /vendor/', vendor.join(', '));
+    check(errors.length === 0, '?engine=native: no console errors or warnings', errors.join(' | '));
+    await ctx.close();
+  }
   {
     const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
     await ctx.route('**/vendor/opendaw/**', async (r) => { await new Promise((ok) => setTimeout(ok, 5000)); await r.continue().catch(() => {}); });
@@ -1188,6 +1194,107 @@ async function staticImportGuard() {
     check((await page.evaluate(() => itchy.engine.ready)) === 'opendaw', 'then openDAW takes over');
     check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
     await ctx.close();
+  }
+}
+
+/**
+ * Every way a child can arrive, on the site as GitHub Pages ships it (scripts/collect-site.mjs), served without the
+ * isolation headers (docs/OPENDAW-PORT.md §10b):
+ * - the service worker isolates the page: openDAW plays within 3 page loads, also when the first reload is
+ *   dropped (as WebKit sometimes does) and when the stylesheet fails once;
+ * - no service worker (as in some private windows), ?engine=native, and a device that can't run openDAW: the
+ *   built-in engine plays, keeps exact time and is heard; no service worker is registered, the page never
+ *   reloads, and nothing is fetched from /vendor/.
+ */
+async function isolationPaths() {
+  console.log('\nArriving without isolation headers (the site as GitHub Pages serves it)');
+  const dir = mkdtempSync(join(tmpdir(), 'itchy-pages-'));
+  collectSite(dir);
+  const PAGES = PORT + 2;
+  const pages = await startServer(PAGES, { isolate: false, root: dir });
+  const base = `http://localhost:${PAGES}/`;
+  const visit = async ({ query = '', init = null, route = null } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    if (init) await ctx.addInitScript(init);
+    if (route) await ctx.route(...route);
+    const page = await ctx.newPage();
+    const errors = watchConsole(page);
+    const counts = { loads: 0, vendor: 0 };
+    page.on('framenavigated', (f) => { if (f === page.mainFrame()) counts.loads++; });
+    page.on('request', (r) => { if (r.url().includes('/vendor/')) counts.vendor++; });
+    await page.goto(base + query);
+    return { ctx, page, errors, counts };
+  };
+  try {
+    for (const [what, opts, allowed] of [
+      ['the service worker', {}, []],
+      ['a dropped first reload', {
+        // Drop the first window.coi.reload() of the visit, as WebKit sometimes does; the page must retry.
+        init: () => {
+          let v;
+          Object.defineProperty(window, 'coi', {
+            configurable: true,
+            get: () => v,
+            set: (c) => {
+              const reload = c.reload;
+              c.reload = () => { if (sessionStorage.getItem('check-dropped')) reload(); else sessionStorage.setItem('check-dropped', '1'); };
+              v = c;
+            },
+          });
+        },
+      }, []],
+      ['a stylesheet that fails once', { route: ['**/styles.css', (() => { let n = 0; return (r) => (n++ ? r.continue() : r.abort()); })()] }, [/^error: Failed to load resource/]],
+    ]) {
+      const { ctx, page, errors, counts } = await visit(opts);
+      const t0 = Date.now();
+      let up = false;
+      while (!up && Date.now() - t0 < 20000) {
+        up = await page.evaluate(() => crossOriginIsolated && !!window.itchy).catch(() => false); // a reload may be under way
+        if (!up) await page.waitForTimeout(100);
+      }
+      await page.waitForTimeout(2000); // a later reload would show here
+      const st = await page.evaluate(() => ({ isolated: crossOriginIsolated, controlled: !!navigator.serviceWorker.controller, dropped: sessionStorage.getItem('check-dropped') }));
+      console.log(`  · ${what}: isolated after ${counts.loads} page loads`);
+      check(up && st.isolated && st.controlled && counts.loads <= 3, `${what}: the page ends isolated within 3 loads`, `${counts.loads} loads, ${JSON.stringify(st)}`);
+      if (opts.init) check(st.dropped === '1', `${what}: a reload really was dropped`);
+      await loaded(page);
+      await audible(page, `${what}: a tap`, () => page.click('.cell[data-s="2"][data-r="2"]'));
+      await page.click('.btn.undo');
+      await page.click('.btn.play', { force: true });
+      await page.waitForTimeout(500);
+      const lvl = await peakLevel(page);
+      check(lvl > 0.01, `${what}: Play is heard`, `level ${lvl.toFixed(3)}`);
+      await page.click('.btn.play', { force: true });
+      const others = errors.filter((e) => !allowed.some((a) => a.test(e)));
+      check(others.length === 0, `${what}: no console errors or warnings`, errors.join(' | '));
+      await ctx.close();
+    }
+    for (const [what, opts] of [
+      ['no service worker', { init: () => { Object.defineProperty(navigator, 'serviceWorker', { value: undefined }); } }],
+      ['?engine=native', { query: '?engine=native' }],
+      ['a device that can’t run openDAW', { init: () => { delete Promise.withResolvers; } }], // iPadOS before 17.4
+    ]) {
+      const { ctx, page, errors, counts } = await visit(opts);
+      await loaded(page, '?engine=native');
+      await page.waitForTimeout(1500); // a reload would show here
+      const st = await page.evaluate(async () => ({
+        isolated: crossOriginIsolated,
+        registrations: (await navigator.serviceWorker?.getRegistrations())?.length ?? 0,
+        context: !!itchy.engine.ctx,
+      }));
+      check(!st.isolated && st.registrations === 0 && counts.loads === 1, `${what}: no service worker and no reload`, `${counts.loads} loads, ${JSON.stringify(st)}`);
+      check(!st.context, `${what}: the audio context waits for the first gesture, as before`);
+      await audible(page, `${what}: the first tap`, () => page.click('.cell[data-s="2"][data-r="2"]'));
+      await actionCheck(page, `${what}: tap a note`, () => page.click('.cell[data-s="6"][data-r="3"]'));
+      await nativeTiming(page, what);
+      await page.click('.btn.play', { force: true });
+      check(counts.vendor === 0, `${what}: no request to /vendor/`);
+      check(errors.length === 0, `${what}: no console errors or warnings`, errors.join(' | '));
+      await ctx.close();
+    }
+  } finally {
+    pages.close();
+    rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -1402,6 +1509,7 @@ const sections = [
   ['suspendedContext', suspendedContext],
   ['robustness', robustness],
   ['staticImportGuard', staticImportGuard],
+  ['isolationPaths', isolationPaths],
   ['hardening', hardening],
   ['renderedSounds', renderedSounds],
   ['recording', recording],
