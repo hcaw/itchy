@@ -5,10 +5,12 @@
 //   native  (src/audio/native/engine.js)  the built-in Web Audio engine; plays everything today
 //   openDAW (src/audio/opendaw/engine.js)  the song and preview engine on capable, cross-origin isolated pages
 //
-//   native engine → nativeOut (1) ─┬─► speakers
-//   interface blips → uiBus (0.8) ─┤
-//   openDAW's worklet ─────────────┤ (it connects itself to the speakers; this is a side tap)
-//                                  └─► analyser (level)
+//   native engine → nativeOut (1) ─┐
+//   interface blips → uiBus (0.8) ─┼─► out ─► analyser (level) ─► speakers
+//   openDAW's worklet ─────────────┘
+//
+// The analyser sits on the only path to the speakers (openDAW's worklet, which connects itself to them, is
+// re-connected to `out`), so a level read there, as the checks do, is sound that reaches the speakers.
 //
 // Every page starts on the built-in engine, so the first tap always sounds. On a page that can run openDAW the
 // context is made at load and openDAW boots meanwhile; once it is ready and the music is stopped, the facade
@@ -81,7 +83,8 @@ export class Engine {
     try {
       const { startOpenDaw } = await import('./opendaw/engine.js');
       od = await startOpenDaw(this.ctx, { getProject: this.getProject, recordings: this.recordings, onFatal: (e) => this.fail(e) });
-      od.worklet.connect(this.analyser);
+      od.worklet.disconnect(); // from the speakers: it plays through `out` and the analyser like everything else
+      od.worklet.connect(this.out);
       od.onHalt = () => this.halted();
       this.openDaw = od;
       // Recordings that arrived while it booted.
@@ -143,13 +146,13 @@ export class Engine {
     const ctx = (this.ctx = new AC({ latencyHint: 'interactive' }));
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 512;
+    this.out = ctx.createGain();
+    this.out.connect(this.analyser).connect(ctx.destination);
     this.nativeOut = ctx.createGain();
     this.uiBus = ctx.createGain();
     this.uiBus.gain.value = 0.8;
-    for (const bus of [this.nativeOut, this.uiBus]) {
-      bus.connect(ctx.destination);
-      bus.connect(this.analyser);
-    }
+    this.nativeOut.connect(this.out);
+    this.uiBus.connect(this.out);
     this.native = new NativeEngine(this.getProject, { ctx, out: this.nativeOut, onStep: (i, t, d) => this.playStep(i, t, d) });
     for (const [id, rec] of this.pendingRecordings) this.native.addRecording(id, rec);
     this.pendingRecordings.clear();

@@ -668,6 +668,44 @@ async function audioFacade() {
       await ctx.close();
     }
   }
+  // The analyser (where every level and output check listens) is on the only path to the speakers: every engine
+  // plays into `out`, `out` into the analyser, and only the analyser into the speakers. Tracked by recording every
+  // connect and disconnect from the page's start.
+  const EDGES = () => {
+    const edges = (window.__edges = new Map());
+    const connect = AudioNode.prototype.connect, disconnect = AudioNode.prototype.disconnect;
+    AudioNode.prototype.connect = function (to, ...a) { if (!edges.has(this)) edges.set(this, new Set()); edges.get(this).add(to); return connect.call(this, to, ...a); };
+    AudioNode.prototype.disconnect = function (...a) { const set = edges.get(this); if (set) { if (!a.length || typeof a[0] === 'number') set.clear(); else set.delete(a[0]); } return disconnect.apply(this, a); };
+  };
+  for (const [where, query] of [['openDAW', ''], ['built-in engine forced', '?engine=native']]) {
+    const { ctx, page, errors } = await openPage({ width: 1024, height: 768, query, init: EDGES });
+    await page.click('.cell[data-s="3"][data-r="3"]');
+    await page.click('.btn.play', { force: true });
+    await page.waitForTimeout(600);
+    await page.click('.btn.play', { force: true });
+    const path = () => page.evaluate(() => {
+      const e = itchy.engine, d = e.ctx.destination, edges = window.__edges;
+      const to = (n) => [...(edges.get(n) || [])];
+      // The checks' own taps end in a silent gain; the iOS unlock buffer is one sample long.
+      const ours = (n) => !(n instanceof GainNode && n.gain.value === 0) && !(n instanceof AudioBufferSourceNode && n.buffer?.length === 1);
+      const speakers = [...edges].filter(([n, set]) => set.has(d) && ours(n)).map(([n]) => n);
+      const engines = [e.nativeOut, e.uiBus, ...(e.kind === 'opendaw' ? [e.openDaw.worklet] : [])];
+      return {
+        onlyAnalyser: speakers.length === 1 && speakers[0] === e.analyser,
+        outToAnalyser: to(e.out).length === 1 && to(e.out)[0] === e.analyser,
+        enginesToOut: engines.every((n) => to(n).length === 1 && to(n)[0] === e.out),
+        kind: e.kind,
+      };
+    });
+    const r = await path();
+    check(r.onlyAnalyser && r.outToAnalyser && r.enginesToOut, `${where}: every engine reaches the speakers only through the analyser the checks listen to`, JSON.stringify(r));
+    // And the check notices when it doesn't.
+    await page.evaluate(() => { const e = itchy.engine; e.analyser.disconnect(e.ctx.destination); e.nativeOut.connect(e.ctx.destination); });
+    const cut = await path();
+    check(!cut.onlyAnalyser && !cut.enginesToOut, `${where}: a path that skips the analyser is caught`, JSON.stringify(cut));
+    check(errors.length === 0, `${where}: no console errors or warnings`, errors.join(' | '));
+    await ctx.close();
+  }
 }
 
 /**

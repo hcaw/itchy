@@ -131,6 +131,10 @@ checks and debugging: `kind` (`'native' | 'opendaw'`, can change from `'opendaw'
 - **Output graph.** `nativeOut` (gain 1) and `uiBus` (gain 0.8) → `destination`, and both → the facade's single
   `AnalyserNode` (fftSize 512, `RMS × 3`). openDAW's `EngineWorklet` connects itself to `destination`
   ([verified] `Project.ts:313` at 9306eaab) and the facade adds `worklet.connect(analyser)` as a side tap.
+  **Changed after the review:** a side tap let every audibility check pass with nothing reaching the speakers. Now
+  `nativeOut`, `uiBus` and openDAW's worklet (`worklet.disconnect()` first) → one `out` gain → the analyser →
+  `destination`, as on `main`, so the analyser sits on the only path out. `audioFacade` in check.mjs records every
+  `connect`/`disconnect` and checks that path on both engines, and that a path skipping the analyser is caught.
 - `preview()` and phrases call `this.voice(...)`, UI calls `engine.uiSound(...)`, so the check's counting wrapper
   still counts them. **One preview is exactly one `voice()` call.**
 - **Routing inside `voice(layer, note, t, dur, preview)`** on the openDAW backend:
@@ -566,7 +570,7 @@ first one's pitch at 500 ms within 1 dB of a lone preview, on both engines.
 
 ## 8. Interface blips
 
-`uiSound(kind)` stays plain Web Audio into `uiBus` (0.8) → destination and the analyser, identical on both
+`uiSound(kind)` stays plain Web Audio into `uiBus` (0.8) → `out` → the analyser → destination, identical on both
 backends; peak ≤ 0.18, so no limiting needed.
 
 ---
