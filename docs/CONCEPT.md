@@ -246,6 +246,10 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
 - **When openDAW stops the music because the device can't keep up, Itchy shows it as stopped** — openDAW puts
   its engine to sleep after a CPU overload; Itchy wakes it so taps still sound and turns Play back off, so the
   music never looks as if it plays in silence, and pressing Play simply starts it again.
+- **openDAW's boot does its long steps only while the music is stopped** — the built-in engine plays the song while
+  openDAW boots, and on a slow tablet running openDAW's code and building the song are long tasks that made its
+  beat stumble; the download goes on meanwhile, and openDAW takes over at the next Stop anyway, so a child loses
+  nothing but a few seconds before the switch.
 - **On openDAW pages, a page restored from the back/forward cache reloads** — Chromium can bring the audio worklet
   back running at half speed; the song was saved when the page was hidden, and the undo history is kept in the
   tab's sessionStorage for that one reload (it lives only in memory otherwise, and a first version lost it). The

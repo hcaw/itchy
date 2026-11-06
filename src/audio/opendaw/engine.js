@@ -49,9 +49,12 @@ const session = {
  * @param {() => object} o.getProject     the current Itchy project
  * @param {Map<string, {sampleRate:number, data:Float32Array}>} [o.recordings]  mic recordings already loaded
  * @param {(error: unknown) => void} o.onFatal  openDAW failed after boot (a transaction or the worklet)
+ * @param {() => Promise<void>} [o.quiet]  resolves when the music is stopped: the boot's long main-thread steps
+ *   wait for it (see bootOpenDaw)
  */
-export async function startOpenDaw(ctx, { getProject, recordings = new Map(), onFatal }) {
+export async function startOpenDaw(ctx, { getProject, recordings = new Map(), onFatal, quiet = async () => {} }) {
   if (session.get()) throw new Error('openDAW did not survive its last boot in this tab');
+  await quiet();
   session.set();
   addEventListener('pagehide', session.clear);
   let engine = null, booted = false;
@@ -59,6 +62,7 @@ export async function startOpenDaw(ctx, { getProject, recordings = new Map(), on
   const renders = renderSounds({ sampleRate: ctx.sampleRate }); // in parallel with the download
   try {
     const handle = await bootOpenDaw(ctx, {
+      quiet,
       onFatal: (e) => (engine ? engine.fatal(e) : fatal(e)),
       prepare: async (h) => {
         for (const r of (await renders).values()) {
@@ -67,6 +71,7 @@ export async function startOpenDaw(ctx, { getProject, recordings = new Map(), on
         }
         engine = new OpenDawEngine(h, { getProject, onFatal: fatal });
         for (const [id, rec] of recordings) await engine.registerRecording(id, rec);
+        await quiet();
         engine.sync();
         engine.buildVoices();
         if (engine.failed) throw new Error('openDAW could not build the song');

@@ -284,6 +284,18 @@ native for that visit.
 Started by the facade at page load, only when the context was created at load (§1c), and always through
 `await import()`.
 
+**Changed after the review: the long steps wait while the built-in engine plays.** On the slow-tablet profile (4×
+CPU) running the bundle is one long task of about 370 ms and building the song another of about 400 ms; the
+built-in scheduler looks only 120 ms ahead, so while it played the song steps came up to 250 ms late and one was
+skipped. Now the bundle is first fetched (and compiled) with a `<link rel="modulepreload">`, which can go on while the
+music plays (marked `data-optional`, so index.html's reload-on-a-failed-file safety net leaves a failure to the
+boot); then the boot awaits the facade's `whenStopped()` (`quiet`) before setting the crash flag and
+rendering the sounds, before running the bundle, before `prepare` and the first sync, and before starting the
+worklet. Nothing is lost, since openDAW only takes over once the music stops; it just becomes ready a little after
+that Stop instead of at it. Taps made during the boot's long tasks while the music is stopped still wait for them.
+`bootWhilePlaying` in check.mjs: at 4× CPU, play on the built-in engine, release `/vendor/`, 6 s with no step late
+and none skipped, then Stop → openDAW.
+
 1. **Probe** (`probe.js`): `crossOriginIsolated`, `AudioWorkletNode`, SIMD `WebAssembly.validate`,
    `Promise.withResolvers` (roughly Safari/iPadOS 17.4+, Chrome 119+, Firefox 121+). Missing → native.
 2. **Crash guard:** if `sessionStorage['itchy-opendaw-booting']` is set, the previous load in this tab died during

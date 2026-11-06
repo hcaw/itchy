@@ -33,6 +33,21 @@ export function loadOpenDaw() {
   return pageSetup;
 }
 
+/**
+ * Fetch (and compile) the bundle without running it: a `<link rel="modulepreload">`. Resolves once it has loaded or
+ * failed (the import that follows reports a failure). The download can then go on while the music plays, and only
+ * running the bundle, a long task, waits for `quiet()`.
+ */
+function preloadOpenDaw() {
+  if (!document.createElement('link').relList?.supports?.('modulepreload')) return Promise.resolve();
+  return new Promise((done) => {
+    const link = Object.assign(document.createElement('link'), { rel: 'modulepreload', href: `${VENDOR}opendaw.js` });
+    link.setAttribute('data-optional', ''); // a failure is the boot's to handle: index.html doesn't reload for it
+    link.onload = link.onerror = () => done();
+    document.head.append(link);
+  });
+}
+
 /** A service that must never be used: openDAW's SoundfontService fetches a remote catalogue when constructed. */
 const noSoundfontService = new Proxy({}, { get(_, key) { throw new Error(`Itchy uses no soundfonts (${String(key)})`); } });
 
@@ -47,9 +62,14 @@ const noSoundfontService = new Proxy({}, { get(_, key) { throw new Error(`Itchy 
  * - `onFatal(reason)`: called at most once if the engine fails later (a worklet `error` or `processorerror`). The
  *   project is terminated first, so openDAW does not restart the worklet.
  * - `readyTimeoutMs`: how long to wait for the engine to report ready once the worklet has started.
+ * - `quiet()`: awaited before each step that keeps the main thread busy for long (loading the bundle, `prepare`,
+ *   starting the worklet), so the caller can hold them back while the built-in engine plays the music: on a slow
+ *   tablet each is a long task of a few hundred ms, which would make the built-in engine's beat stumble.
  */
-export async function bootOpenDaw(ctx, { prepare, onFatal = () => {}, readyTimeoutMs = 10000 } = {}) {
+export async function bootOpenDaw(ctx, { prepare, onFatal = () => {}, readyTimeoutMs = 10000, quiet = async () => {} } = {}) {
   if (!canUseOpenDaw(window)) throw new Error('openDAW needs a capable, cross-origin isolated page');
+  if (!pageSetup) await preloadOpenDaw();
+  await quiet();
   const od = await loadOpenDaw();
   if (!(await od.WasmEngine.ensureReady(ctx))) throw new Error('openDAW engine is unavailable');
 
@@ -75,7 +95,9 @@ export async function bootOpenDaw(ctx, { prepare, onFatal = () => {}, readyTimeo
     },
   };
   try {
+    await quiet();
     if (prepare) await prepare(handle);
+    await quiet();
     let failed = false;
     handle.worklet = project.startAudioWorklet({
       unload: (reason) => {

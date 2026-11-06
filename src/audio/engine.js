@@ -82,7 +82,7 @@ export class Engine {
     let od;
     try {
       const { startOpenDaw } = await import('./opendaw/engine.js');
-      od = await startOpenDaw(this.ctx, { getProject: this.getProject, recordings: this.recordings, onFatal: (e) => this.fail(e) });
+      od = await startOpenDaw(this.ctx, { getProject: this.getProject, recordings: this.recordings, onFatal: (e) => this.fail(e), quiet: () => this.whenStopped() });
       od.worklet.disconnect(); // from the speakers: it plays through `out` and the analyser like everything else
       od.worklet.connect(this.out);
       od.onHalt = () => this.halted();
@@ -102,6 +102,16 @@ export class Engine {
     if (this.openDaw !== od) return; // failed meanwhile
     if (this.playing) this.waiting = od;
     else this.useOpenDaw(od);
+  }
+
+  /**
+   * Resolves when the music is stopped (at once if it is). openDAW's boot does its long main-thread steps only then:
+   * the built-in engine plays the music meanwhile, and on a slow tablet a long task would make its beat stumble.
+   * Nothing is lost by waiting, as openDAW takes over only once the music has stopped anyway.
+   */
+  whenStopped() {
+    if (!this.playing) return Promise.resolve();
+    return new Promise((ok) => { const off = this.on((type) => { if (type === 'stop') { off(); ok(); } }); });
   }
 
   useOpenDaw(od) {

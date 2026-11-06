@@ -87,12 +87,14 @@
     };
     // WebKit also now and then fails every file the service worker fetches just after it starts, which would leave
     // a blank page. If one of the page's own scripts or stylesheets fails to load, reload (twice per tab at most).
+    // Files marked data-optional (openDAW's bundle, preloaded by src/audio/opendaw/boot.js) are left to the code that
+    // loads them: without them the built-in engine plays.
     (function () {
       var key = 'itchy-load-retries', failed = false;
       function store(f) { try { return f(window.sessionStorage); } catch (e) { return null; } }
       document.addEventListener('error', function (e) {
         var el = e.target, url = el && (el.tagName === 'SCRIPT' ? el.src : el.tagName === 'LINK' ? el.href : '');
-        if (failed || !url || new URL(url, location.href).origin !== location.origin) return;
+        if (failed || !url || el.hasAttribute('data-optional') || new URL(url, location.href).origin !== location.origin) return;
         failed = true;
         var tries = Number(store(function (s) { return s.getItem(key); }) || 0);
         if (tries < 2 && store(function (s) { s.setItem(key, String(tries + 1)); return true; })) location.reload();

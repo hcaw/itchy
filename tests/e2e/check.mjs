@@ -19,7 +19,8 @@
 // isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads, and without a
 // service worker, forced, or on a device that can't run openDAW, the built-in engine plays with exact timing and no
 // reload; on Fast 3G with a 4× slower CPU (over HTTP/2, as deployed) the app renders and the first tap is heard
-// within 3 s and openDAW is ready within 60 s (4 s with a warm cache); a CPU overload shows as a stop, a page
+// within 3 s and openDAW is ready within 60 s (4 s with a warm cache), and openDAW booting while the built-in
+// engine plays never makes a step late; a CPU overload shows as a stop, a page
 // restored from the back/forward cache reloads, and a tab whose boot died plays on the built-in engine; and the M1
 // probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
 
@@ -1585,6 +1586,52 @@ async function budgets() {
 }
 
 /**
+ * openDAW boots while the built-in engine plays the song, on a slow tablet (4× slower CPU): the boot's long
+ * main-thread steps wait for Stop, so no step is scheduled late and none is skipped. Then openDAW takes over.
+ */
+async function bootWhilePlaying() {
+  console.log('\nopenDAW boots while the built-in engine plays (4× slower CPU)');
+  const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  const page = await ctx.newPage();
+  const errors = watchConsole(page);
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  let release;
+  const gate = new Promise((ok) => { release = ok; });
+  await page.route('**/vendor/opendaw/**', async (route) => { await gate; await route.continue(); });
+  await page.goto(URL_);
+  await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
+  await page.evaluate(() => {
+    const e = itchy.engine;
+    e.ensure();
+    window.__st = [];
+    const orig = e.playStep.bind(e);
+    e.playStep = (i, t, d) => { if (e.kind === 'native') window.__st.push([i, t, e.ctx.currentTime]); return orig(i, t, d); };
+  });
+  await page.click('.btn.play', { force: true });
+  await page.waitForTimeout(1500);
+  release();
+  await page.waitForTimeout(6000);
+  const r = await page.evaluate(() => {
+    const st = window.__st;
+    let skipped = 0;
+    for (let k = 1; k < st.length; k++) skipped += st[k][0] - st[k - 1][0] - 1;
+    const late = st.filter(([, t, now]) => t < now).map(([i, t, now]) => [i, Math.round((now - t) * 1000)]);
+    return { steps: st.length, skipped, late, kind: itchy.engine.kind, playing: itchy.engine.playing };
+  });
+  check(r.playing && r.kind === 'native' && r.steps > 30, 'the built-in engine plays the song while openDAW waits', JSON.stringify(r));
+  check(r.late.length === 0 && r.skipped === 0, 'no step is scheduled late and none is skipped', JSON.stringify(r));
+  await page.click('.btn.play', { force: true });
+  const ready = await page.evaluate(() => Promise.race([itchy.engine.ready, new Promise((ok) => setTimeout(() => ok('timeout'), 60000))]));
+  check(ready === 'opendaw' && (await page.evaluate(() => itchy.engine.kind)) === 'opendaw', 'after Stop, openDAW boots and takes over', `ready ${ready}`);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  await instrument(page);
+  await audible(page, 'then a tap', () => page.click('.cell[data-s="5"][data-r="2"]'));
+  check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
+  await ctx.close();
+}
+
+/**
  * Hardening (docs/OPENDAW-PORT.md M4): when openDAW stops the music by itself (a CPU overload puts its engine to
  * sleep), the app shows it as stopped, taps still sound and Play starts it again; a page restored from the
  * back/forward cache reloads (keeping the song) on openDAW pages only; and a tab whose openDAW boot died (the
@@ -1801,6 +1848,7 @@ const sections = [
   ['staticImportGuard', staticImportGuard],
   ['isolationPaths', isolationPaths],
   ['budgets', budgets],
+  ['bootWhilePlaying', bootWhilePlaying],
   ['hardening', hardening],
   ['renderedSounds', renderedSounds],
   ['recording', recording],
