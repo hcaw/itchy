@@ -1580,6 +1580,7 @@ async function hardening() {
   for (const query of ['', '?engine=native']) {
     const { ctx, page, errors } = await openPage({ width: 1024, height: 768, query });
     const where = query ? 'built-in engine forced' : 'openDAW';
+    const untouched = await project(page);
     await page.click('.cell[data-s="9"][data-r="5"]');
     const song = await project(page);
     let navigated = 0;
@@ -1594,6 +1595,9 @@ async function hardening() {
       check(navigated === 1, 'back/forward cache, openDAW: a restored page reloads', `${navigated} navigations`);
       await loaded(page);
       check((await project(page)) === song, 'back/forward cache, openDAW: the song is kept');
+      await page.click('.btn.undo');
+      await page.waitForTimeout(60);
+      check((await project(page)) === untouched, 'back/forward cache, openDAW: and so is the undo history', diff(untouched, await project(page)));
     }
     check(errors.length === 0, `back/forward cache, ${where}: no console errors or warnings`, errors.join(' | '));
     await ctx.close();

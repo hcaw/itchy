@@ -28,7 +28,10 @@ export class App {
 
     guardGhostClicks();
     store.subscribe((what) => this.render(what));
-    engine.on((type) => { if (type === 'stop') this.onStop(); });
+    engine.on((type) => {
+      if (type === 'stop') this.onStop();
+      if (type === 'reload') store.stashHistory();
+    });
     this.render('open');
     this.bindKeys();
     this.loop = this.loop.bind(this);

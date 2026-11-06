@@ -75,3 +75,31 @@ test('memory storage keeps projects and recordings, and survives a corrupt local
   await s.saveRecording('r1', { sampleRate: 8000, data: new Float32Array(4) });
   assert.equal((await s.loadRecording('r1')).sampleRate, 8000);
 });
+
+test('the undo history survives one reload of the tab, only for the same song in the same state', async () => {
+  const { Store } = await import('../src/ui/store.js');
+  const items = new Map();
+  globalThis.sessionStorage = { getItem: (k) => items.get(k) ?? null, setItem: (k, v) => items.set(k, String(v)), removeItem: (k) => items.delete(k) };
+  try {
+    const storage = new MemoryStorage();
+    const a = new Store({ project: createProject(), storage });
+    a.change((p) => { p.tempo = 120; });
+    a.change((p) => { p.tempo = 130; });
+    a.undo();
+    a.stashHistory();
+    const saved = JSON.parse(JSON.stringify(a.project));
+    saved.updated += 5; // saved again on the way out
+    const b = new Store({ project: migrate(saved), storage });
+    assert.equal(b.history.past.length, 1);
+    assert.equal(b.history.future.length, 1);
+    assert.ok(b.undo());
+    assert.equal(b.project.tempo, a.history.past.length ? JSON.parse(a.history.past[0]).tempo : -1);
+    const c = new Store({ project: migrate(saved), storage });
+    assert.equal(c.history.canUndo, false, 'only for the next load');
+    a.stashHistory();
+    const d = new Store({ project: createProject(), storage });
+    assert.equal(d.history.canUndo, false, 'another song starts with no history');
+  } finally {
+    delete globalThis.sessionStorage;
+  }
+});

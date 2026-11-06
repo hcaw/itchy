@@ -6,6 +6,9 @@ import { History } from '../model/history.js';
 import { migrate, findLayer } from '../model/project.js';
 
 export const BACKUP_KEY = 'itchy.backup';
+/** sessionStorage key: the undo history, kept across one reload of this tab (see stashHistory). */
+export const HISTORY_KEY = 'itchy.history';
+const withoutUpdated = (json) => JSON.stringify(JSON.parse(json), (k, v) => (k === 'updated' ? undefined : v));
 
 export class Store {
   constructor({ project, storage }) {
@@ -16,6 +19,29 @@ export class Store {
     this.listeners = new Set();
     this.saveTimer = null;
     this.saving = Promise.resolve();
+    this.unstashHistory();
+  }
+
+  /**
+   * Keep the undo history across a reload of this tab (the engine reloads a page restored from the back/forward
+   * cache): it lives only in memory otherwise. Only for the next load, and only if that load opens the same song in
+   * the same state. If it doesn't fit in sessionStorage the history is lost, as on any reload.
+   */
+  stashHistory() {
+    const { past, future } = this.history;
+    try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify({ current: JSON.stringify(this.project), past, future })); } catch { /* no room */ }
+  }
+
+  unstashHistory() {
+    let stash = null;
+    try {
+      stash = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || 'null');
+      sessionStorage.removeItem(HISTORY_KEY);
+    } catch { return; }
+    if (!stash || !Array.isArray(stash.past) || !Array.isArray(stash.future)) return;
+    try { if (withoutUpdated(stash.current) !== withoutUpdated(JSON.stringify(this.project))) return; } catch { return; }
+    this.history.past = stash.past.filter((x) => typeof x === 'string').slice(-this.history.limit);
+    this.history.future = stash.future.filter((x) => typeof x === 'string');
   }
 
   subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }

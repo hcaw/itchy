@@ -247,7 +247,9 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
   its engine to sleep after a CPU overload; Itchy wakes it so taps still sound and turns Play back off, so the
   music never looks as if it plays in silence, and pressing Play simply starts it again.
 - **On openDAW pages, a page restored from the back/forward cache reloads** — Chromium can bring the audio worklet
-  back running at half speed; the song was saved when the page was hidden, so the reload costs nothing.
+  back running at half speed; the song was saved when the page was hidden, and the undo history is kept in the
+  tab's sessionStorage for that one reload (it lives only in memory otherwise, and a first version lost it). The
+  reload still replays openDAW's boot, and a history too big for sessionStorage is lost.
 - **`index.html` preloads every module the app starts with (`<link rel="modulepreload">`)** — with no bundler each
   level of imports costs a network round trip; on Fast 3G the listed modules arrive at once, and the app renders in
   about 2.2 s instead of 3.6 s. A unit test keeps the list complete, and openDAW is never on it.

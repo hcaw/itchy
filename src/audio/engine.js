@@ -63,8 +63,9 @@ export class Engine {
       this.createContext();
       this.bootOpenDaw();
       // A page restored from the back/forward cache can come back with Chromium's audio worklet clock running at
-      // half speed. Reload it instead: the song was saved when the page was hidden, so nothing is lost.
-      addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+      // half speed. Reload it instead: the song was saved when the page was hidden, and the 'reload' event lets the
+      // app keep its undo history for the next load (Store.stashHistory).
+      addEventListener('pageshow', (e) => { if (e.persisted) { this.emit('reload'); location.reload(); } });
     } else {
       this.settle('native');
     }

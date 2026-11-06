@@ -803,7 +803,7 @@ example songs on both and note differences.
 | 8 | CPU with up to ~18 units (6 critters, ≤ 10 tray, library, aux) on tablets | Medium / medium | Lazy tray units; idle units carry no notes; measure `engine.cpuLoad`; overload → surface as a stop (M4: done; openDAW's own overload sleep is woken and shown as a stop) |
 | 9 | SDK console warnings fail checks | Medium / low | Never create a file without its PCM; never orphan a box; checks catch regressions |
 | 10 | Repitching changes tune envelopes; loops audible | Certain / low-medium | Listening check; Vaporisateur or two-root bells fallbacks |
-| 11 | Chromium half-speed worklet clock after bfcache restore | Low / medium | `pageshow` with `persisted` → reload (autosaved) (M4: done, on openDAW pages) |
+| 11 | Chromium half-speed worklet clock after bfcache restore | Low / medium | `pageshow` with `persisted` → reload (autosaved) (M4: done, on openDAW pages; after the review the undo history is kept across that reload in sessionStorage) |
 | 12 | Two engines to maintain | Certain / medium | Native frozen; decisions log records when it could go |
 | 13 | Git history +6.5 MB per upgrade | Certain / low | Upgrade rarely; `.gitattributes` |
 | 14 | AGPL | Certain / owner's call | §12; sign-off before merge |
@@ -1139,7 +1139,8 @@ CONTRIBUTING.
   (one `console.info`). Checked by calling `handleCpuOverload()`: the app shows stopped, a tap is heard (a mutation
   without `wake()` makes it silent), Play works again. *bfcache:* on openDAW pages (context made at load),
   `pageshow` with `persisted` reloads; checked with a synthetic event (Playwright's Chromium disables the bfcache):
-  reload, song kept; no reload for a plain `pageshow` or on `?engine=native`. *Crash flag:* set before load by an
+  reload, song kept (after the review: and the undo history, stashed in sessionStorage for that reload); no reload
+  for a plain `pageshow` or on `?engine=native`. *Crash flag:* set before load by an
   init script → the built-in engine, one `console.info`, a tap heard, and no `/vendor/` request.
 - **Deviations:**
   1. *The budgets run over HTTP/2, not on serve.js.* Over HTTP/1.1 a browser opens six connections and DevTools'
