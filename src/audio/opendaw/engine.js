@@ -223,10 +223,8 @@ export class OpenDawEngine {
    * pool of VOICES units and each note rings its full length; a kit has one voice unit per kit, as its slots play
    * every hit to its end (gate off).
    *
-   * When the voice unit has to switch to another sample file (a different tune sound or a recording), openDAW only
-   * plays the new file once its engine has taken the change in: an audition sent in the same task is lost about two
-   * times in three. So that note waits for openDAW to report its loading complete (a few milliseconds); a note whose
-   * voice already holds the file goes at once.
+   * A voice unit that has to switch to another sample file (a different tune sound or a recording) is replaced
+   * rather than re-pointed (see voiceUnit), so this note can go at once.
    */
   audition(layer, note) {
     if (this.failed) return false;
@@ -234,30 +232,45 @@ export class OpenDawEngine {
     const v = describeVoice(layer, { ...note, s: this.previews++ }, p, this.env);
     if (!v) return false; // a recording that isn't loaded yet
     const kit = this.env.sounds[layer.sound]?.instrument === 'playfield';
-    const key = kit ? `__voice:${layer.sound}` : `__voice:${(this.nextVoice = (this.nextVoice + 1) % VOICES)}`;
-    const fileBefore = this.voices.get(key)?.instrument?.file;
+    const key = kit ? `__voice:${layer.sound}` : this.tuneVoice(describeUnit({ ...layer, notes: [], steps: 16 }, p, this.env).instrument.file);
     const h = this.voiceUnit(key, layer, p) && this.applier.units.get(key);
     if (!h) return false;
     this.voiceOwner.set(key, layer.id);
-    const send = () => {
-      if (!this.failed) this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
-    };
-    if (fileBefore !== undefined && fileBefore !== this.voices.get(key)?.instrument?.file) {
-      this.project.engine.queryLoadingComplete().then(send, send);
-    } else send();
+    this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
     return true;
+  }
+
+  /**
+   * The tune voice the next live note plays on: going round the pool, the first voice that already holds `file` and
+   * didn't play the last note (so a quick run of notes keeps ringing), else simply the next voice, which then has to
+   * be given the file (a new unit, a little slower: see voiceUnit). Repeated sounds so never change a voice's file.
+   */
+  tuneVoice(file) {
+    let pick = null;
+    for (let i = 1; i <= VOICES && pick === null; i++) {
+      const k = (this.nextVoice + i) % VOICES;
+      if (k !== this.nextVoice && this.voices.get(`__voice:${k}`)?.instrument?.file === file) pick = k;
+    }
+    this.nextVoice = pick ?? (this.nextVoice + 1) % VOICES;
+    return `__voice:${this.nextVoice}`;
   }
 
   /**
    * Make or update the hidden voice unit `key` to play `layer`'s sound through its charms (one small transaction).
    * `glide`: charm fields glide as on a critter's unit (when following a critter); otherwise they jump at once,
    * before the note they are for.
+   *
+   * A voice that has to play another sample file is replaced with a new unit, not re-pointed: openDAW loses about two
+   * in three auditions sent in the same task as a file re-point (the note goes silent), but plays an audition on a
+   * unit created in that task (the M1 spike's "delete a unit, recreate it and audition in the same task").
    */
   voiceUnit(key, layer, project, glide = false) {
     const desc = describeUnit({ ...layer, id: key, muted: false, notes: [], steps: 16 }, project, this.env);
     const prev = this.voices.get(key);
     const frame = (units) => ({ bpm: 0, groove: {}, masterDb: 0, library: this.scene.library, units });
-    if (!this.applier.apply(diffScene(frame(prev ? [prev] : []), frame([desc])), { glide })) return false;
+    let ops = diffScene(frame(prev ? [prev] : []), frame([desc]));
+    if (ops.some((op) => op.op === 'setFile')) ops = [{ op: 'replaceUnit', key, unit: desc }];
+    if (!this.applier.apply(ops, { glide })) return false;
     this.voices.set(key, desc);
     return true;
   }
