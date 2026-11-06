@@ -43,7 +43,10 @@ export class Engine {
     /** The OpenDawEngine, or null. */
     this.openDaw = null;
     /** Settles with the first final kind: 'opendaw' when it takes over, 'native' if it never will (or fails). */
-    this.ready = new Promise((ok) => { this.settle = ok; });
+    this.ready = new Promise((ok) => { this.settle = (kind) => { this.readyAt ??= Math.round(performance.now()); ok(kind); }; });
+    /** When `ready` settled, in ms from the start of the page load (null until then): the boot time, for the checks
+     * and for anyone timing a real device from the browser's console. Never sent anywhere. */
+    this.readyAt = null;
     this.playing = false;        // the transport, as the app sees it; set at once by play() and stop()
     this.gen = 0;                // play/stop generation: an async play() that finishes after a stop() does nothing
     this.sentPlay = false;       // has openDAW been told to play (so a stop must be sent)?

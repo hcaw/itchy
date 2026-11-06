@@ -76,6 +76,7 @@ async function loaded(page, query = '', { kind = expectedKind(query) } = {}) {
   await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'));
   const got = await page.evaluate(() => itchy.engine.ready);
   if (kind) check(got === kind && (await page.evaluate(() => itchy.engine.kind)) === kind, `the ${kind === 'opendaw' ? 'openDAW' : 'built-in'} engine plays`, `ready ${got}`);
+  check(Number.isFinite(await page.evaluate(() => itchy.engine.readyAt)), 'the engine records when it was ready');
   await instrument(page);
 }
 
@@ -1354,9 +1355,8 @@ async function budgets() {
       await page.goto(h2.url, { waitUntil: 'commit' });
       await page.waitForFunction(() => window.itchy && !document.getElementById('app').classList.contains('loading'), null, { timeout: 60000, polling: 50 });
       const render = Date.now() - t0;
-      // When ready settles, in the page's own time (from the start of navigation): a later evaluate can wait behind
-      // the busy main thread.
-      await page.evaluate(() => { itchy.engine.ready.then(() => { window.__readyAt = performance.now(); }); });
+      // When ready settles is read from engine.readyAt, in the page's own time (from the start of navigation): a
+      // later evaluate can wait behind the busy main thread.
       await instrument(page);
       const armed = await armTap(page);
       const kindAtTap = await page.evaluate(() => itchy.engine.kind); // which engine plays the first tap
@@ -1366,7 +1366,7 @@ async function budgets() {
       const heard = armed ? await tapResult(page) : { first: null };
       const tapMs = heard.first === null ? null : tap + Math.max(0, (heard.first - heard.callAt) * 1000);
       const ready = await page.evaluate(() => Promise.race([itchy.engine.ready, new Promise((ok) => setTimeout(() => ok('timeout'), 90000))]));
-      const readyMs = Math.round(await page.evaluate(() => window.__readyAt ?? performance.now()));
+      const readyMs = await page.evaluate(() => itchy.engine.readyAt ?? Math.round(performance.now()));
       await cdp.send('Performance.enable');
       const heap = (await cdp.send('Performance.getMetrics')).metrics.find((m) => m.name === 'JSHeapUsedSize').value;
       const vendor = h2.served.filter((f) => f.path.includes('/vendor/'));
