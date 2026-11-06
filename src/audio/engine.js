@@ -70,7 +70,11 @@ export class Engine {
     }
   }
 
-  /** Load and boot openDAW (never statically imported: only here, after the capability probe). */
+  /**
+   * Load and boot openDAW (never statically imported: only here, after the capability probe). Any failure, during
+   * the boot or in the steps after it, terminates whatever openDAW started, logs once and stays on the built-in
+   * engine.
+   */
   async bootOpenDaw() {
     let od;
     try {
@@ -78,14 +82,19 @@ export class Engine {
       od = await startOpenDaw(this.ctx, { getProject: this.getProject, recordings: this.recordings, onFatal: (e) => this.fail(e) });
       od.worklet.connect(this.analyser);
       od.onHalt = () => this.halted();
+      this.openDaw = od;
+      // Recordings that arrived while it booted.
+      for (const [id, rec] of this.recordings) if (!od.hasRecording(id)) await od.addRecording(id, rec);
     } catch (e) {
-      console.info('Itchy: playing with the built-in sound engine.', reason(e));
-      this.settle('native');
+      if (od?.failed) return; // it failed by itself meanwhile, and fail() has handled it
+      if (od && this.openDaw === od) this.fail(e);
+      else {
+        try { od?.terminate(); } catch { /* already gone */ }
+        console.info('Itchy: playing with the built-in sound engine.', reason(e));
+        this.settle('native');
+      }
       return;
     }
-    this.openDaw = od;
-    // Recordings that arrived while it booted.
-    for (const [id, rec] of this.recordings) if (!od.hasRecording(id)) await od.addRecording(id, rec);
     if (this.openDaw !== od) return; // failed meanwhile
     if (this.playing) this.waiting = od;
     else this.useOpenDaw(od);

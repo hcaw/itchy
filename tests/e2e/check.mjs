@@ -13,7 +13,7 @@
 // and every page with ?engine=native on the built-in engine; openDAW's transport runs at the tempo and an offline
 // render puts every hit on the sample grid; tap-to-sound latency is within the built-in engine's + 10 ms; the
 // first tap and the first Play are heard on a context that starts suspended; failures (a bad edit, a worklet
-// error, a missing bundle) end on the built-in engine with sound; the bundle is never requested where it can't
+// error, a missing bundle, a failed step after the boot) end on the built-in engine with sound; the bundle is never requested where it can't
 // be used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first
 // gesture; each sound rendered for openDAW is non-silent and the same every time; on the site served without
 // isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads, and without a
@@ -1165,6 +1165,35 @@ async function robustness() {
     const warns = errors.filter((e) => e === 'warning: ErrorEvent').length;
     check(warns === 1, 'worklet error: openDAW’s one documented warning', errors.join(' | '));
     await after(page, errors, 'worklet error', [/^warning: ErrorEvent$/]);
+    await ctx.close();
+  }
+  {
+    // A step after the boot fails (here, catching up a recording that arrived meanwhile): openDAW is terminated,
+    // `ready` still settles, and the built-in engine plays.
+    const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    const seed = await ctx.newPage();
+    await seed.goto(URL_ + '?engine=native');
+    await seed.waitForFunction(() => window.itchy);
+    await seed.evaluate(async () => {
+      await itchy.storage.saveRecording('rcatch', { data: new Float32Array(4000).map((_, i) => Math.sin(i / 8) * 0.5), sampleRate: 22050, peaks: [0.5, 1, 0.5], created: Date.now() });
+      itchy.store.change((p) => { p.layers[0].sound = 'rec:rcatch'; });
+      await itchy.store.flush();
+    });
+    await seed.close();
+    await ctx.route('**/src/audio/opendaw/engine.js', async (route) => {
+      const res = await route.fetch();
+      const body = (await res.text())
+        .replace('async addRecording(id, rec) {', 'async addRecording(id, rec) { globalThis.__catchUp = this; throw new Error(\'forced by the check\');')
+        .replace('hasRecording(id) {', 'hasRecording(id) { if (!globalThis.__catchUp) return false;');
+      await route.fulfill({ response: res, body });
+    });
+    const page = await ctx.newPage();
+    const errors = watchConsole(page);
+    await page.goto(URL_);
+    await loaded(page, '', { kind: 'native' });
+    const r = await page.evaluate(() => ({ tried: !!globalThis.__catchUp, terminated: !!globalThis.__catchUp?.handle.terminated, openDaw: itchy.engine.openDaw }));
+    check(r.tried && r.terminated && r.openDaw === null, 'a failure after the boot terminates openDAW', JSON.stringify(r));
+    await after(page, errors, 'recording catch-up fails');
     await ctx.close();
   }
   {
