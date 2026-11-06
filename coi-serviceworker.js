@@ -1,6 +1,6 @@
 /*! coi-serviceworker v0.1.7 - Guido Zuidhof and contributors, licensed under MIT */
 // Vendored from npm coi-serviceworker@0.1.7 (https://github.com/gzuidhof/coi-serviceworker), MIT licence:
-// Copyright (c) 2021 Guido Zuidhof. Itchy's two changes are marked "Itchy:" below. index.html configures it with
+// Copyright (c) 2021 Guido Zuidhof. Itchy's three changes are marked "Itchy:" below. index.html configures it with
 // window.coi before loading it. It makes GitHub Pages cross-origin isolated, which openDAW's engine needs.
 let coepCredentialless = false;
 if (typeof window === 'undefined') {
@@ -106,15 +106,38 @@ if (typeof window === 'undefined') {
                 (registration) => {
                     !coi.quiet && console.log("COOP/COEP Service Worker registered", registration.scope);
 
+                    // Itchy: reload only once the worker is "activated". Stock 0.1.7 reloads as soon as a worker is
+                    // found (still installing) or present (perhaps still activating); a navigation that starts
+                    // before activation doesn't pass through the worker, so the page comes back not isolated and
+                    // needs another reload. Waits 3 s at most, and reloads once per page.
+                    let reloading = false;
+                    const reloadWhenActivated = () => {
+                        if (reloading) return;
+                        reloading = true;
+                        new Promise((resolve) => {
+                            const timer = setTimeout(resolve, 3000);
+                            const check = () => {
+                                const a = registration.active;
+                                if (a && a.state === "activated" && !registration.installing && !registration.waiting) {
+                                    clearTimeout(timer);
+                                    return resolve();
+                                }
+                                const w = registration.installing || registration.waiting || a;
+                                if (w) w.addEventListener("statechange", check, { once: true });
+                            };
+                            check();
+                        }).then(() => coi.doReload());
+                    };
+
                     registration.addEventListener("updatefound", () => {
                         !coi.quiet && console.log("Reloading page to make use of updated COOP/COEP Service Worker.");
-                        coi.doReload();
+                        reloadWhenActivated();
                     });
 
                     // If the registration is active, but it's not controlling the page
                     if (registration.active && !n.serviceWorker.controller) {
                         !coi.quiet && console.log("Reloading page to make use of COOP/COEP Service Worker.");
-                        coi.doReload();
+                        reloadWhenActivated();
                     } else if (registration.active && n.serviceWorker.controller
                         && session((s) => s.getItem(reloadKey)) === null) {
                         // Itchy: the worker controls the page, but this navigation did not pass through it (it
