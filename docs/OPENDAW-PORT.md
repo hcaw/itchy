@@ -709,7 +709,10 @@ backends; peak ≤ 0.18, so no limiting needed.
 - **WebKit:** `safariLayout()` gains console collection and, in CI, a boot step that asserts `ready` settles and that
   a tap gives `level() > 0.01` on whichever backend is chosen. M0 found that Playwright's Linux WebKit does run an
   `AudioContext` with no sound card, so the level assertion stays (M0 already asserts it for the native engine); the
-  real-iPad checklist (M5) remains the gate.
+  real-iPad checklist (M5) remains the gate. **Added after the review:** `isolationPaths()` also runs "the service
+  worker" and "a dropped first reload" in WebKit, on the header-less collected site (the GitHub Pages path, where
+  isolation comes only from coi-serviceworker): isolated within 3 loads, openDAW plays, a tap and Play heard, no
+  console errors. Required in CI, as in `safariLayout()`.
 - Extend `check.mjs` for every new interaction (the port adds no gestures).
 
 ### 10c. Listening and parity checks (M3, written up in the PR)

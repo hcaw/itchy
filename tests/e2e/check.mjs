@@ -16,7 +16,8 @@
 // error, a missing bundle, a failed step after the boot) end on the built-in engine with sound; the bundle is never requested where it can't
 // be used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first
 // gesture; each sound rendered for openDAW is non-silent and the same every time; on the site served without
-// isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads, and without a
+// isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads (in Chromium and in
+// WebKit, also when the first reload is dropped), and without a
 // service worker, forced, or on a device that can't run openDAW, the built-in engine plays with exact timing and no
 // reload; on Fast 3G with a 4× slower CPU (over HTTP/2, as deployed) the app renders and the first tap is heard
 // within 3 s and openDAW is ready within 60 s (4 s with a warm cache), and openDAW booting while the built-in
@@ -1422,8 +1423,8 @@ async function isolationPaths() {
   const PAGES = PORT + 2;
   const pages = await startServer(PAGES, { isolate: false, root: dir });
   const base = `http://localhost:${PAGES}/`;
-  const visit = async ({ query = '', init = null, route = null } = {}) => {
-    const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  const visit = async ({ query = '', init = null, route = null, on = browser } = {}) => {
+    const ctx = await on.newContext({ viewport: { width: 1024, height: 768 } });
     if (init) await ctx.addInitScript(init);
     if (route) await ctx.route(...route);
     const page = await ctx.newPage();
@@ -1434,6 +1435,13 @@ async function isolationPaths() {
     await page.goto(base + query);
     return { ctx, page, errors, counts };
   };
+  // The service worker's path also runs in WebKit (the iPad stand-in; required in CI, as in safariLayout): the
+  // safety nets in index.html are there for reloads WebKit drops.
+  let wk = null;
+  try { wk = await webkit.launch(); } catch (e) {
+    if (process.env.CI) check(false, 'WebKit launches in CI', e.message.split('\n')[0]);
+    else console.log('  · WebKit not installed: the service worker path runs in Chromium only');
+  }
   try {
     for (const [what, opts, allowed] of [
       ['the service worker', {}, []],
@@ -1453,7 +1461,7 @@ async function isolationPaths() {
         },
       }, []],
       ['a stylesheet that fails once', { route: ['**/styles.css', (() => { let n = 0; return (r) => (n++ ? r.continue() : r.abort()); })()] }, [/^error: Failed to load resource/]],
-    ]) {
+    ].flatMap((x) => (wk && x[0] !== 'a stylesheet that fails once' ? [x, [`WebKit, ${x[0]}`, { ...x[1], on: wk }, x[2]]] : [x]))) {
       const { ctx, page, errors, counts } = await visit(opts);
       const t0 = Date.now();
       let up = false;
@@ -1502,6 +1510,7 @@ async function isolationPaths() {
       await ctx.close();
     }
   } finally {
+    await wk?.close();
     pages.close();
     rmSync(dir, { recursive: true, force: true });
   }
