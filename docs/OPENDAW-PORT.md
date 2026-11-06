@@ -1159,6 +1159,41 @@ Acceptance:
 - README, CONCEPT, CONTRIBUTING, CLAUDE.md and dependabot changes listed in the PR; `LICENSE` unchanged.
 - `npm run screenshots` leaves the tree clean, or reviewed images are committed.
 
+Done (the parts an agent can do; the Vercel check and the iPad merge gate are the owner's, in the PR description).
+`npm test`: 71 passed (70 at M4, plus the Compressor guard). `npm run check`: 706 passed, 0 failed, as CI runs it (WebKit installed, `CI=true`); budgets this run: cold render 2.29 s,
+first tap heard 2.44 s, `ready` 19.7 s; warm `ready` 2.4 s.
+Files: README ("Engine and browsers" with the M3/M4 numbers, Licence, Known rough edges, Next steps #7, badge),
+CONTRIBUTING ("Upgrading openDAW", the Compressor and same-origin rules, set-up and checks wording), CONCEPT (final
+tree, three decisions), `scripts/vendor-opendaw.mjs` and the re-vendored `NOTICE.md` and `VERSIONS.json` (two runs
+identical), `tests/vendor.test.js`, `src/audio/engine.js` (`readyAt`), `tests/e2e/check.mjs`, and the PR description
+(the owner hand-off: AGPL acceptance, the Vercel header check, the real-iPad checklist with a bookmarklet, keeping
+the built-in engine).
+- **Screenshots:** nothing visible changed in M5, and no picture is committed. `npm run screenshots` is still not
+  byte-stable run to run, as before the port: the tablet shot's play-button glow (it follows the live level; the ring
+  is a few pixels larger or smaller) and the social card (at most 2/255 per channel, invisible). Three runs, all
+  reviewed; the committed images were kept rather than swapped for another random state. Making the glow
+  deterministic (pin `--glow` while posing) is left as a follow-up.
+- **Deviations:**
+  1. *`CLAUDE.md` Commands is not changed.* An agent shouldn't edit `CLAUDE.md` on its own; the line
+     (`npm run vendor:opendaw`) is proposed in the PR for the owner to add. M3's timing-rule parenthetical stays.
+  2. *`itchy.engine.readyAt` (new, `src/audio/engine.js`)*: the time `ready` settled, in ms from navigation start.
+     The merge gate asks for the iPad's boot time, and nothing recorded it; the budgets now read it instead of their
+     own `__readyAt` hook, and every load checks it is set. Never stored or sent.
+  3. *`NOTICE.md` says more than §12 asked:* Itchy's repository URL as the rest of the Corresponding Source, that the
+     vendored files are unmodified, and the WebAssembly that ports code under other licences, read from the crates at
+     `9306eaab`: the Compressor (CTAGDRC, GPL-3.0) and Tubular (Dexed, GPL-3.0; msfa, Apache-2.0), which the engine
+     always loads, and `engine.wasm`'s Signalsmith Stretch port (MIT, whose notice is now included). The list is
+     `WASM_LICENCES` in the vendoring script, which fails if a listed file disappears; CONTRIBUTING says to re-check it
+     on upgrade. It comes from source comments and openDAW's README, not a line-by-line audit.
+  4. *A unit test guards "never use the Compressor"* (`tests/vendor.test.js`): no `Compressor` in `entry.js` or `src/`.
+  5. *The README's first-visit size is M4's measurement* (5.1 MB from `/vendor/`, 2.6 MB sent over HTTP/2 with gzip),
+     not §11's earlier estimate (2.7 MB on Pages, 1.4 MB fully compressed).
+  6. *The README badge* says "nothing to install" instead of "dependencies: none", which the vendored engine made
+     untrue.
+  7. *Testing the Pages build before merging needs a second Pages site* (Pages deploys only from `main`): the PR
+     suggests a throwaway repository with Pages on, or allowing the branch in the `github-pages` environment for one
+     manual deploy; the Vercel preview covers everything but the reloads.
+
 ---
 
 ## 15. Review log
