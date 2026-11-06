@@ -222,6 +222,11 @@ export class OpenDawEngine {
    * charms. openDAW keeps one audition per unit (a new one ends the one before), so tune sounds take turns over a
    * pool of VOICES units and each note rings its full length; a kit has one voice unit per kit, as its slots play
    * every hit to its end (gate off).
+   *
+   * When the voice unit has to switch to another sample file (a different tune sound or a recording), openDAW only
+   * plays the new file once its engine has taken the change in: an audition sent in the same task is lost about two
+   * times in three. So that note waits for openDAW to report its loading complete (a few milliseconds); a note whose
+   * voice already holds the file goes at once.
    */
   audition(layer, note) {
     if (this.failed) return false;
@@ -230,10 +235,16 @@ export class OpenDawEngine {
     if (!v) return false; // a recording that isn't loaded yet
     const kit = this.env.sounds[layer.sound]?.instrument === 'playfield';
     const key = kit ? `__voice:${layer.sound}` : `__voice:${(this.nextVoice = (this.nextVoice + 1) % VOICES)}`;
+    const fileBefore = this.voices.get(key)?.instrument?.file;
     const h = this.voiceUnit(key, layer, p) && this.applier.units.get(key);
     if (!h) return false;
     this.voiceOwner.set(key, layer.id);
-    this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
+    const send = () => {
+      if (!this.failed) this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
+    };
+    if (fileBefore !== undefined && fileBefore !== this.voices.get(key)?.instrument?.file) {
+      this.project.engine.queryLoadingComplete().then(send, send);
+    } else send();
     return true;
   }
 
