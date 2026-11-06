@@ -220,6 +220,7 @@ export class OpenDawEngine {
   async renderOffline({ project = this.getProject(), steps = 16, sampleRate = 48000 } = {}) {
     const { od } = this;
     this.applier.finishGlides();
+    // A fresh throwaway project, rendered directly (renderSection never terminates its source: a copy would leak).
     const rp = od.Project.new(this.handle.env);
     let error = null;
     try {
@@ -227,7 +228,7 @@ export class OpenDawEngine {
       const scene = describe(project, this.env);
       if (!applier.apply(diffScene(null, scene), { space: scene.space, glide: false })) throw error;
       const section = { type: 'loop', key: 'itchy', label: 'itchy', start: 0, end: steps * STEP_PULSES, passes: 1, tail: false };
-      const audio = await od.OfflineEngineRenderer.renderSection(rp.copy(), od.Option.None, section, new od.DefaultObservableValue(0), undefined, sampleRate);
+      const audio = await od.OfflineEngineRenderer.renderSection(rp, od.Option.None, section, new od.DefaultObservableValue(0), undefined, sampleRate);
       return { sampleRate, channels: [...audio.frames] };
     } finally {
       rp.terminate();
