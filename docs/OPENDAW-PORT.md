@@ -550,8 +550,12 @@ file, including recordings) take turns over a pool of **4** voice units (`VOICES
 painted melody, quick taps, a multi-touch chord and charm previews each ring their full length; each kit has one
 voice unit (its slots have the gate off, so a new audition doesn't stop a hit). All six are built at boot (after
 the first sync), so a first tap never waits for a unit. That is fewer units than the tray units could reach, and
-the critter's own unit plays only the song, so sleep can mute it (§4b). Checked: two previews 100 ms apart, the
-first one's pitch at 500 ms within 1 dB of a lone preview, on both engines.
+the critter's own unit plays only the song, so sleep can mute it (§4b). After every sync a voice unit follows the
+charms of the critter it last played (gliding, as a critter's unit does), as a preview on the built-in engine plays
+through the critter's own chain: undoing an echo ends the echo of a preview still ringing. Checked: two previews
+100 ms apart, the first one's pitch at 500 ms within 1 dB of a lone preview, on both engines. Since notes now ring
+their whole length, the checks' output tap waits up to 3 s (not 1.5 s) for earlier sounds to die down, and the
+recording check lets each note end before the next.
 
 ---
 

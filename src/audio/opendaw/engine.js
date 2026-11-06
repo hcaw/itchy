@@ -107,6 +107,7 @@ export class OpenDawEngine {
     this.failed = false;
     this.scene = null;
     this.voices = new Map(); // hidden voice unit key → its unit description (see audition)
+    this.voiceOwner = new Map(); // hidden voice unit key → the id of the critter it last played
     this.nextVoice = 0;      // the tune voice unit the next live note uses
     this.previews = 0;       // turns the variants of a noisy drum for repeated previews
     const frame = typeof requestAnimationFrame === 'function'
@@ -158,7 +159,15 @@ export class OpenDawEngine {
     if (this.failed) return;
     const next = describe(this.getProject(), this.env);
     const ok = this.applier.apply(diffScene(this.scene, next), this.scene ? {} : { space: next.space });
-    if (ok) this.scene = next;
+    if (!ok) return;
+    this.scene = next;
+    // A voice unit follows the charms of the critter it last played, as a preview on the built-in engine plays
+    // through the critter's own chain: undoing an echo also ends the echo of the preview that is still ringing.
+    const p = this.getProject();
+    for (const [key, id] of this.voiceOwner) {
+      const layer = p.layers.find((l) => l.id === id);
+      if (layer && layer.sound === this.voices.get(key)?.sound) this.voiceUnit(key, layer, p, true);
+    }
   }
 
   /** Apply ops directly (for checks: an op that must fail). */
@@ -223,16 +232,21 @@ export class OpenDawEngine {
     const key = kit ? `__voice:${layer.sound}` : `__voice:${(this.nextVoice = (this.nextVoice + 1) % VOICES)}`;
     const h = this.voiceUnit(key, layer, p) && this.applier.units.get(key);
     if (!h) return false;
+    this.voiceOwner.set(key, layer.id);
     this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
     return true;
   }
 
-  /** Make or update the hidden voice unit `key` to play `layer`'s sound through its charms (one small transaction). */
-  voiceUnit(key, layer, project) {
+  /**
+   * Make or update the hidden voice unit `key` to play `layer`'s sound through its charms (one small transaction).
+   * `glide`: charm fields glide as on a critter's unit (when following a critter); otherwise they jump at once,
+   * before the note they are for.
+   */
+  voiceUnit(key, layer, project, glide = false) {
     const desc = describeUnit({ ...layer, id: key, muted: false, notes: [], steps: 16 }, project, this.env);
     const prev = this.voices.get(key);
     const frame = (units) => ({ bpm: 0, groove: {}, masterDb: 0, library: this.scene.library, units });
-    if (!this.applier.apply(diffScene(frame(prev ? [prev] : []), frame([desc])), { glide: false })) return false;
+    if (!this.applier.apply(diffScene(frame(prev ? [prev] : []), frame([desc])), { glide })) return false;
     this.voices.set(key, desc);
     return true;
   }

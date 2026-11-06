@@ -9,21 +9,22 @@
 // play; keyboard controls work; in WebKit (when installed, always in CI), Safari layout holds, a tap starts the
 // sound, the sound engine settles (openDAW or the built-in one), a tap and Play are heard, and nothing is logged.
 //
-// The port to openDAW (docs/OPENDAW-PORT.md): every page on this (cross-origin isolated) server must end on openDAW
-// and every page with ?engine=native on the built-in engine; openDAW's transport runs at the tempo and an offline
-// render puts every hit on the sample grid; tap-to-sound latency is within the built-in engine's + 10 ms; the
-// first tap and the first Play are heard on a context that starts suspended; failures (a bad edit, a worklet
-// error, a missing bundle, a failed step after the boot) end on the built-in engine with sound; the bundle is never requested where it can't
-// be used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first
-// gesture; each sound rendered for openDAW is non-silent and the same every time; on the site served without
-// isolation headers (as GitHub Pages does), the service worker isolates the page within 3 loads (in Chromium and in
-// WebKit, also when the first reload is dropped), and without a
-// service worker, forced, or on a device that can't run openDAW, the built-in engine plays with exact timing and no
-// reload; on Fast 3G with a 4× slower CPU (over HTTP/2, as deployed) the app renders and the first tap is heard
-// within 3 s and openDAW is ready within 60 s (4 s with a warm cache), and openDAW booting while the built-in
-// engine plays never makes a step late; a CPU overload shows as a stop, a page
-// restored from the back/forward cache reloads, and a tab whose boot died plays on the built-in engine; and the M1
-// probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
+// The port to openDAW (docs/OPENDAW-PORT.md): every page on this (cross-origin isolated) server must end on openDAW and
+// every page with ?engine=native on the built-in engine; openDAW's transport runs at the tempo and an offline render
+// puts every hit on the sample grid; tap-to-sound latency is within the built-in engine's + 10 ms; the first tap and
+// the first Play are heard on a context that starts suspended; failures (a bad edit, a worklet error, a missing bundle,
+// a failed step after the boot) end on the built-in engine with sound; the bundle is never requested where it can't be
+// used; each sound is as loud on both engines (±3 dB); the facade plays the iOS unlock buffer in the first gesture, and
+// every engine reaches the speakers only through the analyser the checks listen to; the playhead keeps time with the
+// sound, a second preview doesn't cut the first off, and sleep silences a held note, on both engines; each sound
+// rendered for openDAW is non-silent and the same every time; on the site served without isolation headers (as GitHub
+// Pages does), the service worker isolates the page within 3 loads (in Chromium and in WebKit, also when the first
+// reload is dropped), and without a service worker, forced, or on a device that can't run openDAW, the built-in engine
+// plays with exact timing and no reload; on Fast 3G with a 4× slower CPU (over HTTP/2, as deployed) the app renders and
+// the first tap is heard within 3 s and openDAW is ready within 60 s (4 s with a warm cache), and openDAW booting while
+// the built-in engine plays never makes a step late; a CPU overload shows as a stop, a page restored from the
+// back/forward cache reloads (and keeps the undo history), and a tab whose boot died plays on the built-in engine; and
+// the M1 probe (tests/e2e/opendaw-probe.js) still passes every go/no-go item.
 
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -163,14 +164,15 @@ async function instrument(page) {
 }
 
 /**
- * Arm the output tap: wait (up to 1.5 s) until earlier sounds have died down, then catch the first frame above
- * a threshold. Resolves false when there is no tap (no context yet) or the context isn't running.
+ * Arm the output tap: wait (up to 3 s: a low recording or a bell rings for about 2 s) until earlier sounds have
+ * died down, then catch the first frame above a threshold. Resolves false when there is no tap (no context yet) or
+ * the context isn't running.
  */
 const armTap = (page) => page.evaluate(async () => {
   if (!window.__tap || itchy.engine.ctx.state !== 'running') return false;
   await __tap.read();
   let base = 1;
-  for (let i = 0; i < 30 && base > 0.01; i++) { await new Promise((r) => setTimeout(r, 50)); base = (await __tap.read()).peak; }
+  for (let i = 0; i < 60 && base > 0.01; i++) { await new Promise((r) => setTimeout(r, 50)); base = (await __tap.read()).peak; }
   __tap.arm(Math.max(0.008, 2 * base)); // the quietest blip (a tick) peaks near 0.05
   return true;
 });
@@ -776,7 +778,13 @@ async function recording() {
     check(await page.evaluate((id) => itchy.engine.buffers.has(id), sound.slice(4)), 'the recording is ready to play');
     // play it at three pitches
     const s0 = await sounds(page);
-    for (const r of [0, 3, 7]) await audible(page, `the recording on row ${r}`, () => page.tap(`.cell[data-s="${r * 2}"][data-r="${r}"]`));
+    // Each note rings its whole length (a low row plays the recording slower, and the fake microphone's beeps leave
+    // gaps the tap could take for silence), so let one end before the next is listened for.
+    const secs = await page.evaluate((id) => { const r = itchy.engine.recordings.get(id); return r.data.length / r.sampleRate; }, sound.slice(4));
+    for (const r of [0, 3, 7]) {
+      await audible(page, `the recording on row ${r}`, () => page.tap(`.cell[data-s="${r * 2}"][data-r="${r}"]`));
+      await page.waitForTimeout(Math.min(6000, secs * 2000));
+    }
     check((await sounds(page)) - s0 >= 3, 'recorded sound plays on the grid at different pitches');
     await page.tap('.btn.play', { force: true });
     await page.waitForTimeout(300);
