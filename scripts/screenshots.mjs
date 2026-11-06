@@ -11,8 +11,9 @@
 //   assets/social-card.png                      the link preview (Open Graph) image
 //
 // It uses the pre-installed Playwright, like `npm run check`. Motion is reduced so eyes, blinks
-// and sparks hold still, and the audio clock is paused at a fixed step so the playhead always
-// lands on the same column.
+// and sparks hold still, the audio clock is paused at a fixed step so the playhead always lands
+// on the same column, and the play button's glow is held at one level (see GLOW) so the pictures
+// come out the same on every run.
 
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, statSync } from 'node:fs';
@@ -32,6 +33,9 @@ const INK = '#261f3d';
 const BRAND_RED = '#ff6b6b'; // COLORS[0] in src/model/sounds.js: the colour the brand critter starts in
 // The top bar's .wordmark look, written out because narrow screens hide the .wordmark class.
 const WORDMARK = 'font-weight:900;letter-spacing:-0.02em;line-height:1';
+// While a song plays, the play button glows with the sound level (--glow, 0–1). That level depends on the exact
+// moment the audio clock is frozen, which moves with how long openDAW takes to boot, so the pictures pin it here.
+const GLOW = 0.6;
 
 /**
  * The README screenshots. Each opens a fresh browser (so first-run state is the same every time),
@@ -188,7 +192,30 @@ async function playTo(page, step) {
     return ticks.findIndex((t) => t.classList.contains('now')) === s;
   }, step, { polling: 'raf', timeout: 15000 });
   await page.evaluate(() => window.itchy.engine.ctx.suspend());
+  // The app sets --glow inline on every frame; a stylesheet !important rule outranks it.
+  await page.addStyleTag({ content: `.btn.play { --glow: ${GLOW} !important; }` });
   await page.waitForTimeout(250);
+}
+
+/**
+ * Settle every CSS animation and transition so nothing is caught part-way through, then repaint the whole page.
+ * The repaint matters: a note's ring (.cell.hit) reaches over its neighbours, and which of its frames Chromium last
+ * painted there depends on timing, so its edges could differ by a shade from run to run. Nudging the viewport a pixel
+ * and back makes Chromium paint everything afresh from the settled styles.
+ */
+async function holdStill(page) {
+  const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.evaluate(() => {
+    for (const a of document.getAnimations()) {
+      // Reduced motion makes every animation short and run once, so finishing it shows where it comes to rest.
+      try { a.finish(); } catch { a.pause(); a.currentTime = 0; }
+    }
+  });
+  const size = page.viewportSize();
+  await page.setViewportSize({ ...size, width: size.width + 1 });
+  await frames();
+  await page.setViewportSize(size);
+  await frames();
 }
 
 async function screenshot({ name, width, height, touch, example, critter, play, songbook }) {
@@ -204,6 +231,7 @@ async function screenshot({ name, width, height, touch, example, critter, play, 
   }
   // Park the pointer in a corner so no hover state shows.
   await page.mouse.move(0, height - 1);
+  await holdStill(page);
   const path = `${IMAGES}${name}.png`;
   await page.screenshot({ path });
   report(path);
@@ -219,6 +247,7 @@ async function socialCard() {
   await pickCritter(app, 0);
   await playTo(app, 6);
   await app.mouse.move(0, 799);
+  await holdStill(app);
   const shot = (await app.screenshot()).toString('base64');
   await appCtx.close();
 
