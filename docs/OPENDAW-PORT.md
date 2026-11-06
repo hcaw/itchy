@@ -249,7 +249,7 @@ checks and debugging: `kind` (`'native' | 'opendaw'`, can change from `'opendaw'
 | Where | Change |
 |---|---|
 | `scripts/serve.js` | COOP `same-origin` + COEP `require-corp` on every response; `.wasm` → `application/wasm`, `.map`; `startServer(port, { isolate = true, root })` so checks can serve without headers and serve a collected site. |
-| `vercel.json` | `headers` block with both headers for `/(.*)`. Checked on the first PR preview. |
+| `vercel.json` | `headers` block with both headers for `/(.*)`. Checked on the first PR preview. (Review: previews are isolated and play on openDAW, but `require-corp` blocks the toolbar script Vercel injects from vercel.live, which sends no CORP header, so WebKit logs errors and a pageerror on every preview. Documented in README and CONCEPT as expected; the owner can stop the injection with `VERCEL_PREVIEW_FEEDBACK_ENABLED=0` for Preview, a project setting outside this repository.) |
 | `scripts/collect-site.mjs` | Exports `SHIPPED = ['index.html','manifest.webmanifest','styles.css','src','assets','vendor','coi-serviceworker.js']` and copies them to a folder. |
 | `.github/workflows/pages.yml` | Replaces the `cp -r` line with `node scripts/collect-site.mjs _site`. |
 | `.vercelignore` | Whitelists `vendor` and `coi-serviceworker.js`; `tests/deploy.test.js` asserts it whitelists every `SHIPPED` entry and that `pages.yml` calls `collect-site.mjs`. |

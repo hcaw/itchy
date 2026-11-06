@@ -108,7 +108,10 @@ push to `main`.
 Every pull request also gets its own preview on Vercel, so you can try a change before it's merged: Vercel's bot
 posts the link on the pull request. Each preview has its own web address, so songs saved there never touch the ones
 on the live site. [`vercel.json`](vercel.json) turns off Vercel deploys from `main`, and
-[`.vercelignore`](.vercelignore) uploads only the app's files.
+[`.vercelignore`](.vercelignore) uploads only the app's files. Previews are cross-origin isolated, which blocks the
+toolbar script Vercel injects (from vercel.live, without a Cross-Origin-Resource-Policy header): the toolbar doesn't
+work on previews, and Safari's console shows a few errors about it there. They are expected and harmless; setting
+`VERCEL_PREVIEW_FEEDBACK_ENABLED=0` for Preview in the Vercel project removes them.
 
 Checks:
 

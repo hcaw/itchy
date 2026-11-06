@@ -165,7 +165,8 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
   then launches like any other app, with nothing around it for a child to tap by accident.
 - **Pull requests get a preview on Vercel; the live site stays on GitHub Pages** — you can play with a change before
   it's merged, and each preview has its own web address, so a preview never reads or rewrites the songs saved on the
-  live site. It's hosting only: no runtime dependency, no build step, and the toolbar and analytics stay off.
+  live site. It's hosting only: no runtime dependency, no build step, and analytics stay off (so does the toolbar,
+  whose script cross-origin isolation blocks; see below).
 - **CI runs the browser checks in WebKit as well as Chromium, and fails if WebKit won't start** — many children use
   iPads, and Safari is the browser most likely to differ; Playwright's Linux WebKit runs real audio, so CI also checks
   that a tap starts the sound there. Locally WebKit stays optional.
@@ -180,7 +181,10 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
   bytes, and `VERSIONS.json` records each file's hash and the openDAW commit it came from.
 - **Cross-origin isolation: headers from `npm start` and on Vercel, coi-serviceworker on GitHub Pages, registered
   only on devices that pass the capability probe** — openDAW needs `SharedArrayBuffer`; Pages can't send headers;
-  a device that could never run openDAW is never reloaded. Measured on a header-less server: isolated and
+  a device that could never run openDAW is never reloaded. On Vercel previews this blocks the script Vercel injects
+  for its toolbar (it comes from vercel.live with no Cross-Origin-Resource-Policy header), so the preview toolbar
+  and its comments don't work there, and Safari logs a few console errors on previews that are expected; setting
+  `VERCEL_PREVIEW_FEEDBACK_ENABLED=0` for Preview in the Vercel project stops the injection. Measured on a header-less server: isolated and
   running after 2 page loads in all 20 cold visits in Chromium, and 2 in 114 and 3 in 6 of 120 in WebKit.
 - **A first visit that goes wrong reloads by itself** — WebKit sometimes drops the service worker's reload or fails
   the files it fetches just after starting, which left a blank page in about 1 visit in 35; the page retries the
