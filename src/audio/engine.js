@@ -184,8 +184,11 @@ export class Engine {
     if (this.kind === 'native') this.native.play();
     else {
       this.tracker.reset();
-      this.restarting = true; // until openDAW reports the jump back to 0, its position is the old one
+      // openDAW's position on the main thread stays the old, paused one for a frame or two: ignore it until it
+      // has changed and is back near the start.
+      this.restarting = true;
       const od = this.openDaw;
+      this.restartFrom = od.position;
       // A Stop (or a failure) before the context is running wins: nothing is sent.
       const go = () => {
         if (gen !== this.gen || !this.playing || this.kind !== 'opendaw' || this.openDaw !== od) return;
@@ -294,9 +297,10 @@ export class Engine {
       // openDAW plays the song on the audio thread: read its position and report each step as it is heard.
       const p = this.getProject();
       const now = this.ctx.currentTime, dur = stepDuration(p.tempo), position = this.openDaw.position;
-      if (this.restarting && position < 4 * STEP_PULSES) this.restarting = false;
+      if (this.restarting && position !== this.restartFrom && position < 4 * STEP_PULSES) this.restarting = false;
       if (!this.restarting) {
-        for (const { index, ago } of this.tracker.advance(position, { tempo: p.tempo, latency: lat, swing: p.swing })) {
+        const at = this.openDaw.positionNow(now, p.tempo);
+        for (const { index, ago } of this.tracker.advance(at, { tempo: p.tempo, latency: lat, swing: p.swing })) {
           this.playStep(index, now - ago, dur);
         }
       }

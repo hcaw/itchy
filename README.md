@@ -219,8 +219,8 @@ them exactly on the audio clock. The built-in engine keeps time like this: a wor
 tick the scheduler queues every 16th-note step that falls in the next 120 ms, at exact times on the audio clock.
 Tempo is read on every step, so a change lands on the next step without drift. Swing only moves the off-beats. If
 the tab freezes, the scheduler skips ahead instead of firing a burst of stale notes. Either way, the UI draws each
-step when its sound reaches the speakers, allowing for the output latency (on openDAW, from its transport position
-every frame).
+step when its sound reaches the speakers, allowing for the output latency (on openDAW, from its transport position,
+read every frame and moved on to the current audio time).
 
 **Data.** A song is plain JSON: tempo, swing, mood and key, plus a list of layers. Each layer has a sound, a colour, a
 loop length, mute, volume, octave, effects, and notes `{s, r, len, vel}`. Recordings are raw PCM, stored separately by

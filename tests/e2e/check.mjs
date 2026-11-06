@@ -402,10 +402,18 @@ async function playback() {
   const locals = steps.map((x) => x.local[layerId]);
   check(locals.includes(15) && locals.lastIndexOf(0) > locals.indexOf(15), 'the loop wraps from the last step back to the first');
   const slope = () => page.evaluate(async () => {
-    const e = itchy.engine, a = [e.ctx.currentTime, e.openDaw.position];
-    await new Promise((r) => setTimeout(r, 2000));
-    const b = [e.ctx.currentTime, e.openDaw.position];
-    return (b[1] - a[1]) / (b[0] - a[0]);
+    // A least-squares line through 2 s of readings, each with the audio time it was read at (once a frame).
+    const e = itchy.engine, pts = [], end = performance.now() + 2000;
+    await new Promise((done) => {
+      const frame = () => {
+        const p = [e.openDaw.positionAt, e.openDaw.position];
+        if (!pts.length || p[0] !== pts.at(-1)[0]) pts.push(p);
+        if (performance.now() < end) requestAnimationFrame(frame); else done();
+      };
+      requestAnimationFrame(frame);
+    });
+    const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+    return pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0) / pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0);
   });
   for (const tempo of [100, 140]) {
     if (tempo !== 100) { await page.evaluate((t) => itchy.store.change((p) => { p.tempo = t; }), tempo); await page.waitForTimeout(300); }
@@ -429,6 +437,18 @@ async function playback() {
   const again = await page.evaluate(() => ({ playing: itchy.engine.playing, first: window.__steps[0]?.i }));
   check(again.playing && again.first === 0, 'Space starts playback again, from the first step', JSON.stringify(again));
   await page.keyboard.press('Space');
+  // A quick Stop within the first steps, then Play again: the old paused position never shows as steps.
+  const quick = await page.evaluate(async () => {
+    const e = itchy.engine, sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    await sleep(300);
+    e.play(); await sleep(400); e.stop();
+    await sleep(300);
+    window.__steps.length = 0;
+    e.play(); await sleep(400); e.stop();
+    return window.__steps.map((x) => x.i);
+  });
+  check(quick[0] === 0 && quick.every((i, k) => i === k), 'Play again soon after Stop: steps from 0, none early or repeated', quick.join(','));
+  await visualSync(page, 'openDAW');
 
   // Sample-exact grid: an offline render of a woodblock on every step at 100 BPM, straight and swung.
   const grid = await page.evaluate(async () => {
@@ -454,6 +474,47 @@ async function playback() {
   check(grid[1].onsets === 16 && grid[1].maxErr <= 2, 'offline: with full swing, odd hits land half a step late (±2 samples)', JSON.stringify(grid[1]));
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
+}
+
+/**
+ * The playhead keeps time with the sound: a lone kick on steps 0 and 8, and an onset tap on the mix. Each hit's
+ * queued event time must be within ±10 ms of its first loud frame, and the event must reach the app within one
+ * frame (25 ms) of that time plus the output latency, when its sound reaches the speakers. Stops the music.
+ */
+async function visualSync(page, engineName) {
+  const r = await page.evaluate(async () => {
+    const e = itchy.engine;
+    e.ensure();
+    if (e.playing) e.stop();
+    const { migrate } = await import('/src/model/project.js');
+    const song = migrate({ tempo: 100, swing: 0, layers: [{ sound: 'kit', fx: { echo: 0, space: 0, tone: 0 }, notes: [{ s: 0, r: 0 }, { s: 8, r: 0 }] }] });
+    itchy.store.change((p) => { p.layers = song.layers; p.tempo = 100; p.swing = 0; });
+    const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+    await sleep(1500); // earlier sounds die down
+    const code = `registerProcessor('itchy-onsets', class extends AudioWorkletProcessor {
+      constructor() { super(); this.on = []; this.quiet = 4000; this.port.onmessage = () => this.port.postMessage(this.on); }
+      process(i) { const x = i[0][0]; if (!x) return true; for (let k = 0; k < x.length; k++) { if (Math.abs(x[k]) > 0.03) { if (this.quiet >= 4000) this.on.push(currentTime + k / sampleRate); this.quiet = 0; } else this.quiet++; } return true; }
+    });`;
+    const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+    await e.ctx.audioWorklet.addModule(url);
+    const node = new AudioWorkletNode(e.ctx, 'itchy-onsets'), sink = e.ctx.createGain();
+    sink.gain.value = 0;
+    e.analyser.connect(node).connect(sink).connect(e.ctx.destination);
+    const drained = [], drain = e.drainEvents;
+    e.drainEvents = () => { const list = drain.call(e); for (const ev of list) if (Object.keys(ev.hits).length) drained.push({ t: ev.time, at: e.ctx.currentTime }); return list; };
+    e.play();
+    await sleep(4300); // hits at 0, 1.2, 2.4 and 3.6 s
+    e.stop();
+    e.drainEvents = drain;
+    const onsets = await new Promise((ok) => { node.port.onmessage = (m) => ok(m.data); node.port.postMessage(0); });
+    e.analyser.disconnect(node);
+    const lat = Math.min(0.2, e.ctx.outputLatency || e.ctx.baseLatency || 0);
+    return { lat, pairs: drained.slice(0, onsets.length).map((d, k) => ({ queued: +((d.t - onsets[k]) * 1000).toFixed(1), late: +((d.at - d.t - lat) * 1000).toFixed(1) })), hits: drained.length, onsets: onsets.length };
+  });
+  const ok = r.hits >= 3 && r.hits === r.onsets;
+  // The first hit comes a frame or two after Play, before openDAW's position has been read often: ±15 ms there.
+  check(ok && r.pairs.every((x, k) => Math.abs(x.queued) <= (k ? 10 : 15)), `${engineName}: each hit's playhead time is within ±10 ms of its sound (the first after Play ±15 ms)`, JSON.stringify(r));
+  check(ok && r.pairs.every((x) => x.late >= -1 && x.late <= 25), `${engineName}: and it is shown within a frame of reaching the speakers`, JSON.stringify(r));
 }
 
 /**
@@ -510,6 +571,7 @@ async function playbackNative() {
   await page.keyboard.press('Space');
   await page.waitForTimeout(300);
   check(await page.evaluate(() => itchy.engine.playing), 'Space starts playback again');
+  await visualSync(page, 'built-in engine');
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
 }

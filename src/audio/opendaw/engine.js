@@ -12,7 +12,7 @@
 import { bootOpenDaw } from './boot.js';
 import { SceneApplier, sampleKeyOf } from './apply.js';
 import { recordingKey } from './samples.js';
-import { describe, describeUnit, describeVoice, diffScene, STEP_PULSES } from '../mirror.js';
+import { describe, describeUnit, describeVoice, diffScene, pulsesPerSecond, STEP_PULSES } from '../mirror.js';
 import { renderSounds, soundCatalogue, impulseScale, SPACE_FILE } from '../render-sounds.js';
 
 /**
@@ -22,6 +22,11 @@ import { renderSounds, soundCatalogue, impulseScale, SPACE_FILE } from '../rende
  */
 export const CRASH_FLAG = 'itchy-opendaw-booting';
 const CRASH_CLEAR_MS = 20000;
+/**
+ * How far openDAW's position, as the main thread estimates it, trails the sound leaving the engine, in seconds:
+ * measured in Chromium (tests/e2e/check.mjs visualSync checks each hit's playhead time against its sound).
+ */
+const POSITION_LAG = 0.005;
 
 const session = {
   get: () => { try { return sessionStorage.getItem(CRASH_FLAG); } catch { return null; } },
@@ -100,6 +105,11 @@ export class OpenDawEngine {
     this.expectPlaying = false; // play() was sent and no stop() since
     this.seenPlaying = false;   // and openDAW has reported the transport running since
     this.watchTransport();
+    // The audio time when the main thread last read a new position (openDAW reads it in its own animation frame,
+    // which runs after the app's: the app always sees the previous frame's position).
+    this.positionAt = 0;
+    this.fit = null;
+    this.project.engine.position.subscribe(() => { this.positionAt = handle.env.audioContext.currentTime; });
   }
 
   /**
@@ -158,8 +168,27 @@ export class OpenDawEngine {
     this.project.engine.stop(false);
   }
 
-  /** The transport position in pulses (updated every animation frame). */
+  /** The transport position in pulses, as last read (once every animation frame). */
   get position() { return this.project.engine.position.getValue(); }
+
+  /**
+   * The transport position in pulses at audio time `now`, while the transport runs. The main thread reads openDAW's
+   * position once a frame, in openDAW's own animation frame (after the app's), and the audio thread writes it in
+   * bursts, so a reading is a few ms to a frame old. Each reading says where the transport was at the audio time it
+   * was read; the least late of the recent readings (position = pulses a second × time + c, take the largest c,
+   * which sags by 20 ms a second so it follows a transport that falls behind) gives the steadiest estimate. A new
+   * tempo, or a reading more than 50 ms behind (a restart, an audio stall), starts again from that reading. Even so,
+   * the estimate trails the sound by about 5 ms (POSITION_LAG). It stays within 50 ms ahead of the last reading.
+   */
+  positionNow(now, bpm) {
+    const pps = pulsesPerSecond(bpm), position = this.position;
+    const c = position - pps * this.positionAt;
+    const fit = this.fit, at = this.positionAt;
+    if (!fit || fit.bpm !== bpm || fit.c - c > 0.05 * pps) this.fit = { bpm, c, at };
+    else if (at !== fit.at) this.fit = { bpm, c: Math.max(c, fit.c - 0.02 * pps * (at - fit.at)), at };
+    return Math.min(position + 0.05 * pps, Math.max(position, this.fit.c + pps * (now + POSITION_LAG)));
+  }
+
   get transporting() { return this.project.engine.isPlaying.getValue(); }
 
   // ------------------------------------------------------------------ live notes

@@ -529,6 +529,16 @@ plus 4 for "my sounds".
 
 - Every animation frame, `drainEvents()` reads `engine.position` (pulses, updated each rAF via `AnimationFrame`),
   subtracts `lat = min(0.2, ctx.outputLatency || ctx.baseLatency || 0)` in pulses at the current tempo, as today.
+  **Changed after the review:** openDAW's `AnimationFrame` runs after the app's frame, so the app always read the
+  previous frame's position, and the hits lit up about 36 ms after the sound. The engine now notes the audio time
+  of every new reading and estimates the position *now* from the least late recent reading (`positionNow`: a line
+  of slope pulses-per-second through the readings, taking the most advanced one, sagging 20 ms a second, reset by a
+  tempo change or a reading 50 ms behind, at most 50 ms past the last reading), plus a measured 5 ms
+  (`POSITION_LAG`). `visualSync` in check.mjs checks both engines: each hit's queued time within ±10 ms of its
+  sound (the first after Play ±15 ms), drained within a frame of reaching the speakers.
+- Restarting: until the position has changed since Play (the main thread keeps the old paused one for a frame or
+  two) and is back within 4 steps of the start, no step is reported (**changed after the review**: the guard alone
+  let a stale position from a Stop within the first 4 steps through, which showed steps 0..k at once).
 - Step `i` is due when the compensated position passes `i·240`; odd steps at `i·240 + 120·swing`.
 - For each newly due index the facade calls `this.playStep(i, time, dur)`, pushing `{time, index, dur, steps,
   hits}` as today (`hits` from `notesAtStep`, muted layers left out). `app.js` needs no changes.
