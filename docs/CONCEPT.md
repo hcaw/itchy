@@ -71,7 +71,11 @@ vendor/opendaw/<version>/  the vendored openDAW build (scripts/vendor-opendaw.mj
 src/model/    project.js (JSON data model + migrate), scales.js, history.js (undo), surprise.js, examples.js
 src/storage/  storage.js (async interface: IndexedDB → localStorage → memory)
 src/ui/       app.js and one module per screen region; critters.js draws the SVG creatures
-tests/        unit tests (scheduler timing, model, history) + Playwright checks
+scripts/      serve.js (npm start, with the isolation headers), collect-site.mjs (what the site ships),
+              vendor-opendaw.mjs + opendaw/ (the pins and entry for npm run vendor:opendaw), screenshots.mjs
+tests/        unit tests (scheduler timing, model, history, mirror, apply, vendor, deploy) + Playwright checks
+              (e2e/check.mjs, with the openDAW probe and an HTTP/2 server for the load budgets)
+docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what each milestone found), images/
 ```
 
 ## Decisions log
@@ -242,3 +246,12 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **`index.html` preloads every module the app starts with (`<link rel="modulepreload">`)** — with no bundler each
   level of imports costs a network round trip; on Fast 3G the listed modules arrive at once, and the app renders in
   about 2.2 s instead of 3.6 s. A unit test keeps the list complete, and openDAW is never on it.
+- **`itchy.engine.readyAt` records when the sound engine settled** (milliseconds from the start of the page load) —
+  so the boot time on a real iPad can be read from the browser's console, and the load-budget check reads the same
+  number; it is never stored or sent anywhere.
+- **The README's badge says "nothing to install" instead of "no dependencies"** — openDAW is now a vendored runtime
+  dependency, but there is still nothing to install and no build step.
+- **openDAW's `NOTICE.md` also lists the WebAssembly that ports code under other licences** (the Compressor and
+  Tubular from GPL-3.0 code, the engine's Signalsmith Stretch port under MIT, with its notice) — openDAW's engine
+  loads every plugin, so Itchy conveys them even though it never creates those devices, and their licences ask for
+  their notices to travel with them. A unit test keeps Itchy from ever creating the Compressor.

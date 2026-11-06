@@ -24,7 +24,7 @@
   <a href="https://github.com/hcaw/itchy/actions/workflows/ci.yml"><img src="https://github.com/hcaw/itchy/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/hcaw/itchy/actions/workflows/pages.yml"><img src="https://github.com/hcaw/itchy/actions/workflows/pages.yml/badge.svg" alt="Deploy"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="MIT licence"></a>
-  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
+  <img src="https://img.shields.io/badge/install-nothing-brightgreen" alt="Nothing to install">
 </p>
 
 <p align="center">
@@ -113,10 +113,48 @@ on the live site. [`vercel.json`](vercel.json) turns off Vercel deploys from `ma
 Checks:
 
 ```sh
-npm test             # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up, docs pictures
+npm test             # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up, the openDAW
+                     # mirror and edits, the vendored files, what the site ships, docs pictures
 npm run check        # browser checks in headless Chromium (needs Playwright); screenshots go to test-output/
 npm run screenshots  # re-render the logo, icons and README screenshots from the app (see "Screenshots" below)
 ```
+
+## Engine and browsers
+
+Itchy has two sound engines, and a child never has to know. Every page starts on Itchy's own Web Audio engine, so the
+first tap always sounds. Where the browser can run it, [openDAW](https://github.com/andremichelle/openDAW)'s engine
+loads in the background and takes over as soon as it is ready and the music is stopped.
+
+| Where | What plays |
+| --- | --- |
+| Safari and iPadOS 17.4+, Chrome and Edge 119+, Firefox 121+, on a cross-origin isolated page | openDAW, once it has loaded |
+| Older browsers (for example an iPad below iPadOS 17.4), service workers turned off, a page shown inside another site, or a plain static server without the isolation headers | the built-in engine, with no reload and nothing fetched from `vendor/` |
+| Any page with `?engine=native` on the end of its address | the built-in engine (handy for comparing the two) |
+| A tab where openDAW stopped working, or whose last openDAW start crashed | the built-in engine, at once and for the rest of the visit |
+
+openDAW needs a **cross-origin isolated** page. `npm start` and Vercel send the two headers that make one. GitHub
+Pages can't, so there [`coi-serviceworker.js`](coi-serviceworker.js) adds them: a capable browser reloads the page
+**once or twice on its first visit** and never again. Browsers that could never run openDAW are not reloaded. In
+the browser's console, `crossOriginIsolated` says whether the page is isolated, `itchy.engine.kind` says which engine
+is playing (`'opendaw'` or `'native'`), and `itchy.engine.readyAt` says how many milliseconds after the page started
+loading the engine settled.
+
+What we measured, in headless Chromium in a container (`npm run check` holds each of these to a budget):
+
+- **First visit on a slow network** (DevTools' Fast 3G with a 4× slower CPU, served over HTTP/2 with gzip as GitHub
+  Pages and Vercel serve it): the app appears in about 2.2 s and the first tap is heard in about 2.4 s, on the
+  built-in engine. openDAW is ready after about 20 s. It is 5.1 MB, of which 2.6 MB goes over the network. On the next
+  visit nothing is downloaded again and openDAW is ready in about 2.3 s.
+- **Reloads to become isolated without the headers**, as on GitHub Pages: 2 page loads in all 20 first visits in
+  Chromium; in WebKit, 2 in 114 and 3 in 6 of 120.
+- **From touch to sound** (the middle of 5 tries): a grid tap 12.7 ms on openDAW (17.3 ms on the built-in engine),
+  changing a sound 10.1 ms (25.9 ms), and a finger in the sounds tray 1.4 ms (17.3 ms).
+- **Timing:** tempo within 0.5% at 100 and 140 BPM, and every step of a rendered loop within 1 sample of the grid,
+  straight or swung.
+- **Loudness:** every sound within 3 dB of the built-in engine. Bells and pluck on the top row are the furthest
+  away, about 2 dB quieter, because playing a sample higher also makes it shorter.
+
+These are container numbers; a real iPad is checked by hand before the port is merged.
 
 ## Architecture
 
@@ -212,8 +250,9 @@ The model and engine already support most of these. What's missing is the gestur
    critter wear several in an order you can see.
 6. **Chance and rules.** Give notes a probability, and add "dice with a lock" (keep the rhythm, reroll the pitches).
    Allow more moods and a choice of key. These make generative music possible without new modes.
-7. **Export and share.** Render with `OfflineAudioContext` to WAV. Share a song as a JSON file or link (recordings
-   travel as compressed audio). Add a `CloudStorage` class for accounts.
+7. **Export and share.** Render a song to WAV with `itchy.engine.renderOffline()`, which already renders any song on
+   openDAW, sample-exact (the checks use it), so export only needs a gesture and a file. Share
+   a song as a JSON file or link (recordings travel as compressed audio). Add a `CloudStorage` class for accounts.
 8. **A tidy songbook.** Names drawn as pictures, a bin with undo, and duplicating a song.
 
 Items 1 and 2 come first because they unlock the most musical depth for the least new interface. Item 3 is next
@@ -225,6 +264,11 @@ because it turns loops into songs.
 - Long notes can only be made by the dice or found in the example songs. You can't stretch a note by hand yet.
 - There is no volume control per critter (sleep, i.e. mute, only).
 - Phones work, but the layout is designed for tablets, Chromebooks and laptops.
+- On GitHub Pages, the first visit reloads the page once or twice (to turn on cross-origin isolation for openDAW).
+- The hello, the mood arpeggio and the dice preview play through the built-in engine's mix, because openDAW can't
+  schedule a live note ahead of time. They can sound a little different from the same notes in the song.
+- WAV export works only on openDAW (`renderOffline()` rejects on the built-in engine), so an export button would
+  need to hide or wait where openDAW can't run.
 
 ## Screenshots
 
@@ -253,6 +297,9 @@ under the **GNU Affero General Public License v3.0 or later**. Its prebuilt file
 lists the exact openDAW commits they were built from; `npm run vendor:opendaw` rebuilds them byte for byte from the
 pins in `scripts/opendaw/`. Itchy's own code stays MIT, but a deployment of Itchy that includes `vendor/opendaw/` is a
 combined work distributed under the AGPL-3.0: anyone who changes and deploys it must also offer its source. This
-repository is that source. `coi-serviceworker.js` is
+repository is that source. openDAW's WebAssembly also carries a few devices ported from GPL-3.0 code (its Compressor
+and Tubular synth), which Itchy never uses but the engine always loads; the notice lists them. A fork that can't
+accept these terms can drop `vendor/opendaw/` and play on the built-in engine alone, or ask openDAW's author about
+the commercial licence (which doesn't cover the Compressor). `coi-serviceworker.js` is
 [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) 0.1.7 (MIT), with Itchy's changes marked in the
 file.

@@ -22,7 +22,8 @@ so we can agree on the idea before you build it.
 ## Set up
 
 You need [Node.js](https://nodejs.org/) 18 or newer (the version in [`.nvmrc`](.nvmrc) is what CI uses). There is
-nothing to install: Itchy has no dependencies and no build step.
+nothing to install: Itchy has no npm dependencies and no build step. Its one runtime dependency, openDAW's sound
+engine, is committed ready to run in `vendor/opendaw/` (see [Upgrading openDAW](#upgrading-opendaw)).
 
 ```sh
 git clone https://github.com/hcaw/itchy.git
@@ -35,7 +36,8 @@ Edit any file and reload the page.
 ## Checks
 
 ```sh
-npm test           # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up
+npm test           # unit tests: scheduler timing, data model, undo, storage, dice, recording clean-up, the openDAW
+                   # mirror and edits, the vendored files, what the site ships
 npm run check      # browser checks in headless Chromium; screenshots go to test-output/
 ```
 
@@ -69,6 +71,11 @@ These keep Itchy simple on the surface and deep underneath.
   `src/audio/scheduler.js` in the built-in engine). Never use timers for note timing.
 - **No tracking or analytics. No new runtime dependencies or build tools** without a strong reason logged in the
   decisions list.
+- **Never use openDAW's Compressor device.** It is GPL-licensed and outside openDAW's commercial licence; the master
+  limiter already keeps the mix safe. Neither `src/` nor `scripts/opendaw/entry.js` may mention it (`npm test` checks).
+- **Everything the app loads must come from Itchy's own site.** The page is cross-origin isolated (COEP
+  `require-corp`) so openDAW can run, which blocks fonts, images, scripts and embeds from other sites. Bundle them in
+  `assets/` instead.
 - **Only original or licensed art and sounds.** Synthesise sounds in code. Never reuse Scratch's characters, art or
   sounds.
 - **When the brief leaves a choice open**, pick what's most fun and intuitive for a seven-year-old and still rewarding
@@ -79,6 +86,29 @@ touch, makes a sound, and undoes in one step.
 
 When you add a module that the app imports at start (directly or through another module), add a
 `<link rel="modulepreload">` line for it to `index.html`; `npm test` names any that are missing or no longer used.
+
+## Upgrading openDAW
+
+openDAW's engine is vendored: `vendor/opendaw/<version>/` holds a prebuilt bundle and openDAW's worker, worklet and
+WebAssembly files, made by [`scripts/vendor-opendaw.mjs`](scripts/vendor-opendaw.mjs) from the exact versions pinned
+in [`scripts/opendaw/`](scripts/opendaw/). Never edit those files by hand. To upgrade:
+
+1. Set the new versions in `scripts/opendaw/package.json` (exact versions, no `^`), then regenerate
+   `scripts/opendaw/package-lock.json` in a temporary copy of that folder with `npm install --package-lock-only`.
+2. Run `npm run vendor:opendaw`. It installs the pins in a temporary folder (Itchy never gets a `node_modules`),
+   bundles `scripts/opendaw/entry.js` with the pinned esbuild, replaces the old version folder and writes
+   `VERSIONS.json` and `NOTICE.md`. Run it twice: the second run must change nothing.
+3. Update `OPENDAW_VERSION` in `src/audio/opendaw/boot.js`, so browsers fetch the new folder rather than a cached old
+   one.
+4. Review `VERSIONS.json` (every openDAW package should name the commit it was built from) and `NOTICE.md`. Check
+   that `WASM_LICENCES` in the vendoring script is still right: look at the doc comments of openDAW's `crates/` at
+   those commits and at the list of ported devices in openDAW's README.
+5. Run `npm test`, `npm run check` (with WebKit if you can) and `npm run screenshots`, and listen to every sound:
+   openDAW is pre-1.0, and its API and sound can change between versions. `src/audio/opendaw/apply.js` is the only
+   file that touches openDAW's data structures, so most fixes go there.
+
+Each upgrade adds about 6.5 MB to the repository's history, so upgrade for a reason, not on every release.
+Dependabot may raise alerts for `scripts/opendaw/package-lock.json`; they're handled here, at the next upgrade.
 
 ## Screenshots and the logo
 

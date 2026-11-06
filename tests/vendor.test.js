@@ -92,6 +92,13 @@ test('boot.js loads this version, and only src/audio/opendaw/ ever mentions vend
   }
 });
 
+test('Itchy never creates openDAW\'s Compressor (GPL, outside openDAW\'s commercial licence)', () => {
+  assert.ok(!/Compressor/.test(read('scripts/opendaw/entry.js')), 'entry.js exports no Compressor');
+  for (const f of walk(join(root, 'src')).filter((f) => f.endsWith('.js'))) {
+    assert.ok(!/\bCompressor(DeviceBox)?\b/.test(readFileSync(f, 'utf8')), `${relative(root, f)} must not use openDAW's Compressor`);
+  }
+});
+
 test('index.html sets up the probe and coi-serviceworker before the app module', () => {
   const html = read('index.html');
   const probe = html.indexOf('function itchyProbe()'), coi = html.indexOf('window.coi = {'), sw = html.indexOf('<script src="coi-serviceworker.js"></script>'), app = html.indexOf('<script type="module"');
