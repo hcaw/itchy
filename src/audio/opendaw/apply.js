@@ -236,6 +236,7 @@ export class SceneApplier {
     switch (a) {
       case 'volumeDb': return h.audioUnitBox.volume.setValue(value);
       case 'regionMute': return h.region.mute.setValue(value);
+      case 'mute': return h.audioUnitBox.mute.setValue(value);
       case 'loopPulses': return h.region.loopDuration.setValue(value);
       case 'spaceSendDb': return h.send.sendGain.setValue(value);
       case 'revamp': {
@@ -379,6 +380,6 @@ function flatten(u) {
       else out[prefix + k] = v;
     }
   };
-  walk({ volumeDb: u.volumeDb, regionMute: u.regionMute, loopPulses: u.loopPulses, revamp: u.revamp, delay: u.delay, spaceSendDb: u.spaceSendDb }, '');
+  walk({ volumeDb: u.volumeDb, regionMute: u.regionMute, mute: u.mute, loopPulses: u.loopPulses, revamp: u.revamp, delay: u.delay, spaceSendDb: u.spaceSendDb }, '');
   return out;
 }

@@ -477,6 +477,61 @@ async function playback() {
 }
 
 /**
+ * Live notes ring and sleep silences, on the engine the page plays with:
+ * - two previews 100 ms apart: the first one's pitch still rings at 500 ms as loud as a lone preview (±1 dB);
+ * - a critter holding a long note falls asleep: 50 ms later the mix is at least 10 dB quieter, 150 ms later 30 dB.
+ * Leaves the music stopped and a fresh song of the test's critters (callers undo nothing after it).
+ */
+async function liveNotes(page, engineName) {
+  const r = await page.evaluate(async () => {
+    const e = itchy.engine, sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+    e.ensure();
+    if (e.playing) e.stop();
+    const { migrate } = await import('/src/model/project.js');
+    const { rowSemitones } = await import('/src/model/scales.js');
+    const { soundInfo } = await import('/src/model/sounds.js');
+    const dry = { echo: 0, space: 0, tone: 0 };
+    const use = (layers, tempo = 100) => {
+      const song = migrate({ tempo, swing: 0, layers });
+      itchy.store.change((p) => { p.layers = song.layers; p.tempo = tempo; p.swing = 0; p.mood = 'happy'; p.key = 0; });
+      return itchy.store.project.layers[0];
+    };
+    const an = e.ctx.createAnalyser();
+    an.fftSize = 16384;
+    an.smoothingTimeConstant = 0;
+    e.analyser.connect(an);
+    // Two previews in a row.
+    const bells = use([{ sound: 'bells', fx: dry, notes: [] }]);
+    await sleep(1500);
+    const p = itchy.store.project, bin = (r) => Math.round((440 * 2 ** ((soundInfo('bells').base + rowSemitones(r, p.mood) + p.key - 69) / 12) * an.fftSize) / e.ctx.sampleRate);
+    const band = (r) => { const d = new Float32Array(an.frequencyBinCount); an.getFloatFrequencyData(d); const b = bin(r); return Math.max(d[b - 1], d[b], d[b + 1]); };
+    e.preview(bells, 0); await sleep(500);
+    const alone = band(0);
+    await sleep(2500);
+    e.preview(bells, 0); await sleep(100); e.preview(bells, 4); await sleep(400);
+    const withSecond = band(0);
+    await sleep(2500);
+    // Sleep with a long note held.
+    an.fftSize = 256;
+    const rms = () => { const a = new Float32Array(an.fftSize); an.getFloatTimeDomainData(a); let x = 0; for (const v of a) x += v * v; return 10 * Math.log10(x / a.length + 1e-30); };
+    use([{ sound: 'cloud', fx: dry, notes: [{ s: 0, r: 2, len: 16 }] }], 60);
+    await sleep(300);
+    e.play();
+    await sleep(800);
+    const before = rms(), t0 = e.ctx.currentTime;
+    itchy.store.change((q) => { q.layers[0].muted = true; });
+    const at = async (s) => { while (e.ctx.currentTime < t0 + s) await sleep(2); return rms(); };
+    const after50 = await at(0.05), after150 = await at(0.15);
+    e.stop();
+    e.analyser.disconnect(an);
+    const f = (x) => +x.toFixed(1);
+    return { alone: f(alone), withSecond: f(withSecond), before: f(before), after50: f(after50), after150: f(after150) };
+  });
+  check(Math.abs(r.withSecond - r.alone) <= 1, `${engineName}: a second preview 100 ms later doesn’t cut the first one off`, JSON.stringify(r));
+  check(r.before > -40 && r.before - r.after50 >= 10 && r.before - r.after150 >= 30, `${engineName}: a critter put to sleep stops the note it is holding (10 dB down in 50 ms, 30 dB in 150 ms)`, JSON.stringify(r));
+}
+
+/**
  * The playhead keeps time with the sound: a lone kick on steps 0 and 8, and an onset tap on the mix. Each hit's
  * queued event time must be within ±10 ms of its first loud frame, and the event must reach the app within one
  * frame (25 ms) of that time plus the output latency, when its sound reaches the speakers. Stops the music.
@@ -572,6 +627,7 @@ async function playbackNative() {
   await page.waitForTimeout(300);
   check(await page.evaluate(() => itchy.engine.playing), 'Space starts playback again');
   await visualSync(page, 'built-in engine');
+  await liveNotes(page, 'built-in engine');
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
 }
@@ -1070,6 +1126,7 @@ async function openDawBackend() {
   await phrase('the mood arpeggio', async () => { await page.click('.btn.mood'); await page.click('.mood-choice.mood-spooky'); }, 0.09);
   await page.keyboard.press('Escape');
   await page.click('.btn.undo');
+  await liveNotes(page, 'openDAW');
   check(errors.length === 0, 'no console errors or warnings', errors.join(' | '));
   await ctx.close();
 }

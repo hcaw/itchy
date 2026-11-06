@@ -5,8 +5,8 @@
 // describes it again (mirror.js) and applies the difference to openDAW's project (apply.js), which is never saved
 // and keeps no undo.
 //
-// openDAW sequences the song on the audio thread. Live notes (taps, previews) are auditions that sound at the next
-// render quantum; notes timed in the future (the interface phrases) never come here: the facade gives them to the
+// openDAW sequences the song on the audio thread. Live notes (taps, previews) are auditions on hidden voice units
+// that sound at the next render quantum; notes timed in the future (the interface phrases) never come here: the facade gives them to the
 // built-in engine, which schedules them exactly on the audio clock.
 
 import { bootOpenDaw } from './boot.js';
@@ -14,6 +14,7 @@ import { SceneApplier, sampleKeyOf } from './apply.js';
 import { recordingKey } from './samples.js';
 import { describe, describeUnit, describeVoice, diffScene, pulsesPerSecond, STEP_PULSES } from '../mirror.js';
 import { renderSounds, soundCatalogue, impulseScale, SPACE_FILE } from '../render-sounds.js';
+import { createLayer } from '../../model/project.js';
 
 /**
  * sessionStorage flag: set while openDAW boots and for 20 s after, so a tab that died there (an iPad that killed it
@@ -27,6 +28,11 @@ const CRASH_CLEAR_MS = 20000;
  * measured in Chromium (tests/e2e/check.mjs visualSync checks each hit's playhead time against its sound).
  */
 const POSITION_LAG = 0.005;
+/**
+ * Hidden units the live notes of tune sounds take turns on (openDAW keeps one audition per unit). A bell rings about
+ * 1.8 s, so four keep a quickly painted melody or a chord ringing.
+ */
+const VOICES = 4;
 
 const session = {
   get: () => { try { return sessionStorage.getItem(CRASH_FLAG); } catch { return null; } },
@@ -62,6 +68,7 @@ export async function startOpenDaw(ctx, { getProject, recordings = new Map(), on
         engine = new OpenDawEngine(h, { getProject, onFatal: fatal });
         for (const [id, rec] of recordings) await engine.registerRecording(id, rec);
         engine.sync();
+        engine.buildVoices();
         if (engine.failed) throw new Error('openDAW could not build the song');
       },
     });
@@ -94,8 +101,9 @@ export class OpenDawEngine {
     this.env = { ...soundCatalogue(handle.env.audioContext.sampleRate), recordings: {} };
     this.failed = false;
     this.scene = null;
-    this.tray = new Map(); // tray unit key → its unit description
-    this.previews = 0;     // turns the variants of a noisy drum for repeated previews
+    this.voices = new Map(); // hidden voice unit key → its unit description (see audition)
+    this.nextVoice = 0;      // the tune voice unit the next live note uses
+    this.previews = 0;       // turns the variants of a noisy drum for repeated previews
     const frame = typeof requestAnimationFrame === 'function'
       ? (fn) => (document.hidden ? queueMicrotask(fn) : requestAnimationFrame(fn))
       : null;
@@ -194,33 +202,41 @@ export class OpenDawEngine {
   // ------------------------------------------------------------------ live notes
 
   /**
-   * Sound a note now through the layer's unit: an audition, heard at the next render quantum, whether the
-   * transport runs or not and whether the critter is asleep or not. A layer with a sound its unit doesn't have
-   * (a tray preview) plays through a hidden tray unit carrying the critter's charms.
+   * Sound a note now (a tap or a preview): an audition, heard at the next render quantum, whether the transport runs
+   * or not and whether the critter is asleep or not. It never goes to the critter's own unit, which plays the song
+   * (and is muted while the critter sleeps): it goes to a hidden voice unit that copies the critter's sound and
+   * charms. openDAW keeps one audition per unit (a new one ends the one before), so tune sounds take turns over a
+   * pool of VOICES units and each note rings its full length; a kit has one voice unit per kit, as its slots play
+   * every hit to its end (gate off).
    */
   audition(layer, note) {
     if (this.failed) return false;
     const p = this.getProject();
     const v = describeVoice(layer, { ...note, s: this.previews++ }, p, this.env);
     if (!v) return false; // a recording that isn't loaded yet
-    const unit = this.scene?.units.find((u) => u.key === layer.id);
-    const key = unit && unit.sound === layer.sound ? layer.id : this.trayUnit(layer, p);
-    const h = key && this.applier.units.get(key);
+    const kit = this.env.sounds[layer.sound]?.instrument === 'playfield';
+    const key = kit ? `__voice:${layer.sound}` : `__voice:${(this.nextVoice = (this.nextVoice + 1) % VOICES)}`;
+    const h = this.voiceUnit(key, layer, p) && this.applier.units.get(key);
     if (!h) return false;
     this.project.engine.noteSignal(this.od.NoteSignal.audition(h.audioUnitBox.address.uuid, v.pitch, v.duration, v.velocity));
     return true;
   }
 
-  /** The hidden unit that previews `layer.sound` with `layer`'s charms; made on first use, updated per preview. */
-  trayUnit(layer, project) {
-    const key = `__tray:${layer.sound}`;
+  /** Make or update the hidden voice unit `key` to play `layer`'s sound through its charms (one small transaction). */
+  voiceUnit(key, layer, project) {
     const desc = describeUnit({ ...layer, id: key, muted: false, notes: [], steps: 16 }, project, this.env);
-    const prev = this.tray.get(key);
+    const prev = this.voices.get(key);
     const frame = (units) => ({ bpm: 0, groove: {}, masterDb: 0, library: this.scene.library, units });
-    const ops = diffScene(frame(prev ? [prev] : []), frame([desc]));
-    if (!this.applier.apply(ops, { glide: false })) return null;
-    this.tray.set(key, desc);
-    return key;
+    if (!this.applier.apply(diffScene(frame(prev ? [prev] : []), frame([desc])), { glide: false })) return false;
+    this.voices.set(key, desc);
+    return true;
+  }
+
+  /** Build the voice units at boot, so the first tap never waits for one: the tune pool and one per kit. */
+  buildVoices() {
+    const p = this.getProject();
+    for (let k = 0; k < VOICES; k++) this.voiceUnit(`__voice:${k}`, createLayer('bells'), p);
+    for (const [id, s] of Object.entries(this.env.sounds)) if (s.instrument === 'playfield') this.voiceUnit(`__voice:${id}`, createLayer(id), p);
   }
 
   // ------------------------------------------------------------------ recordings

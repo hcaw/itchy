@@ -182,7 +182,10 @@ export function describeUnit(layer, project, env) {
     instrument,
     files: instrumentFiles(instrument),
     volumeDb: volumeDb(layer.volume),
-    regionMute: !!layer.muted, // asleep: the region plays nothing, but taps and previews still sound
+    // Asleep: the region plays nothing more, and the unit is muted (de-clicked over 5 ms), so the notes it is
+    // already playing stop too. Taps and previews still sound: they play on hidden voice units.
+    regionMute: !!layer.muted,
+    mute: !!layer.muted,
     loopPulses: layer.steps * STEP_PULSES,
     revamp: revamp(layer.fx.tone),
     delay: delay(layer.fx.echo),
@@ -215,7 +218,7 @@ function fields(obj, prefix = '', out = {}) {
   }
   return out;
 }
-const UNIT_FIELDS = ['volumeDb', 'regionMute', 'loopPulses', 'revamp', 'delay', 'spaceSendDb'];
+const UNIT_FIELDS = ['volumeDb', 'regionMute', 'mute', 'loopPulses', 'revamp', 'delay', 'spaceSendDb'];
 const unitFields = (u) => fields(Object.fromEntries(UNIT_FIELDS.map((k) => [k, u[k]])));
 const sameInstrument = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 

@@ -205,15 +205,20 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
   two reference pitches (two units per bells critter) would add cost for nothing audible.
 - **A hidden library unit holds every sample file** — openDAW refuses a file nothing points at; it also keeps every
   sound loaded, so a newly chosen sound plays on the first tap.
-- **Asleep critters mute their region, not their channel** — the loop goes quiet while taps and previews still
-  sound, as before; notes already ringing finish instead of ducking.
+- **Asleep critters mute their region and their channel** — the loop goes quiet and a note it is holding stops
+  within a few ms, as on the built-in engine; taps and previews still sound, because they play on hidden voice
+  units (a first version muted only the region, and a held cloud note rang on for seconds after the critter fell
+  asleep).
 - **Swing uses openDAW's Zeitgeist on the project's groove with amount (0.5 + swing/4 − 0.01)/0.98** — it undoes
   openDAW's squash margin, so the odd step lands exactly where the built-in swing puts it (checked to 2 samples).
 - **Timed interface phrases (hello, mood arpeggio, dice preview) play on the built-in engine** — openDAW can only
   play a live note at once; the built-in engine schedules each note exactly on the audio clock, with the critter's
   charms, through its own mix. Anything due within 15 ms counts as "now" and goes to openDAW.
-- **Tray previews use hidden tray units with the critter's charms** — an openDAW unit holds one instrument, and a
-  tray tap must sound through the critter's echo, space and tone before the sound is chosen.
+- **Taps and previews play on a few hidden voice units that copy the critter's sound and charms** — openDAW keeps
+  one live note per unit and ends it when the next arrives, so a painted melody, quick taps or a chord on the
+  critter's own unit came out one chopped note at a time; tune sounds take turns over four voice units (a bell
+  rings about 1.8 s), and each kit has one, as a kit plays every hit to its end. The voice units also play the
+  sounds tray's previews, and keep previews sounding while a critter sleeps.
 - **Space is fed from after the echo** — openDAW sends are post-chain, so echoes reach the reverb too: slightly
   wetter than before.
 - **No openDAW Compressor device, ever** — it is GPL-licensed and outside openDAW's commercial licence; the master

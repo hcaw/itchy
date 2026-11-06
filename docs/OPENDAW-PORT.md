@@ -378,10 +378,11 @@ Nano's gain is `playback.gain · velocity`, linear like Itchy's [verified at 930
 
 - `layer.volume` (0..1, no UI) → `audioUnitBox.volume = max(-96, 20·log10(volume))` dB; applies to loop and
   previews, as today.
-- `layer.muted` ("asleep") → **`NoteRegionBox.mute = true`**, not `audioUnitBox.mute`. A muted region emits no
-  notes, but auditions are emitted before the transport gate and still sound [verified at 9306eaab:
-  `note_sequencer.rs:8,195`]. Keeps "Taps and previews skip mute". Difference: loop notes already ringing finish
-  instead of a 30 ms duck.
+- `layer.muted` ("asleep") → **`NoteRegionBox.mute = true`** and (**changed after the review**) **`audioUnitBox.mute
+  = true`**. A muted region emits no notes; a muted region alone let notes already ringing finish (a held cloud
+  note for seconds), so the unit is muted too, which openDAW de-clicks with a 5 ms ramp (`channel_strip.rs`), like
+  the built-in engine's 30 ms duck. Taps and previews still sound because they never play on the critter's unit:
+  they play on the hidden voice units (§6c). Checked: a held note is 30 dB down 150 ms after sleep, on both engines.
 - `octave`, `key` and `mood` fold into each `NoteEventBox.pitch`. A mood or key change rewrites every tune note's
   pitch in one transaction (at most about 1500 field writes).
 
@@ -486,6 +487,9 @@ listening check (§10c) confirms.
   On openDAW a `voice()` at `t ≤ now + 0.02` sends `engine.noteSignal(NoteSignal.audition(unitUuid, pitch,
   durationPpqn, vel))` **synchronously**, heard at the next render quantum plus the Maximizer's 5 ms lookahead, with
   the transport stopped or playing and the region muted or not.
+- **Changed after the review:** the audition never goes to the critter's own unit. openDAW keeps one audition per
+  unit: a new one sends NoteComplete to the one before (`note_sequencer.rs:170-180`), so previews on one unit cut
+  each other off (a bell released after 0.05 s). Live notes play on hidden **voice units** (§6c), built at boot.
 - Before the first gesture the context is suspended, so nothing sounds anyway; the first gesture's `ensure()`
   resumes it before the audition.
 - **The first tap before openDAW is ready** plays on native.
@@ -522,6 +526,16 @@ openDAW. The facade keeps one hidden **tray unit** per sound (same chain as a cr
 file held by the library). On a tray preview it copies the critter's `volume`, `fx` and `octave` into the tray unit
 in one small transaction, then sends the audition: still one `voice()`. At most 6 tray units for built-in sounds
 plus 4 for "my sounds".
+
+**Changed after the review: voice units replace tray units, for every live note.** Every tap and preview (tray or
+not) plays on a hidden voice unit (same chain as a critter unit, `__voice:…`), which copies the critter's sound,
+`volume`, `fx` and `octave` in one small transaction (`glide: false`) before the audition. Tune sounds (Nano, any
+file, including recordings) take turns over a pool of **4** voice units (`VOICES`: a bell rings about 1.8 s), so a
+painted melody, quick taps, a multi-touch chord and charm previews each ring their full length; each kit has one
+voice unit (its slots have the gate off, so a new audition doesn't stop a hit). All six are built at boot (after
+the first sync), so a first tap never waits for a unit. That is fewer units than the tray units could reach, and
+the critter's own unit plays only the song, so sleep can mute it (§4b). Checked: two previews 100 ms apart, the
+first one's pitch at 500 ms within 1 dB of a lone preview, on both engines.
 
 ---
 
@@ -725,12 +739,15 @@ example songs on both and note differences.
   7. **Bass and cloud sustain with a crossfaded loop** — any length at any pitch.
   8. **A hidden library unit holds every sample file** — openDAW requires every file to be referenced; it also keeps
      every sound loaded so a new sound plays on the first tap.
-  9. **Asleep critters mute their region, not their channel** — taps and previews still sound.
+  9. **Asleep critters mute their region and (after the review) their channel** — taps and previews still sound,
+     on hidden voice units.
   10. **Swing uses Zeitgeist with `amount = (0.5 + swing/4 − 0.01)/0.98`** — undoes openDAW's squash margin so the
       odd step lands exactly where today's swing puts it.
   11. **Timed interface phrases play on the native engine** — openDAW can't schedule a live note in the future;
       native schedules them exactly on the audio clock; they go through the native mix.
   12. **Tray previews use hidden tray units with the critter's charms** — openDAW units hold one instrument each.
+      (After the review: every live note plays on hidden voice units with the critter's charms, 4 for tunes and one
+      per kit, as openDAW keeps one audition per unit.)
   13. **Space feeds from after the echo** — openDAW sends are post-chain; slightly wetter.
   14. **No openDAW Compressor** — GPL, outside the commercial licence; the Maximizer limits the master.
   15. **COEP rules out cross-origin embeds and assets** — everything must stay same-origin.

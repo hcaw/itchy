@@ -127,6 +127,7 @@ test('every example song, sound changes, charms, notes and mood all apply in tur
   assert.equal(h.instrumentBox.file.targetVertex.unwrap(), t.applier.files.get(tune.sound));
   assert.equal(t.applier.units.get(drum.id).type, 'nano');
   assert.equal(h.region.mute.getValue(), true);
+  assert.equal(h.audioUnitBox.mute.getValue(), true, 'an asleep critter’s unit is muted');
   assert.ok(Math.abs(h.revamp.lowPass.frequency.getValue() - u.revamp.lowPass.hz) < 1e-2);
   assert.ok(Math.abs(h.delay.wet.getValue() - u.delay.wetDb) < 1e-5);
   assert.ok(Math.abs(h.send.sendGain.getValue() - u.spaceSendDb) < 1e-5);

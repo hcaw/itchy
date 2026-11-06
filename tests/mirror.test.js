@@ -19,14 +19,17 @@ const near = (a, b, eps = 1e-9, what = '') => assert.ok(Math.abs(a - b) <= eps, 
 const song = (layers, extra = {}) => migrate({ tempo: 100, mood: 'happy', key: 0, ...extra, layers });
 const unitOf = (project, i = 0, e = env()) => describe(project, e).units[i];
 
-test('notes sit at s·240 pulses, each critter loops over its own length, and asleep mutes only the region', () => {
+test('notes sit at s·240 pulses, each critter loops over its own length, and asleep mutes the region and the unit', () => {
   const p = song([{ sound: 'bells', steps: 12, muted: true, notes: [{ s: 0, r: 0 }, { s: 5, r: 2 }, { s: 11, r: 7 }] }]);
   const u = unitOf(p);
   assert.deepEqual(u.notes.map((n) => n.position), [0, 5 * 240, 11 * 240]);
   assert.equal(u.loopPulses, 12 * STEP_PULSES);
   assert.equal(u.regionMute, true);
-  assert.equal(u.volumeDb, volumeDb(0.8), 'asleep leaves the volume alone, so taps and previews still sound');
-  assert.equal(unitOf(song([{ sound: 'bells', notes: [] }])).regionMute, false);
+  assert.equal(u.mute, true, 'asleep mutes the unit, so the notes it is playing stop too');
+  assert.equal(u.volumeDb, volumeDb(0.8), 'asleep leaves the volume alone');
+  const awake = unitOf(song([{ sound: 'bells', notes: [] }]));
+  assert.equal(awake.regionMute, false);
+  assert.equal(awake.mute, false);
 });
 
 test('drum notes pick Playfield slot 36 + 4·row + variant, and noisy pieces alternate variants by step', () => {
@@ -284,7 +287,7 @@ test('diffScene: a charm move writes only that charm’s fields', () => {
   assert.deepEqual(dark.map((o) => o.path).sort(), ['revamp.lowPass.hz', 'revamp.lowPass.q']);
   const volume = ops(p, (q) => { q.layers[0].volume = 0.5; });
   assert.deepEqual(volume, [{ op: 'setField', key: 'd', path: 'volumeDb', value: volumeDb(0.5) }]);
-  assert.deepEqual(ops(p, (q) => { q.layers[0].muted = true; }), [{ op: 'setField', key: 'd', path: 'regionMute', value: true }]);
+  assert.deepEqual(ops(p, (q) => { q.layers[0].muted = true; }), [{ op: 'setField', key: 'd', path: 'regionMute', value: true }, { op: 'setField', key: 'd', path: 'mute', value: true }]);
   assert.deepEqual(ops(p, (q) => { q.layers[0].steps = 12; }), [{ op: 'setField', key: 'd', path: 'loopPulses', value: 12 * 240 }]);
   assert.deepEqual(ops(p, (q) => { q.swing = 1; }), [{ op: 'setField', key: null, path: 'groove.amount', value: grooveAmount(1) }]);
 });
