@@ -255,3 +255,6 @@ docs/         BRIEF.md, CONCEPT.md, OPENDAW-PORT.md (the port's plan and what ea
   Tubular from GPL-3.0 code, the engine's Signalsmith Stretch port under MIT, with its notice) — openDAW's engine
   loads every plugin, so Itchy conveys them even though it never creates those devices, and their licences ask for
   their notices to travel with them. A unit test keeps Itchy from ever creating the Compressor.
+- **Contributors need Node 22 or newer** (it was 18) — the unit tests load the vendored openDAW bundle in Node,
+  which uses `Array.prototype.toSorted`, a global `navigator` and `Promise.withResolvers`; Node 18 and 20 have
+  reached their end of life, and CI runs the version in `.nvmrc` (22), which is now also the lowest supported.

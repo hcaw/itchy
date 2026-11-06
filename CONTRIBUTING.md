@@ -21,7 +21,7 @@ so we can agree on the idea before you build it.
 
 ## Set up
 
-You need [Node.js](https://nodejs.org/) 18 or newer (the version in [`.nvmrc`](.nvmrc) is what CI uses). There is
+You need [Node.js](https://nodejs.org/) 22 or newer (the version in [`.nvmrc`](.nvmrc), which CI uses). There is
 nothing to install: Itchy has no npm dependencies and no build step. Its one runtime dependency, openDAW's sound
 engine, is committed ready to run in `vendor/opendaw/` (see [Upgrading openDAW](#upgrading-opendaw)).
 

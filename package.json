@@ -20,7 +20,7 @@
     "vendor:opendaw": "node scripts/vendor-opendaw.mjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "license": "MIT"
 }

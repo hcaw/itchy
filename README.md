@@ -94,7 +94,7 @@ cd itchy
 npm start
 ```
 
-Then open <http://localhost:5173/>. You need Node 18 or newer. There is nothing to install: Itchy has no
+Then open <http://localhost:5173/>. You need Node 22 or newer. There is nothing to install: Itchy has no
 dependencies to install and no build step. `npm start` sends the cross-origin isolation headers that openDAW's
 engine needs; any other static file server works too, for example `python3 -m http.server`, but without those
 headers Itchy plays on its built-in engine. Opening
