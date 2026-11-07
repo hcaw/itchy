@@ -22,6 +22,8 @@ Every choice the brief left open, with a one-line reason. Add new ones at the en
   cross-origin isolated.
 - **A critter is a voice; the grid is one playing surface** — Itchy will gain ways of making music beyond a step
   sequencer, so the grid's region and notes live in `grid.ts`, apart from the critter itself.
+- **New modes are allowed** — Itchy will grow beyond the step sequencer, so depth comes from the building blocks
+  first, but new modes and ways of playing are welcome when they earn their place.
 - **Strict types, enforced** — strict TypeScript plus Oxlint's type-aware rules: no `any`, no `!`, no `as`. Oxlint,
   because typescript-eslint doesn't support TypeScript 7 yet, and Oxlint's type checker is built on it.
 - **Design tokens live in the repo** — the code and its tests never depend on something outside it; the Claude

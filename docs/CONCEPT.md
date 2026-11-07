@@ -20,7 +20,8 @@ There are only five ideas. Everything else is a combination of them.
 
 **How they combine:** critters × sounds × grids × charms × moods × tempo. A kid who has learned "tap the grid" has
 learned every critter; a kid who has learned "pull a charm" has learned every effect. New depth (longer loops,
-note lengths, accents, song sections) is added as *properties of these same objects*, never as new modes.
+note lengths, accents, song sections) is added as *properties of these same objects* where it can be; new modes and
+ways of playing can join them over time.
 
 ## Screen
 
@@ -48,8 +49,7 @@ On a portrait tablet the critter column becomes a row under the top bar. Every c
   sleep and wake it, drag Echo up, shake the dice, try the mic and hear their "boing" sung back at every pitch.
 - **Hour 5–50:** mixing moods, building songs from 5–6 critters, voice-percussion, using the songbook examples as
   things to pull apart. openDAW already supports per-critter loop lengths (polyrhythm), note lengths, velocity
-  and swing, so these can be surfaced as direct manipulations (stretch a note, drag the loop's end) without new
-  modes.
+  and swing, so these can be surfaced as direct manipulations (stretch a note, drag the loop's end).
 
 How Itchy is built is in [`ARCHITECTURE.md`](ARCHITECTURE.md); the decisions behind it are in
 [`DECISIONS.md`](DECISIONS.md).

@@ -35,8 +35,8 @@ CI runs the same checks, in Chromium and WebKit, with a mouse and with touch.
 - **openDAW's project is the single source of truth.** Change the song through the functions in `src/daw/`, one
   `editing.modify` per user action; read it back through the hooks in `src/react/hooks.ts`.
 - **Musical timing comes only from openDAW's engine**, never from timers.
-- **Grow depth from Itchy's building blocks** (critters, grid, sounds, charms), never with new modes, menus, forms
-  or number fields.
+- **Grow depth from Itchy's building blocks first** (critters, grid, sounds, charms), with direct manipulation
+  rather than menus, forms or number fields. New modes and ways of playing are welcome when they earn their place.
 - **No tracking or analytics. Only original or licensed art and sounds.**
 
 When you add an interaction, add a Playwright check that does it with a mouse and with touch, hears a sound, and

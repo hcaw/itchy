@@ -29,8 +29,9 @@ Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or
   critter depend on the grid (other playing surfaces are coming).
 - **Every action makes a sound immediately, works without reading, and is undoable** (from the brief).
 - **Musical timing comes only from openDAW's engine.** Never time notes with `setTimeout` or `requestAnimationFrame`.
-- **Grow depth from the existing building blocks** (critters, grid, sounds, charms): a property or gesture, never a
-  new mode, settings menu, form, dropdown or numeric field.
+- **Grow depth from the building blocks first** (critters, grid, sounds, charms) as a property or gesture, and use
+  direct manipulation rather than settings menus, forms, dropdowns or numeric fields. New modes and new ways of
+  playing are welcome when they earn their place.
 - **No tracking or analytics. Only original or licensed art and sounds.** Never reuse Scratch's characters, art or
   sounds. Prefer openDAW's own instruments and effects to new sample files.
 - **Upgrade openDAW deliberately**: one version per PR, after reading the migration notes in

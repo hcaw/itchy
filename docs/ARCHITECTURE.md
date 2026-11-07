@@ -58,8 +58,6 @@ fit a step sequencer (live playing, drawing, gestures and more), so nothing abou
 - A new surface gets its own module beside `grid.ts`. openDAW already supports what these need: live notes
   (`engine.noteSignal`), recording notes and audio into regions, clips and automation.
 
-How a new surface fits the brief's rule of "no new modes" is a design question for when the first one arrives.
-
 **Timing** comes only from openDAW's engine: never `setTimeout` or `requestAnimationFrame` for notes.
 
 ## Sounds

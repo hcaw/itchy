@@ -41,8 +41,7 @@ while keeping it rewarding for an eleven-year-old who has been using it for mont
    lose work by accident.
 5. **Sounds good by default.** Sensible defaults (scales, quantisation, tempo, levels) make random experiments sound
    musical. Children can loosen these defaults as they grow.
-6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, never hidden behind a
-   "pro mode" or shown all at once.
+6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, not all shown at once.
 7. **Make it joyful and alive.** Bright, friendly and animated, and the interface visibly reacts to the music. Calm
    enough to focus on: no clutter, no overload.
 8. **Accessible and inclusive.** Large touch targets, good contrast, colour never the only way to tell things apart,
