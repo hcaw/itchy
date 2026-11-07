@@ -3,7 +3,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { ObservableValue } from '@opendaw/lib-std';
 import type { Project } from '@opendaw/studio-core';
-import { stepAt } from '../daw/song';
+import { stepAt } from '../daw/grid';
 
 let version = 0;
 

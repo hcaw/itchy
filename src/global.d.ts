@@ -1,5 +1,5 @@
 import type { Daw } from './daw/boot';
-import type { Critter } from './daw/song';
+import type { Critter } from './daw/critter';
 
 declare global {
   interface Window {

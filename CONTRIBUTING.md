@@ -22,6 +22,7 @@ Before you open a pull request, run:
 
 ```sh
 npm run typecheck
+npm run lint
 npm test
 npm run e2e
 ```

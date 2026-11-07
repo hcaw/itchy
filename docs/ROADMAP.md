@@ -6,12 +6,13 @@ with its tests and a preview link. The first version (the git tag `v1`) shows ho
 - [x] **Walking skeleton**: one critter (Vaporisateur) on a 16 × 8 grid, Play and Stop with a playhead, Undo and
   Redo, unit tests and Playwright checks in Chromium and WebKit.
 - [ ] **Cloudflare**: deploy `main` and preview every pull request; remove the Vercel previews.
-- [ ] **Design system**: tokens (colour, type scale, spacing, radius, elevation, motion) and themes, made with
-  Claude's Design System artifact type and seeded from v1's tokens, Nunito and critters. The code reads the tokens
-  from one source as CSS custom properties. To decide: where the source of truth lives (the artifact or the repo),
-  and what the themes are (light and dark, or the moods as themes). Do this before the UI slices below.
-- [ ] **Several critters**, and choosing which one the grid shows. Move reading to openDAW's adapters as
-  [`ARCHITECTURE.md`](ARCHITECTURE.md) describes, and stop holding critter handles in props.
+- [ ] **Design system**: tokens (colour, type scale, spacing, radius, elevation, motion) and themes, seeded from
+  v1's tokens, Nunito and critters. The tokens live in the repo as the single source; the app reads them as CSS
+  custom properties, and a Claude Design System artifact shows them, refreshed from the repo. To decide: what the
+  themes are (light and dark, or the moods as themes). Do this before the UI slices below.
+- [ ] **Several critters**, and choosing which one the grid shows. Look critters up from openDAW's adapters
+  instead of passing a handle, and re-render per critter rather than on every edit
+  ([`ARCHITECTURE.md`](ARCHITECTURE.md)).
 - [ ] **Sounds from openDAW's instruments**: Korpus (bells, pluck), Cubed or Vaporisateur (bass), Vaporisateur or
   Neon (cloud pads). Drums: Playfield with samples, or an Apparat script; try both.
 - [ ] **Moods and the key**, changing every tune critter at once.
@@ -22,6 +23,9 @@ with its tests and a preview link. The first version (the git tag `v1`) shows ho
 - [ ] **Dice and delight**: the surprise pattern, and the critters' reactions.
 - [ ] **A tap layer**, only if the first visit's boot proves slow on real tablets.
 - [ ] **The full look**: the critters' art and the layout from v1, on the design system.
+
+**Later: other playing surfaces** beyond the step grid (live playing, drawing, gestures), each its own module
+beside `grid.ts`.
 
 Ideas for later, from v1: stretchy loops (per-critter length), stretchy notes and accents, song sections, voice kits,
 charms as objects, chance and rules, export and sharing, a tidier songbook.

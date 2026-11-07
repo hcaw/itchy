@@ -45,6 +45,7 @@ Then open http://localhost:5173/. The dev server sends the two headers openDAW n
 | `npm run dev` | Development server with hot reload |
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run preview` | Serve the built site |
+| `npm run lint` | Oxlint, with type-aware rules |
 | `npm test` | Unit tests (Vitest) |
 | `npm run e2e` | Browser checks (Playwright: Chromium and WebKit, mouse and touch) |
 
@@ -57,7 +58,7 @@ Then open http://localhost:5173/. The dev server sends the two headers openDAW n
 - **TypeScript** in strict mode, built with **Vite**.
 
 ```
-src/daw/      booting openDAW, and Itchy's actions on the song (add a note, play, stop)
+src/daw/      booting openDAW, critters, the grid, the transport
 src/react/    the React app, and hooks that turn openDAW's observables into React state
 src/model/    pure logic: scales and moods
 tests/e2e/    Playwright checks

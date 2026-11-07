@@ -20,6 +20,12 @@ Every choice the brief left open, with a one-line reason. Add new ones at the en
 - **openDAW is upgraded by hand, one version per pull request** — its API changes often while it is at 0.0.x.
 - **The private Claude web page copy of Itchy is retired** — openDAW can't run there, because those pages can't be
   cross-origin isolated.
+- **A critter is a voice; the grid is one playing surface** — Itchy will gain ways of making music beyond a step
+  sequencer, so the grid's region and notes live in `grid.ts`, apart from the critter itself.
+- **Strict types, enforced** — strict TypeScript plus Oxlint's type-aware rules: no `any`, no `!`, no `as`. Oxlint,
+  because typescript-eslint doesn't support TypeScript 7 yet, and Oxlint's type checker is built on it.
+- **Design tokens live in the repo** — the code and its tests never depend on something outside it; the Claude
+  Design System artifact is a view of them.
 - **Setting up a new song is not undoable** — it runs in a bare box-graph transaction, so the first undo never
   removes the critter itself.
 

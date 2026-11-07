@@ -51,6 +51,8 @@ button:disabled { opacity: 0.4; cursor: default; }
 .top .play { background: var(--go); color: white; min-width: 120px; }
 .top .play.is-playing { background: var(--stop); }
 
+fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+
 .grid {
   display: grid;
   gap: 6px;

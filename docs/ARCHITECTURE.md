@@ -10,7 +10,8 @@ Vite, React 19 and strict TypeScript (with `noUncheckedIndexedAccess`). openDAW 
 headers openDAW needs (`public/_headers`); the dev and preview servers send them too (`vite.config.ts`).
 
 ```
-src/daw/      booting openDAW, and every change to the song that touches more than one box
+src/daw/      booting openDAW, and every change to the song that touches more than one box:
+              critter.ts (a voice), grid.ts (the step sequencer surface), transport.ts, song.ts
 src/react/    components, and the hooks that read the song from openDAW
 src/model/    pure logic with no openDAW in it: scales and moods (later the dice)
 tests/e2e/    Playwright checks, Chromium and WebKit, mouse and touch
@@ -23,7 +24,8 @@ openDAW's project is the single source of truth. There is no separate Itchy mode
 
 | Itchy | openDAW |
 |---|---|
-| A critter | An audio unit with an instrument and a note region that loops over the critter's steps |
+| A critter | An audio unit with an instrument (and its charms): a voice |
+| The critter's grid | A note region that loops over the critter's steps |
 | A note on the grid | A note event in that region |
 | A charm | A parameter of an effect device on the critter's unit |
 | Tempo, swing | The timeline's BPM, the groove |
@@ -43,8 +45,20 @@ for this. Two rules:
 - **Never hold on to boxes** in React state or props beyond a render. Undo can delete them. Look critters up from
   `rootBoxAdapter.audioUnits` each time.
 
-The walking skeleton doesn't follow these rules yet: it reads raw boxes in `notesOf` and re-renders on every edit.
-The next slice moves it to adapters (see [`ROADMAP.md`](ROADMAP.md)).
+The walking skeleton doesn't fully follow these rules yet: it re-renders on every edit and passes a critter handle
+as a prop. The next slice fixes both (see [`ROADMAP.md`](ROADMAP.md)).
+
+## Playing surfaces
+
+A critter is a voice; the grid is only one way to play it. Itchy will gain other ways of making music that don't
+fit a step sequencer (live playing, drawing, gestures and more), so nothing about a critter may assume the grid:
+
+- `critter.ts` knows the voice: its unit, its instrument, and sounding a note now (`audition`).
+- `grid.ts` knows the step sequencer: its looping region, its notes and its steps.
+- A new surface gets its own module beside `grid.ts`. openDAW already supports what these need: live notes
+  (`engine.noteSignal`), recording notes and audio into regions, clips and automation.
+
+How a new surface fits the brief's rule of "no new modes" is a design question for when the first one arrives.
 
 **Timing** comes only from openDAW's engine: never `setTimeout` or `requestAnimationFrame` for notes.
 
@@ -53,6 +67,14 @@ The next slice moves it to adapters (see [`ROADMAP.md`](ROADMAP.md)).
 Prefer openDAW's own instruments and effects to new sample files: Korpus (physical modelling), Vaporisateur
 (subtractive), Cubed (acid bass), Neon (phase distortion), Nano and Playfield (samplers), Apparat (an instrument
 scripted in JavaScript); Delay, Dattorro Reverb, Revamp (EQ) and more for charms.
+
+## Types
+
+Strict TypeScript, with `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess` and
+`noPropertyAccessFromIndexSignature` on, and Oxlint's type-aware rules (`npm run lint`) on top. No `any`, no
+non-null assertions (`!`), no type assertions (`as`), no `@ts-` comments: narrow with checks, `Option.unwrap`, or
+openDAW's typed adapters instead. The one exception is the soundfont stand-in in `src/daw/boot.ts`, which explains
+itself.
 
 ## Tests
 

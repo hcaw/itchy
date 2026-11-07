@@ -1,6 +1,6 @@
 import { Component, Suspense, use, type ReactNode } from 'react';
 import type { Daw } from '../daw/boot';
-import type { Critter } from '../daw/song';
+import type { Critter } from '../daw/critter';
 import { App } from './App';
 
 type Ready = Promise<{ daw: Daw; critter: Critter }>;

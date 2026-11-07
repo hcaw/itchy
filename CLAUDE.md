@@ -23,6 +23,10 @@ Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or
   Components read it through the hooks in `src/react/hooks.ts`, built on openDAW's adapters and observables; they
   never create or delete boxes, and never hold boxes beyond a render (undo can delete them).
 - **Subscribe narrowly**, so a change re-renders only what shows it (the playhead re-renders per step, not per frame).
+- **Work with the type system, not against it.** No `any`, no non-null assertions (`!`), no type assertions (`as`),
+  no `@ts-` comments; narrow with checks, `Option.unwrap` or openDAW's typed adapters. `npm run lint` enforces this.
+- **A critter is a voice; the grid is one way to play it.** Keep grid logic in `src/daw/grid.ts`; never make a
+  critter depend on the grid (other playing surfaces are coming).
 - **Every action makes a sound immediately, works without reading, and is undoable** (from the brief).
 - **Musical timing comes only from openDAW's engine.** Never time notes with `setTimeout` or `requestAnimationFrame`.
 - **Grow depth from the existing building blocks** (critters, grid, sounds, charms): a property or gesture, never a
@@ -40,12 +44,13 @@ Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or
 ```sh
 npm run dev        # http://localhost:5173/ (isolated, so openDAW runs)
 npm run typecheck
+npm run lint       # Oxlint with type-aware rules
 npm test           # Vitest unit tests
 npm run e2e        # Playwright against the production build, Chromium and WebKit, mouse and touch
 npm run build
 ```
 
-Run `npm run typecheck`, `npm test` and `npm run e2e` before committing. In this cloud container, run e2e with
+Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run e2e` before committing. In this cloud container, run e2e with
 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e -- --project=chromium --project=chromium-touch` (WebKit runs
 in CI). When you add an interaction, extend `tests/e2e/` so it is checked with mouse and touch, makes a sound, and
 undoes in one step. When the look changes, look at a screenshot before committing.

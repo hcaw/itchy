@@ -27,7 +27,11 @@ export type Daw = {
 /**
  * openDAW's SoundfontService fetches a remote catalogue as soon as it is constructed, and Itchy uses
  * no soundfonts, so the project gets a stand-in that fails loudly if anything ever touches it.
+ *
+ * This is Itchy's one type assertion. SoundfontService is a class with private fields, so nothing but a real
+ * instance can satisfy its type, and constructing one makes the network request Itchy must avoid.
  */
+// oxlint-disable-next-line typescript/consistent-type-assertions, typescript/no-unsafe-type-assertion -- see above
 const noSoundfontService = new Proxy({} as SoundfontService, {
   get(_target, key) {
     throw new Error(`Itchy uses no soundfonts (SoundfontService.${String(key)})`);

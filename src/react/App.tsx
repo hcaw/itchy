@@ -1,5 +1,7 @@
 import type { Daw } from '../daw/boot';
-import { STEPS, audition, notesOf, play, stop, toggleNote, type Critter } from '../daw/song';
+import { audition, type Critter } from '../daw/critter';
+import { STEPS, notesOf, toggleNote } from '../daw/grid';
+import { play, stop } from '../daw/transport';
 import { isHomeRow, rowSemitones } from '../model/scales';
 import { useEditingVersion, useObservableValue, usePlayheadStep } from './hooks';
 
@@ -12,7 +14,7 @@ export function App({ daw, critter }: { daw: Daw; critter: Critter }) {
   useEditingVersion(project); // re-read the song after every edit, undo and redo
   const playing = useObservableValue(project.engine.isPlaying);
   const playhead = usePlayheadStep(project);
-  const notes = new Set(notesOf(critter).map(({ step, pitch }) => `${step}:${pitch}`));
+  const notes = new Set(notesOf(project, critter).map(({ step, pitch }) => `${step}:${pitch}`));
   const rows = Array.from({ length: ROWS }, (_, i) => ROWS - 1 - i); // top row first
 
   return (
@@ -34,33 +36,34 @@ export function App({ daw, critter }: { daw: Daw; critter: Critter }) {
         </button>
       </header>
 
-      <main className="grid" role="grid" aria-label="Music grid">
-        {rows.map((row) => {
-          const pitch = KEY + rowSemitones(row);
-          return (
-            <div role="row" className={`row ${isHomeRow(row) ? 'home' : ''}`} key={row}>
-              {Array.from({ length: STEPS }, (_, step) => {
-                const on = notes.has(`${step}:${pitch}`);
-                return (
-                  <button
-                    type="button"
-                    role="gridcell"
-                    key={step}
-                    className={`cell ${on ? 'on' : ''} ${step === playhead ? 'now' : ''} ${step % 4 === 0 ? 'beat' : ''}`}
-                    aria-pressed={on}
-                    aria-label={`Step ${step + 1}, note ${row + 1}`}
-                    data-step={step}
-                    data-row={row}
-                    onClick={() => {
-                      if (!on) audition(project, critter, pitch);
-                      toggleNote(project, critter, { step, pitch });
-                    }}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
+      <main>
+        <fieldset className="grid" aria-label="Music grid">
+          {rows.map((row) => {
+            const pitch = KEY + rowSemitones(row);
+            return (
+              <fieldset aria-label={`Note ${row + 1}`} className={`row ${isHomeRow(row) ? 'home' : ''}`} key={row}>
+                {Array.from({ length: STEPS }, (_, step) => {
+                  const on = notes.has(`${step}:${pitch}`);
+                  return (
+                    <button
+                      type="button"
+                      key={step}
+                      className={`cell ${on ? 'on' : ''} ${step === playhead ? 'now' : ''} ${step % 4 === 0 ? 'beat' : ''}`}
+                      aria-pressed={on}
+                      aria-label={`Step ${step + 1}, note ${row + 1}`}
+                      data-step={step}
+                      data-row={row}
+                      onClick={() => {
+                        if (!on) audition(project, critter, pitch);
+                        toggleNote(project, critter, { step, pitch });
+                      }}
+                    />
+                  );
+                })}
+              </fieldset>
+            );
+          })}
+        </fieldset>
       </main>
     </div>
   );

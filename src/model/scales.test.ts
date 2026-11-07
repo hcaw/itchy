@@ -25,5 +25,5 @@ describe('isHomeRow', () => {
 });
 
 it('lists every mood once', () => {
-  expect([...MOOD_ORDER].sort()).toEqual(Object.keys(MOODS).sort());
+  expect(MOOD_ORDER.toSorted()).toEqual(Object.keys(MOODS).toSorted());
 });

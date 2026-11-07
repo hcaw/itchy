@@ -20,11 +20,13 @@ async function press(target: Locator, hasTouch: boolean) {
 
 /** The loudest output level (RMS, 0 to 1) seen over the next `ms` milliseconds. */
 async function loudest(page: Page, ms = 800): Promise<number> {
-  return page.evaluate(async (ms) => {
+  return page.evaluate(async (duration) => {
+    const itchy = window.itchy;
+    if (!itchy) throw new Error('Itchy has not booted');
     let max = 0;
-    const end = performance.now() + ms;
+    const end = performance.now() + duration;
     while (performance.now() < end) {
-      max = Math.max(max, window.itchy!.level());
+      max = Math.max(max, itchy.level());
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
     return max;
@@ -36,7 +38,7 @@ const SILENCE = 0.001;
 test('the page is cross-origin isolated and openDAW boots', async ({ page }) => {
   const errors = await open(page);
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
-  await expect(page.getByRole('grid', { name: 'Music grid' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Music grid' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -63,7 +65,7 @@ test('Play loops the notes with a moving playhead, and Stop stops', async ({ pag
   await press(playButton, hasTouch);
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
   await expect(page.locator('.cell.now').first()).toBeVisible();
-  expect(await page.evaluate(() => window.itchy!.project.engine.isPlaying.getValue())).toBe(true);
+  expect(await page.evaluate(() => window.itchy?.project.engine.isPlaying.getValue())).toBe(true);
   expect(await loudest(page, 1500)).toBeGreaterThan(SILENCE);
 
   await press(page.getByRole('button', { name: 'Stop' }), hasTouch);
