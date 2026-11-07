@@ -2,6 +2,10 @@
 
 A music toy for 6–11 year olds that grows into an instrument. Low floor, high ceiling, wide walls.
 
+> The building blocks, screen and progression below are the design target for the rebuild. The technology section
+> and decisions log describe v1 (the `v1` tag); the rebuild's structure and decisions are in
+> [`REBUILD.md`](REBUILD.md).
+
 ## Building blocks
 
 There are only five ideas. Everything else is a combination of them.
@@ -51,7 +55,7 @@ On a portrait tablet the critter column becomes a row under the top bar. Every c
   velocity and swing, so these can be surfaced as direct manipulations later (stretch a note, drag the loop's end)
   without changing the data or the engine.
 
-## Technology & structure
+## Technology & structure (v1)
 
 Plain HTML/CSS/JavaScript ES modules, Web Audio API, **no runtime dependencies and no build step**. A tiny
 zero-dependency Node static server (`npm start`) because ES modules don't load from `file://`. Tests use Node's
@@ -67,7 +71,7 @@ src/ui/       app.js and one module per screen region; critters.js draws the SVG
 tests/        unit tests (scheduler timing, model, history) + Playwright checks
 ```
 
-## Decisions log
+## Decisions log (v1)
 
 - **Name "Itchy"** — it's the repository's name and sounds like a toy.
 - **No framework, no build** — lightest setup; the UI is small enough for hand-written DOM code, and it runs on

@@ -1,0 +1,83 @@
+/* Itchy's design tokens, carried over from v1. Bright, soft and chunky: everything is a big target. */
+@font-face {
+  font-family: "Nunito";
+  src: url("/assets/fonts/nunito.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-display: swap;
+}
+
+:root {
+  --bg: #fff8ee;
+  --surface: #ffffff;
+  --well: #f3ede4;
+  --line: #ebe3d6;
+  --ink: #261f3d;
+  --ink-soft: #625a7c;
+  --go: #22b14c;
+  --go-deep: #178a3a;
+  --stop: #ef4444;
+  --stop-deep: #b91c1c;
+  --note: #4dabf7;
+  --tap: 56px;
+  --r-lg: 24px;
+  --r-sm: 12px;
+  --e1: 0 1px 2px rgba(38, 31, 61, 0.06), 0 3px 0 rgba(38, 31, 61, 0.06), 0 8px 20px -10px rgba(38, 31, 61, 0.22);
+  color: var(--ink);
+  background: var(--bg);
+  font: 600 18px/1.4 "Nunito", ui-rounded, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--note); outline-offset: 2px; }
+button:disabled { opacity: 0.4; cursor: default; }
+
+.app {
+  display: grid;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+}
+
+.top { display: flex; gap: 12px; align-items: center; }
+.top button {
+  min-height: var(--tap);
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--e1);
+}
+.top .play { background: var(--go); color: white; min-width: 120px; }
+.top .play.is-playing { background: var(--stop); }
+
+.grid {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--e1);
+  overflow-x: auto;
+}
+.row { display: grid; grid-template-columns: repeat(16, minmax(36px, 1fr)); gap: 6px; }
+.cell {
+  aspect-ratio: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--well);
+  transition: transform 80ms ease;
+}
+.row.home .cell:not(.on, .now) { background: color-mix(in srgb, var(--well), var(--note) 10%); }
+.cell.beat { box-shadow: inset 3px 0 0 var(--line); }
+.cell.now { background: color-mix(in srgb, var(--well), var(--go) 25%); }
+.cell.on { background: var(--note); }
+.cell.on.now { transform: scale(1.08); }
+.cell:active { transform: scale(0.94); }
+
+.message { display: grid; place-content: center; gap: 8px; min-height: 100dvh; padding: 24px; text-align: center; }
+.message .small { color: var(--ink-soft); font-size: 0.9rem; }
+.wake { animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .wake { animation: none; } .cell { transition: none; } }
