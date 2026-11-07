@@ -1,0 +1,4 @@
+# Cloudflare: make every page cross-origin isolated, which openDAW's engine needs (SharedArrayBuffer).
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp

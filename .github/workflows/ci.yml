@@ -14,18 +14,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit:
-    name: Unit tests
+  check:
+    name: Types, lint, unit tests and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
+      - run: npm run build
 
-  browser:
-    name: Browser checks
+  e2e:
+    name: Browser checks (Chromium and WebKit)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -33,16 +38,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      # Playwright is a test tool only: installed here for CI, never a dependency of Itchy itself.
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.63.0
-          npx playwright install --with-deps chromium
-      - run: npm run check
-      - name: Keep the screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: check-screenshots
-          path: test-output/
-          retention-days: 14
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run e2e

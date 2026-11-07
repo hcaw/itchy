@@ -1,58 +1,57 @@
 # Itchy
 
-A music-making toy for children aged 6–11, in the browser. Plain HTML/CSS/JS ES modules, Web Audio, no dependencies,
-no build step.
+A music-making toy for children aged 6–11, in the browser, built on the openDAW engine with React and TypeScript.
+The first version (hand-written Web Audio, no build) is the git tag `v1`: use it as the reference for how a feature
+should behave, never as code to convert.
 
 ## Read first
 
-1. `docs/BRIEF.md`: the goal, audience, design principles, feature vision and constraints. Everything you build serves it.
-2. `docs/CONCEPT.md`: the building blocks (critters, grid, sounds, charms, mood and dice) and the decisions log.
-3. `README.md`: how to run it, the architecture, and the ranked next steps.
-4. `CONTRIBUTING.md`: setup, the rules below in more detail, and what a good pull request looks like.
+1. `docs/BRIEF.md`: the goal, audience, design principles and constraints. Everything you build serves it.
+2. `docs/CONCEPT.md`: Itchy's building blocks (critters, grid, sounds, charms, moods, dice).
+3. `docs/ARCHITECTURE.md`: how the song lives in openDAW, and how the code writes and reads it.
+4. `docs/ROADMAP.md`: the slices built and still to do. `docs/DECISIONS.md`: every decision, with its reason.
+
+## Stack
+
+Vite, React 19, strict TypeScript, and openDAW (`@opendaw/studio-sdk`, pinned to an exact version). Hosted on
+Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or-later.
 
 ## Rules
 
-- **Grow depth from the existing building blocks.** Add depth as a property or gesture on a critter, grid, sound or
-  charm, never as a new mode, settings menu, form, dropdown or numeric field. New features plug in through
-  `src/ui/plugins.js`.
-- **Every action makes a sound immediately, works without reading, and is undoable.** Project changes go through
-  `store.change(fn, gestureKey)`; call `store.seal()` when a drag ends.
-- **Keep the project format plain JSON.** Add new fields with defaults in `createLayer()`/`createProject()`, and clamp
-  them in `migrate()` so old saves still load.
-- **Musical timing comes only from the scheduler on the audio clock** (`src/audio/scheduler.js`). Never use timers for
-  note timing.
-- **No tracking or analytics. No new runtime dependencies or build tools** without a strong reason logged in the
-  decisions list.
-- **Only original or licensed art and sounds**; synthesise sounds in code. Never reuse Scratch's characters, art or
-  sounds.
-- **When the brief leaves a choice open**, pick what's most fun and intuitive for a seven-year-old and still rewarding
-  for an eleven-year-old. Add it to the decisions log in `docs/CONCEPT.md` with a one-line reason.
-
-## Screenshots and logo
-
-The README's logo and screenshots (`docs/images/`), the favicon (`assets/icon.svg`), the home-screen icons
-(`assets/icon-*.png`) and the link-preview card (`assets/social-card.png`) are rendered from the real app by
-`scripts/screenshots.mjs`. Never edit these images by hand, and never let them fall out of date.
-
-- **When a change alters how the app looks, run `npm run screenshots` and commit the updated pictures in the same
-  commit or PR.** "How it looks" includes layout, spacing, colours, design tokens, fonts, critters, icons, the top bar,
-  the rail, the grid, the dock, charms, the songbook, the example songs, the brand critter and the wordmark. If you're
-  unsure, run it: the output is deterministic, so if nothing visible changed, `git status` stays clean.
-- **Look at every picture the script rewrites** (open the PNGs) before committing, just as with `test-output/`.
-- **When you add a big visible feature or screen**, add a shot to `SHOTS` in `scripts/screenshots.mjs`, show it in
-  `README.md` with descriptive alt text, and update the alt text of any existing shot whose content changed.
-- **When you change the brand critter, its colour or the wordmark**, update the constants at the top of
-  `scripts/screenshots.mjs` to match, then re-run it.
-- `npm test` fails if the README shows a picture that doesn't exist or `docs/images/` holds one the README doesn't use.
+- **openDAW's project is the single source of truth.** Never keep a copy of the song in React state or anywhere
+  else. Write it through `src/daw/` functions (each user action is one `project.editing.modify`, so one undo step).
+  Components read it through the hooks in `src/react/hooks.ts`, built on openDAW's adapters and observables; they
+  never create or delete boxes, and never hold boxes beyond a render (undo can delete them).
+- **Subscribe narrowly**, so a change re-renders only what shows it (the playhead re-renders per step, not per frame).
+- **Work with the type system, not against it.** No `any`, no non-null assertions (`!`), no type assertions (`as`),
+  no `@ts-` comments; narrow with checks, `Option.unwrap` or openDAW's typed adapters. `npm run lint` enforces this.
+- **A critter is a voice; the grid is one way to play it.** Keep grid logic in `src/daw/grid.ts`; never make a
+  critter depend on the grid (other playing surfaces are coming).
+- **Every action makes a sound immediately, works without reading, and is undoable** (from the brief).
+- **Musical timing comes only from openDAW's engine.** Never time notes with `setTimeout` or `requestAnimationFrame`.
+- **Grow depth from the building blocks first** (critters, grid, sounds, charms) as a property or gesture, and use
+  direct manipulation rather than settings menus, forms, dropdowns or numeric fields. New modes and new ways of
+  playing are welcome when they earn their place.
+- **No tracking or analytics. Only original or licensed art and sounds.** Never reuse Scratch's characters, art or
+  sounds. Prefer openDAW's own instruments and effects to new sample files.
+- **Upgrade openDAW deliberately**: one version per PR, after reading the migration notes in
+  [naomiaro/opendaw-test](https://github.com/naomiaro/opendaw-test/tree/main/changelogs). That repo has no licence:
+  read it, don't copy from it.
+- **When the brief leaves a choice open**, pick what's most fun and intuitive for a seven-year-old and still
+  rewarding for an eleven-year-old, and log it in `docs/DECISIONS.md` with a one-line reason.
 
 ## Commands
 
 ```sh
-npm start        # http://localhost:5173/
-npm test         # unit tests (scheduler timing, model, undo, storage, dice, recording)
-npm run check    # browser checks in headless Chromium; screenshots in test-output/ (look at them)
-npm run screenshots  # re-render the README logo and screenshots, icons and social card from the app
+npm run dev        # http://localhost:5173/ (isolated, so openDAW runs)
+npm run typecheck
+npm run lint       # Oxlint with type-aware rules
+npm test           # Vitest unit tests
+npm run e2e        # Playwright against the production build, Chromium and WebKit, mouse and touch
+npm run build
 ```
 
-Run both test commands before committing, and `npm run screenshots` too if the look changed. When you add an interaction, extend `tests/e2e/check.mjs` so it is checked
-with mouse and touch, makes a sound, and undoes in one step.
+Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run e2e` before committing. In this cloud container, run e2e with
+`PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e -- --project=chromium --project=chromium-touch` (WebKit runs
+in CI). When you add an interaction, extend `tests/e2e/` so it is checked with mouse and touch, makes a sound, and
+undoes in one step. When the look changes, look at a screenshot before committing.

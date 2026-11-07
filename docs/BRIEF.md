@@ -41,8 +41,7 @@ while keeping it rewarding for an eleven-year-old who has been using it for mont
    lose work by accident.
 5. **Sounds good by default.** Sensible defaults (scales, quantisation, tempo, levels) make random experiments sound
    musical. Children can loosen these defaults as they grow.
-6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, never hidden behind a
-   "pro mode" or shown all at once.
+6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, not all shown at once.
 7. **Make it joyful and alive.** Bright, friendly and animated, and the interface visibly reacts to the music. Calm
    enough to focus on: no clutter, no overload.
 8. **Accessible and inclusive.** Large touch targets, good contrast, colour never the only way to tell things apart,
@@ -110,8 +109,8 @@ Decisions the owner made after the build:
 - **Low-powered devices are a lower priority than the constraints below suggest.** The owner said the Chromebook
   requirement was overstated: it should run smoothly on typical tablets and laptops, and stay usable on cheaper
   machines, but polish need not be sacrificed for them. Tight, steady audio timing still matters everywhere.
-- **Itchy is also published as a private Claude web page** (owner's account). Pages there can't use the microphone, so
-  recording shows the friendly "no microphone" message. That page was last published with the reverted audio-unlock
-  change, so it differs slightly from `main`.
+- **Itchy moved to openDAW, React and TypeScript** (November 2026). The first version is the `v1` tag. How it's
+  built is in `docs/ARCHITECTURE.md`, what's left in `docs/ROADMAP.md`, and the decisions in `docs/DECISIONS.md`.
+  The private Claude web page copy of Itchy is retired, because openDAW can't run on those pages.
 
-The next steps for raising the ceiling are ranked in `README.md`.
+The ideas for raising the ceiling are in `docs/ROADMAP.md`.
