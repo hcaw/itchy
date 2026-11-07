@@ -27,6 +27,11 @@ feature flags and no running old and new side by side: v1 is the specification, 
 - [x] **Walking skeleton**: Vite, React 19, strict TypeScript, openDAW 0.0.182, Cloudflare headers, one critter
   (Vaporisateur) on a 16 × 8 grid, Play and Stop with a playhead, Undo and Redo, unit tests and Playwright checks.
 - [ ] **Cloudflare deploy** and PR previews; remove the Vercel previews.
+- [ ] **Design system** (earmarked; do it before the UI slices so components are built on it once): tokens
+  (colour, type scale, spacing, radius, elevation, motion) with themes, made with Claude's Design System artifact
+  type and seeded from v1's tokens, Nunito and critters. The code reads the tokens from one source as CSS custom
+  properties. To decide: where the source of truth lives (the artifact or the repo) and how they stay in sync, and
+  what the themes are (light and dark, or Itchy's moods as themes).
 - [ ] **Several critters** and choosing which one the grid shows.
 - [ ] **Sounds from openDAW's instruments**: Korpus (bells, pluck), Cubed or Vaporisateur (bass), Vaporisateur or
   Neon (cloud pads); drums as Playfield with samples or an Apparat script (try both).
