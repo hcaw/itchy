@@ -22,7 +22,7 @@ export type Note = { step: number; pitch: number };
  * A new song: the tempo and one critter. Setting up is not undoable: it runs in a bare box-graph
  * transaction, which openDAW's editing history never sees.
  */
-export function createSong(project: Project, { bpm = 110 } = {}): Critter {
+export function createSong(project: Project, { bpm = 100 } = {}): Critter {
   const graph = project.boxGraph;
   graph.beginTransaction();
   try {

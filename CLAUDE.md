@@ -1,14 +1,15 @@
 # Itchy
 
-A music-making toy for children aged 6–11, in the browser, being rebuilt on the openDAW engine with React and
-TypeScript. v1 (hand-written Web Audio, no build) is the git tag `v1`: use it as the reference for behaviour, never as
-code to convert.
+A music-making toy for children aged 6–11, in the browser, built on the openDAW engine with React and TypeScript.
+The first version (hand-written Web Audio, no build) is the git tag `v1`: use it as the reference for how a feature
+should behave, never as code to convert.
 
 ## Read first
 
 1. `docs/BRIEF.md`: the goal, audience, design principles and constraints. Everything you build serves it.
-2. `docs/REBUILD.md`: how the rebuild is structured, the slices still to do, and the decisions made so far.
-3. `docs/CONCEPT.md`: Itchy's building blocks (critters, grid, sounds, charms, moods, dice) and the v1 decisions log.
+2. `docs/CONCEPT.md`: Itchy's building blocks (critters, grid, sounds, charms, moods, dice).
+3. `docs/ARCHITECTURE.md`: how the song lives in openDAW, and how the code writes and reads it.
+4. `docs/ROADMAP.md`: the slices built and still to do. `docs/DECISIONS.md`: every decision, with its reason.
 
 ## Stack
 
@@ -18,10 +19,10 @@ Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or
 ## Rules
 
 - **openDAW's project is the single source of truth.** Never keep a copy of the song in React state or anywhere
-  else. Write it through `src/daw/` functions (each user action is one `project.editing.modify`, so one undo step);
-  read it back from boxes and openDAW's observables, through the hooks in `src/react/hooks.ts`.
-- **`src/daw/` holds the openDAW know-how:** booting, and every write that touches more than one box. Components
-  may read boxes and observables directly; they should not create or delete boxes themselves.
+  else. Write it through `src/daw/` functions (each user action is one `project.editing.modify`, so one undo step).
+  Components read it through the hooks in `src/react/hooks.ts`, built on openDAW's adapters and observables; they
+  never create or delete boxes, and never hold boxes beyond a render (undo can delete them).
+- **Subscribe narrowly**, so a change re-renders only what shows it (the playhead re-renders per step, not per frame).
 - **Every action makes a sound immediately, works without reading, and is undoable** (from the brief).
 - **Musical timing comes only from openDAW's engine.** Never time notes with `setTimeout` or `requestAnimationFrame`.
 - **Grow depth from the existing building blocks** (critters, grid, sounds, charms): a property or gesture, never a
@@ -32,7 +33,7 @@ Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or
   [naomiaro/opendaw-test](https://github.com/naomiaro/opendaw-test/tree/main/changelogs). That repo has no licence:
   read it, don't copy from it.
 - **When the brief leaves a choice open**, pick what's most fun and intuitive for a seven-year-old and still
-  rewarding for an eleven-year-old, and log it in `docs/REBUILD.md` with a one-line reason.
+  rewarding for an eleven-year-old, and log it in `docs/DECISIONS.md` with a one-line reason.
 
 ## Commands
 

@@ -110,8 +110,8 @@ Decisions the owner made after the build:
 - **Low-powered devices are a lower priority than the constraints below suggest.** The owner said the Chromebook
   requirement was overstated: it should run smoothly on typical tablets and laptops, and stay usable on cheaper
   machines, but polish need not be sacrificed for them. Tight, steady audio timing still matters everywhere.
-- **Itchy is being rebuilt on openDAW, React and TypeScript** (November 2026). The first version is the `v1` tag;
-  the plan, progress and decisions are in `docs/REBUILD.md`. The private Claude web page copy of Itchy is retired,
-  because openDAW can't run on those pages.
+- **Itchy moved to openDAW, React and TypeScript** (November 2026). The first version is the `v1` tag. How it's
+  built is in `docs/ARCHITECTURE.md`, what's left in `docs/ROADMAP.md`, and the decisions in `docs/DECISIONS.md`.
+  The private Claude web page copy of Itchy is retired, because openDAW can't run on those pages.
 
-The ideas for raising the ceiling from v1's README are carried into the slices in `docs/REBUILD.md`.
+The ideas for raising the ceiling are in `docs/ROADMAP.md`.

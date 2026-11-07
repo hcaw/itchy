@@ -3,8 +3,8 @@
 Thank you for helping. Itchy is a music toy for children aged 6–11, so every change is judged by one question: does
 it make Itchy more fun and more intuitive for a seven-year-old, while staying rewarding for an eleven-year-old?
 
-Itchy is being rebuilt on openDAW, React and TypeScript. Read [`docs/REBUILD.md`](docs/REBUILD.md) for the plan and
-the slices still to do, and [`docs/BRIEF.md`](docs/BRIEF.md) for the goal.
+Read [`docs/BRIEF.md`](docs/BRIEF.md) for the goal, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the code
+works, and [`docs/ROADMAP.md`](docs/ROADMAP.md) for what's still to do.
 
 ## Set up
 
@@ -32,7 +32,7 @@ CI runs the same checks, in Chromium and WebKit, with a mouse and with touch.
 
 - **Every action makes a sound immediately, works without reading, and is undoable.**
 - **openDAW's project is the single source of truth.** Change the song through the functions in `src/daw/`, one
-  `editing.modify` per user action; read it back from openDAW's boxes and observables.
+  `editing.modify` per user action; read it back through the hooks in `src/react/hooks.ts`.
 - **Musical timing comes only from openDAW's engine**, never from timers.
 - **Grow depth from Itchy's building blocks** (critters, grid, sounds, charms), never with new modes, menus, forms
   or number fields.

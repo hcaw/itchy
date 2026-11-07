@@ -14,9 +14,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0-blue" alt="AGPL-3.0 licence"></a>
 </p>
 
-> **Being rebuilt.** Itchy is moving onto the [openDAW](https://github.com/andremichelle/openDAW) engine, with React
-> and TypeScript. The finished first version, with hand-written Web Audio, is the [`v1` tag](https://github.com/hcaw/itchy/tree/v1).
-> The plan and progress are in [`docs/REBUILD.md`](docs/REBUILD.md).
+> **Early days.** Itchy now runs on the [openDAW](https://github.com/andremichelle/openDAW) engine, with React and
+> TypeScript, and its features are coming back one at a time ([`docs/ROADMAP.md`](docs/ROADMAP.md)). The finished
+> first version, with hand-written Web Audio, is the [`v1` tag](https://github.com/hcaw/itchy/tree/v1).
 
 ## What is it?
 
@@ -63,6 +63,9 @@ src/model/    pure logic: scales and moods
 tests/e2e/    Playwright checks
 public/       static files, including _headers for Cloudflare
 ```
+
+More in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); every decision and its reason is in
+[`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Contributing
 

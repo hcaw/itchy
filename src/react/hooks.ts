@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { ObservableValue } from '@opendaw/lib-std';
 import type { Project } from '@opendaw/studio-core';
+import { stepAt } from '../daw/song';
 
 let version = 0;
 
@@ -34,4 +35,24 @@ export function useEditingVersion(project: Project): number {
     [project],
   );
   return useSyncExternalStore(subscribe, () => version);
+}
+
+/**
+ * The grid step under the playhead, or -1 when stopped. openDAW updates the position every animation frame, but this
+ * re-renders only when the step changes (16 times a bar), not 60 times a second.
+ */
+export function usePlayheadStep(project: Project): number {
+  const engine = project.engine;
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const position = engine.position.subscribe(onChange);
+      const playing = engine.isPlaying.subscribe(onChange);
+      return () => {
+        position.terminate();
+        playing.terminate();
+      };
+    },
+    [engine],
+  );
+  return useSyncExternalStore(subscribe, () => (engine.isPlaying.getValue() ? stepAt(engine.position.getValue()) : -1));
 }

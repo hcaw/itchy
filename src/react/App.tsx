@@ -1,7 +1,7 @@
 import type { Daw } from '../daw/boot';
-import { STEPS, audition, notesOf, play, stepAt, stop, toggleNote, type Critter } from '../daw/song';
+import { STEPS, audition, notesOf, play, stop, toggleNote, type Critter } from '../daw/song';
 import { isHomeRow, rowSemitones } from '../model/scales';
-import { useEditingVersion, useObservableValue } from './hooks';
+import { useEditingVersion, useObservableValue, usePlayheadStep } from './hooks';
 
 const ROWS = 8;
 const KEY = 60; // middle C
@@ -11,8 +11,7 @@ export function App({ daw, critter }: { daw: Daw; critter: Critter }) {
   const { project } = daw;
   useEditingVersion(project); // re-read the song after every edit, undo and redo
   const playing = useObservableValue(project.engine.isPlaying);
-  const position = useObservableValue(project.engine.position);
-  const playhead = playing ? stepAt(position) : -1;
+  const playhead = usePlayheadStep(project);
   const notes = new Set(notesOf(critter).map(({ step, pitch }) => `${step}:${pitch}`));
   const rows = Array.from({ length: ROWS }, (_, i) => ROWS - 1 - i); // top row first
 
