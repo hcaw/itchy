@@ -90,4 +90,5 @@ licence: read it, don't copy from it. Dependabot leaves openDAW alone for this r
 ## History
 
 The first version of Itchy (the git tag `v1`) was hand-written Web Audio with no build step. It is the reference for
-how Itchy should behave, never code to convert.
+how Itchy should behave, never code to convert: [`reference/v1.md`](reference/v1.md) lists what it did, with
+screenshots, and the live copy stays at <https://hcaw.github.io/itchy/>.

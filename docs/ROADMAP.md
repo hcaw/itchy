@@ -1,7 +1,8 @@
 # Roadmap
 
 Itchy is built in vertical slices: each slice is one small pull request that adds one feature all the way through,
-with its tests and a preview link. The first version (the git tag `v1`) shows how each feature should behave.
+with its tests and a preview link. [`reference/v1.md`](reference/v1.md) lists every feature of the first version,
+with screenshots, and which slice brings it back.
 
 - [x] **Walking skeleton**: one critter (Vaporisateur) on a 16 × 8 grid, Play and Stop with a playhead, Undo and
   Redo, unit tests and Playwright checks in Chromium and WebKit.

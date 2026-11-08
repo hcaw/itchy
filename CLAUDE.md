@@ -10,6 +10,8 @@ should behave, never as code to convert.
 2. `docs/CONCEPT.md`: Itchy's building blocks (critters, grid, sounds, charms, moods, dice).
 3. `docs/ARCHITECTURE.md`: how the song lives in openDAW, and how the code writes and reads it.
 4. `docs/ROADMAP.md`: the slices built and still to do. `docs/DECISIONS.md`: every decision, with its reason.
+5. `docs/reference/v1.md`: what v1 did and how it looked, the target a slice works towards. Tick a feature there when
+   a slice brings it back.
 
 ## Stack
 
