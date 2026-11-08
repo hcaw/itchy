@@ -1,8 +1,8 @@
 # Itchy — the brief
 
 This is the goal Itchy is built towards, condensed from the owner's original prompt. Read it before changing
-anything. `docs/CONCEPT.md` says *how* Itchy meets this brief and logs every decision; `README.md` covers running it,
-the architecture and the next steps.
+anything. `docs/CONCEPT.md` describes the building blocks that meet it, `docs/ARCHITECTURE.md` how the code works,
+`docs/ROADMAP.md` what's next and `docs/DECISIONS.md` every decision.
 
 ## Goal
 
