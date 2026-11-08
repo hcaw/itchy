@@ -6,7 +6,7 @@ plays the music on the audio thread; React draws the interface from openDAW's pr
 ## Stack
 
 Vite, React 19 and strict TypeScript (with `noUncheckedIndexedAccess`). openDAW is installed from npm as
-`@opendaw/studio-sdk`, pinned to an exact version. Hosting is Cloudflare, which sends the two cross-origin isolation
+`@opendaw/studio-sdk`, pinned to an exact version. Hosting is Cloudflare Workers, serving the built app as static assets (`wrangler.jsonc`); it sends the two cross-origin isolation
 headers openDAW needs (`public/_headers`); the dev and preview servers send them too (`vite.config.ts`).
 
 ```

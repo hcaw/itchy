@@ -14,7 +14,7 @@ should behave, never as code to convert.
 ## Stack
 
 Vite, React 19, strict TypeScript, and openDAW (`@opendaw/studio-sdk`, pinned to an exact version). Hosted on
-Cloudflare with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or-later.
+Cloudflare Workers (static assets, `wrangler.jsonc`) with the isolation headers in `public/_headers`. Licence: AGPL-3.0-or-later.
 
 ## Rules
 

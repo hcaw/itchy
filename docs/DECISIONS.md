@@ -15,8 +15,9 @@ Every choice the brief left open, with a one-line reason. Add new ones at the en
 - **`src/daw/` owns booting and multi-box writes; reads go through adapter-based hooks** — the writes encode Itchy's
   rules and keep each action one undo step, while wrapping openDAW's whole read API would only rebuild a mirror.
 - **AGPL-3.0-or-later for the whole project** — matches openDAW, which Itchy is built on. Versions up to `v1` were MIT.
-- **Cloudflare for hosting** — free, sends the isolation headers from `public/_headers`, and previews every pull
-  request. GitHub Pages can't send headers.
+- **Cloudflare Workers for hosting, serving static assets** — free, applies the isolation headers from
+  `public/_headers`, and builds a preview of every branch. Workers rather than Pages, because Cloudflare now points new
+  projects there. GitHub Pages can't send headers. Configured in `wrangler.jsonc`.
 - **openDAW is upgraded by hand, one version per pull request** — its API changes often while it is at 0.0.x.
 - **The private Claude web page copy of Itchy is retired** — openDAW can't run there, because those pages can't be
   cross-origin isolated.
