@@ -54,7 +54,7 @@ and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
   <tr>
     <td width="50%"><img src="docs/images/screenshot-tablet.png" alt="Itchy on a tablet held upright, playing the Rainy Day example: a melody of glossy bell notes on a colourful glass grid, with jelly drum, cloud and bell critters along the top."></td>
     <td width="50%">
-      <img src="docs/images/screenshot-songbook.png" alt="The songbook, a frosted glass sheet: your own songs at the top and three example songs, Robot Disco, Rainy Day and Spooky Clocks, below, each showing its critters.">
+      <img src="docs/images/screenshot-songbook.png" alt="The songbook, a frosted glass sheet: your own songs at the top and five example songs, Robot Disco, Rainy Day, Spooky Clocks, Sunshine Reggae and Echo Cave Dub, below, each showing its critters.">
       <br><br>
       <img src="docs/images/screenshot-phone.png" alt="Itchy on a phone on its side, showing the Spooky Clocks example with long held notes as glossy bars and an emerald glass play orb.">
     </td>
@@ -79,7 +79,7 @@ and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
 | Face | choose a mood (scale) for every tune critter | an arpeggio in that mood |
 | Turtle ↔ rabbit | drag to change speed | a tick at the new speed |
 | ↶ ↷ | undo or redo anything | a whoosh |
-| Book | every song you've made, plus three examples | — |
+| Book | every song you've made, plus five examples | — |
 | The Itchy critter (top bar) | tap it | a little hello in the current mood (it changes colour each time) |
 
 Keyboard: Space plays and stops, arrow keys move around the grid, Enter places a note, Ctrl/⌘+Z undoes, Ctrl/⌘+Y
@@ -100,6 +100,11 @@ dependencies and no build step. Any static file server works too, for example `p
 To put it on your own site, copy `index.html`, `manifest.webmanifest`, `styles.css`, `src/` and `assets/` to any
 static host. The [Pages workflow](.github/workflows/pages.yml) does exactly this for <https://hcaw.github.io/itchy/>
 on every push to `main`.
+
+Every pull request also gets its own preview on Vercel, so you can try a change before it's merged: Vercel's bot
+posts the link on the pull request. Each preview has its own web address, so songs saved there never touch the ones
+on the live site. [`vercel.json`](vercel.json) turns off Vercel deploys from `main`, and
+[`.vercelignore`](.vercelignore) uploads only the app's files.
 
 Checks:
 

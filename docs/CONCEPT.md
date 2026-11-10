@@ -101,6 +101,8 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Synchronous localStorage backup on page hide** — an IndexedDB write started while closing may not finish;
   boot takes whichever copy is newer.
 - **No song deleting yet** — the safest way to make losing work impossible; a bin with undo can come later.
+- **Example songs teach styles by name** (Sunshine Reggae, Echo Cave Dub): each shows one style's signature in
+  critters a child can pull apart: reggae's one drop and skank, dub's echo on the rim and a sleeping melody to wake.
 - **Long notes are in the model and drawn as bars** — the dice and examples use them; a stretch gesture can come later.
 - **Features are plugins** (mood, dice, charms, mic, songbook) that add controls to existing regions — new depth
   arrives the same way, without new modes.
@@ -178,3 +180,6 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
   refreshed in one command, and a test catches a picture that's missing or unused.
 - **Itchy has a web app manifest and home-screen icons, opening without browser chrome** — on a classroom tablet it
   then launches like any other app, with nothing around it for a child to tap by accident.
+- **Pull requests get a preview on Vercel; the live site stays on GitHub Pages** — you can play with a change before
+  it's merged, and each preview has its own web address, so a preview never reads or rewrites the songs saved on the
+  live site. It's hosting only: no runtime dependency, no build step, and the toolbar and analytics stay off.
