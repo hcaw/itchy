@@ -48,12 +48,14 @@ Cloudflare Workers (static assets, `wrangler.jsonc`) with the isolation headers 
 npm run dev        # http://localhost:5173/ (isolated, so openDAW runs)
 npm run typecheck
 npm run lint       # Oxlint with type-aware rules
+npm run fmt        # Oxfmt: format every file in place (npm run fmt:check only checks, as CI does)
 npm test           # Vitest unit tests
 npm run e2e        # Playwright against the production build, Chromium and WebKit, mouse and touch
 npm run build
 ```
 
-Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run e2e` before committing. In this cloud container, run e2e with
+Run `npm run fmt`, then `npm run typecheck`, `npm run lint`, `npm test` and `npm run e2e` before committing. Never
+format by hand or argue with the formatter: its settings are in `.oxfmtrc.json` (plus `.editorconfig`). In this cloud container, run e2e with
 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e -- --project=chromium --project=chromium-touch` (WebKit runs
 in CI). When you add an interaction, extend `tests/e2e/` so it is checked with mouse and touch, makes a sound, and
 undoes in one step. When the look changes, look at a screenshot before committing.

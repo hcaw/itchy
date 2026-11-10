@@ -29,6 +29,7 @@ Then open http://localhost:5173/.
 | `npm run preview` | Serve the build |
 | `npm run typecheck` | TypeScript |
 | `npm run lint` | Oxlint |
+| `npm run fmt` | Format every file (Oxfmt); `npm run fmt:check` only checks |
 | `npm test` | Unit tests (Vitest) |
 | `npm run e2e` | Browser tests (Playwright) |
 

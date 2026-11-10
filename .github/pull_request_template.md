@@ -8,7 +8,7 @@
 
 ## Checklist
 
-- [ ] `npm run typecheck`, `npm run lint`, `npm test` and `npm run e2e` pass
+- [ ] `npm run typecheck`, `npm run lint`, `npm run fmt:check`, `npm test` and `npm run e2e` pass
 - [ ] New interactions are covered in `tests/e2e/` (mouse and touch, makes a sound, one undo)
 - [ ] If the look changed: I looked at it, and added a screenshot below
 - [ ] Decisions the brief left open are added to `docs/DECISIONS.md`

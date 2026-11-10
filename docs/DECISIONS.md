@@ -27,6 +27,12 @@ Every choice the brief left open, with a one-line reason. Add new ones at the en
   first, but new modes and ways of playing are welcome when they earn their place.
 - **Strict types, enforced** — strict TypeScript plus Oxlint's type-aware rules: no `any`, no `!`, no `as`. Oxlint,
   because typescript-eslint doesn't support TypeScript 7 yet, and Oxlint's type checker is built on it.
+- **Oxfmt formats everything, and CI checks it** — from the same Oxc toolchain as Oxlint, so one editor extension
+  serves both, and Oxlint's style rules stay off so the two never disagree. It is pinned to an exact version because
+  its output can change between 0.x releases. `printWidth` is 120 and quotes are single, to match the code and the
+  120-column prose already here.
+- **The Node version lives in `.node-version`, not `.nvmrc`** — it isn't specific to one version manager: GitHub's
+  `setup-node`, Cloudflare's builds, fnm, mise, nodenv and asdf all read it.
 - **Design tokens live in the repo** — the code and its tests never depend on something outside it; the Claude
   Design System artifact is a view of them.
 - **Setting up a new song is not undoable** — it runs in a bare box-graph transaction, so the first undo never

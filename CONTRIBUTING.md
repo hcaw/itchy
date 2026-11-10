@@ -8,13 +8,22 @@ works, and [`docs/ROADMAP.md`](docs/ROADMAP.md) for what's still to do.
 
 ## Set up
 
-You need Node.js 22.12 or later.
+You need Node.js 22.12 or later. The version CI uses is in `.node-version`, which fnm, mise, nodenv and asdf read
+automatically; with nvm, run `nvm use $(cat .node-version)`.
 
 ```sh
 npm install
 npm run dev
 npx playwright install --with-deps chromium webkit   # once, for npm run e2e
 ```
+
+## Formatting
+
+[Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) formats every file: code, CSS, HTML, JSON, YAML and
+Markdown. Run `npm run fmt` before you commit, or let your editor do it on save. In VS Code, install the recommended
+Oxc extension (`oxc.oxc-vscode`); this repository's `.vscode/settings.json` already makes it the formatter. The same
+extension shows Oxlint's warnings as you type. The settings are in `.oxfmtrc.json`, plus indentation and line endings
+from `.editorconfig`.
 
 ## Checks
 
@@ -23,6 +32,7 @@ Before you open a pull request, run:
 ```sh
 npm run typecheck
 npm run lint
+npm run fmt:check
 npm test
 npm run e2e
 ```
