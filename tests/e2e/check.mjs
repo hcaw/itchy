@@ -11,6 +11,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.js';
+import { EXAMPLES } from '../../src/model/examples.js';
 
 const { chromium, webkit } = createRequire(import.meta.url)('playwright');
 const OUT = fileURLToPath(new URL('../../test-output/', import.meta.url));
@@ -546,7 +547,7 @@ async function safariLayout() {
 async function examples() {
   console.log('\nExample songs');
   const { ctx, page, errors } = await openPage({ width: 1366, height: 768 });
-  const count = 3;
+  const count = EXAMPLES.length;
   for (let i = 0; i < count; i++) {
     await page.click('.btn.book');
     await page.waitForSelector('.songbook');
