@@ -3,3 +3,10 @@ dist/
 test-results/
 playwright-report/
 .DS_Store
+
+# Wrangler's local state and cache (from `wrangler dev`); never commit
+.wrangler/
+# Local secrets for Wrangler and Vite
+.dev.vars*
+.env
+.env.*
