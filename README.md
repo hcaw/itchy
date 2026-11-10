@@ -54,7 +54,7 @@ and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
   <tr>
     <td width="50%"><img src="docs/images/screenshot-tablet.png" alt="Itchy on a tablet held upright, playing the Rainy Day example: a melody of bell notes on a colourful grid, with a drum, a cloud and a bell critter along the top."></td>
     <td width="50%">
-      <img src="docs/images/screenshot-songbook.png" alt="The songbook: your own songs at the top and three example songs, Robot Disco, Rainy Day and Spooky Clocks, below.">
+      <img src="docs/images/screenshot-songbook.png" alt="The songbook: your own songs at the top and five example songs, Robot Disco, Rainy Day, Spooky Clocks, Sunshine Reggae and Echo Cave Dub, below.">
       <br><br>
       <img src="docs/images/screenshot-phone.png" alt="Itchy on a phone on its side, showing the Spooky Clocks example with long held notes.">
     </td>
@@ -79,7 +79,7 @@ and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
 | Face | choose a mood (scale) for every tune critter | an arpeggio in that mood |
 | Turtle ↔ rabbit | drag to change speed | a tick at the new speed |
 | ↶ ↷ | undo or redo anything | a whoosh |
-| Book | every song you've made, plus three examples | — |
+| Book | every song you've made, plus five examples | — |
 | The Itchy critter (top bar) | tap it | a little hello in the current mood (it changes colour each time) |
 
 Keyboard: Space plays and stops, arrow keys move around the grid, Enter places a note, Ctrl/⌘+Z undoes, Ctrl/⌘+Y

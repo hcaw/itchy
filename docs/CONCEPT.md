@@ -101,6 +101,8 @@ tests/        unit tests (scheduler timing, model, history) + Playwright checks
 - **Synchronous localStorage backup on page hide** — an IndexedDB write started while closing may not finish;
   boot takes whichever copy is newer.
 - **No song deleting yet** — the safest way to make losing work impossible; a bin with undo can come later.
+- **Example songs teach styles by name** (Sunshine Reggae, Echo Cave Dub): each shows one style's signature in
+  critters a child can pull apart: reggae's one drop and skank, dub's echo on the rim and a sleeping melody to wake.
 - **Long notes are in the model and drawn as bars** — the dice and examples use them; a stretch gesture can come later.
 - **Features are plugins** (mood, dice, charms, mic, songbook) that add controls to existing regions — new depth
   arrives the same way, without new modes.
