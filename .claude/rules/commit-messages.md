@@ -25,12 +25,12 @@ Required. One of:
 
 ## Scope
 
-Optional, in parentheses immediately after the type: `type(scope): ...`. Use the package or area the
-change is centered on, e.g. `api`, `web`, `cdk`, `infra`, `lint`, `oxfmt`, `tsconfig`, `agents`,
-`api-contract`. Omit the scope when a change spans multiple areas or is repo-wide (most `chore` and
-`docs` commits omit it).
+Optional, in parentheses immediately after the type: `type(scope): ...`. Use the area the change is
+centred on: `daw` (`src/daw/`), `react` (`src/react/`), `model` (`src/model/`), `e2e` (`tests/e2e/`), or a
+tool or its config, such as `lint`, `oxfmt`, `tsconfig`, `vite`, `wrangler` or `deps`. Omit the scope when a
+change spans multiple areas or is repo-wide (most `chore` and `docs` commits omit it).
 
-A `!` after the type/scope (`feat(api)!: ...`) marks a breaking change; pair it with a
+A `!` after the type/scope (`feat(daw)!: ...`) marks a breaking change; pair it with a
 `BREAKING CHANGE:` footer describing the break.
 
 ## Description
@@ -55,15 +55,15 @@ Use trailers for issue linking only, one per line:
 ## Examples
 
 ```
-fix(web): reject off-globe clicks so empty space cannot become a scored guess
+fix(react): colour notes on the key's row so they no longer stay grey
 
-Closes #62
-```
-
-```
-refactor(api): rename GameRepo to StorageProvider
+Closes #123
 ```
 
 ```
-chore: sort imports
+refactor(daw): move the grid's region and notes out of the critter
+```
+
+```
+chore: format the codebase with Oxfmt
 ```
