@@ -22,7 +22,13 @@ export class MemorySamples implements SampleLoaderManager {
     const frames = channels[0]?.length ?? 0;
     const data = AudioData.create(sampleRate, frames, channels.length);
     channels.forEach((channel, i) => data.frames[i]?.set(channel));
-    const meta: SampleMetaData = { name, bpm: 0, duration: frames / sampleRate, sample_rate: sampleRate, origin: 'import' };
+    const meta: SampleMetaData = {
+      name,
+      bpm: 0,
+      duration: frames / sampleRate,
+      sample_rate: sampleRate,
+      origin: 'import',
+    };
     const id = UUID.toString(uuid);
     this.#entries.set(id, { data, meta });
     this.#loaders.get(id)?.invalidate();
@@ -71,7 +77,9 @@ export class MemorySamples implements SampleLoaderManager {
 
 /** Itchy uses no soundfonts. */
 export const noSoundfonts: SoundfontLoaderManager = {
-  getOrCreate() { throw new Error('Itchy uses no soundfonts'); },
+  getOrCreate() {
+    throw new Error('Itchy uses no soundfonts');
+  },
   remove() {},
   invalidate() {},
 };

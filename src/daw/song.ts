@@ -16,8 +16,15 @@ export function createSong(project: Project, { bpm = 100 } = {}): Critter {
   graph.beginTransaction();
   try {
     project.timelineBox.bpm.setValue(bpm);
-    const { audioUnitBox, trackBox } = project.api.createInstrument(InstrumentFactories.Vaporisateur, { name: 'Critter' });
-    const region = project.api.createNoteRegion({ trackBox, position: 0, duration: FOREVER, loopDuration: STEPS * STEP });
+    const { audioUnitBox, trackBox } = project.api.createInstrument(InstrumentFactories.Vaporisateur, {
+      name: 'Critter',
+    });
+    const region = project.api.createNoteRegion({
+      trackBox,
+      position: 0,
+      duration: FOREVER,
+      loopDuration: STEPS * STEP,
+    });
     graph.endTransaction();
     return { unit: audioUnitBox, region };
   } catch (error) {

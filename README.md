@@ -22,16 +22,16 @@ npm run dev
 
 Then open http://localhost:5173/.
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Development server |
-| `npm run build` | Type-check and build to `dist/` |
-| `npm run preview` | Serve the build |
-| `npm run typecheck` | TypeScript |
-| `npm run lint` | Oxlint |
-| `npm run fmt` | Format every file (Oxfmt); `npm run fmt:check` only checks |
-| `npm test` | Unit tests (Vitest) |
-| `npm run e2e` | Browser tests (Playwright) |
+| Command             | What it does                                               |
+| ------------------- | ---------------------------------------------------------- |
+| `npm run dev`       | Development server                                         |
+| `npm run build`     | Type-check and build to `dist/`                            |
+| `npm run preview`   | Serve the build                                            |
+| `npm run typecheck` | TypeScript                                                 |
+| `npm run lint`      | Oxlint                                                     |
+| `npm run fmt`       | Format every file (Oxfmt); `npm run fmt:check` only checks |
+| `npm test`          | Unit tests (Vitest)                                        |
+| `npm run e2e`       | Browser tests (Playwright)                                 |
 
 ## Docs
 

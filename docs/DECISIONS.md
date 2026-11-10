@@ -53,7 +53,7 @@ These were decided while building v1 (the git tag `v1`) and still describe how I
 - **Filter is one Dark↔Bright control with a neutral middle** — one handle, two directions, like a DJ filter.
 - **Echo and Space are shared buses with per-critter send** — much cheaper than one reverb per critter, and they mix
   the critters into one shared room.
-- **Recorded sounds are tune sounds** (pitched across the grid rows) — one rule that covers singing *and*
+- **Recorded sounds are tune sounds** (pitched across the grid rows) — one rule that covers singing _and_
   voice-drums (just use one row).
 - **The songbook keeps every song**; opening an example or a new song never overwrites the current one.
 - **Up to 6 critters per song** — enough for rich songs, and the screen stays calm.

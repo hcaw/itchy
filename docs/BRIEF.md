@@ -52,14 +52,14 @@ while keeping it rewarding for an eleven-year-old who has been using it for mont
 Each is simple on the surface and deep underneath. The basic version of every one is built; the full vision is
 where the ceiling goes.
 
-| Feature | Full vision | Basic version (built) |
-| --- | --- | --- |
-| **Music sequencing** | Arrange notes and sounds over time in a visual way a child understands without notation: melodies, chords, bass lines, and small pieces arranged into whole songs. | Place and remove notes on a visual, scale-locked grid, with playback that clearly shows where the music is. |
-| **Looping** | Loops are the basic building block: make them, layer them, vary them, and switch them on and off live. | Patterns loop continuously, several can be layered, and each can be muted or unmuted while the music plays. |
-| **Beat creation** | Simple or intricate drum patterns: accents, swing, different loop lengths, polyrhythm. | A step-based drum pattern with a small, good-sounding kit and a tempo control. |
-| **Effects** | Expressive effects shown as playful objects, applied, combined and adjusted by direct manipulation, heard live. | Echo, Space (reverb) and Dark↔Bright (filter), each with one big control, applied to a critter while it plays. |
-| **Audio recording** | Record voice, claps or room sounds and use them as instruments: trim, pitch, loop, add effects. | Record a short clip from the microphone and play it on the grid at different pitches. |
-| **Sonic experimentation** | Shape and bend sounds; randomness and chance, generative patterns, unusual scales, textures and soundscapes. | The dice (a musical surprise pattern) and moods (six scales). |
+| Feature                   | Full vision                                                                                                                                                        | Basic version (built)                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Music sequencing**      | Arrange notes and sounds over time in a visual way a child understands without notation: melodies, chords, bass lines, and small pieces arranged into whole songs. | Place and remove notes on a visual, scale-locked grid, with playback that clearly shows where the music is.    |
+| **Looping**               | Loops are the basic building block: make them, layer them, vary them, and switch them on and off live.                                                             | Patterns loop continuously, several can be layered, and each can be muted or unmuted while the music plays.    |
+| **Beat creation**         | Simple or intricate drum patterns: accents, swing, different loop lengths, polyrhythm.                                                                             | A step-based drum pattern with a small, good-sounding kit and a tempo control.                                 |
+| **Effects**               | Expressive effects shown as playful objects, applied, combined and adjusted by direct manipulation, heard live.                                                    | Echo, Space (reverb) and Dark↔Bright (filter), each with one big control, applied to a critter while it plays. |
+| **Audio recording**       | Record voice, claps or room sounds and use them as instruments: trim, pitch, loop, add effects.                                                                    | Record a short clip from the microphone and play it on the grid at different pitches.                          |
+| **Sonic experimentation** | Shape and bend sounds; randomness and chance, generative patterns, unusual scales, textures and soundscapes.                                                       | The dice (a musical surprise pattern) and moods (six scales).                                                  |
 
 Also required: the current work is saved in the browser so a reload never loses it, and undo is always available.
 

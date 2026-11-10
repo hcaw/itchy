@@ -26,9 +26,18 @@ export function notesOf(project: Project, critter: Critter): Note[] {
 /** Add the note at this step and pitch, or remove it if it is there. One undo step. */
 export function toggleNote(project: Project, critter: Critter, { step, pitch }: Note): void {
   project.editing.modify(() => {
-    const existing = eventsOf(project, critter).find((event) => event.position === step * STEP && event.pitch === pitch);
+    const existing = eventsOf(project, critter).find(
+      (event) => event.position === step * STEP && event.pitch === pitch,
+    );
     if (existing) existing.box.delete();
-    else project.api.createNoteEvent({ owner: critter.region, position: step * STEP, duration: STEP, pitch, velocity: VELOCITY });
+    else
+      project.api.createNoteEvent({
+        owner: critter.region,
+        position: step * STEP,
+        duration: STEP,
+        pitch,
+        velocity: VELOCITY,
+      });
   });
 }
 

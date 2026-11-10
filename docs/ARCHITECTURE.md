@@ -22,15 +22,15 @@ public/       static files, including _headers
 
 openDAW's project is the single source of truth. There is no separate Itchy model, store or copy of the song.
 
-| Itchy | openDAW |
-|---|---|
-| A critter | An audio unit with an instrument (and its charms): a voice |
-| The critter's grid | A note region that loops over the critter's steps |
-| A note on the grid | A note event in that region |
-| A charm | A parameter of an effect device on the critter's unit |
-| Tempo, swing | The timeline's BPM, the groove |
-| Undo, redo | `project.editing` |
-| Saving | `project.toArrayBuffer()` (planned) |
+| Itchy              | openDAW                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| A critter          | An audio unit with an instrument (and its charms): a voice |
+| The critter's grid | A note region that loops over the critter's steps          |
+| A note on the grid | A note event in that region                                |
+| A charm            | A parameter of an effect device on the critter's unit      |
+| Tempo, swing       | The timeline's BPM, the groove                             |
+| Undo, redo         | `project.editing`                                          |
+| Saving             | `project.toArrayBuffer()` (planned)                        |
 
 **Writing.** Change the song only through functions in `src/daw/`. Each user action is exactly one
 `project.editing.modify(...)`, so it is one undo step. A drag is one step too: its in-between changes are not

@@ -8,13 +8,13 @@ updates:
       interval: monthly
     groups:
       actions:
-        patterns: ["*"]
+        patterns: ['*']
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
     ignore:
-      - dependency-name: "@opendaw/*"
+      - dependency-name: '@opendaw/*'
     groups:
       tooling:
-        patterns: ["*"]
+        patterns: ['*']

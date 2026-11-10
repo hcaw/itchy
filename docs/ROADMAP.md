@@ -5,17 +5,17 @@ with its tests and a preview link. [`reference/v1.md`](reference/v1.md) lists ev
 with screenshots, and which slice brings it back.
 
 - [x] **Walking skeleton**: one critter (Vaporisateur) on a 16 × 8 grid, Play and Stop with a playhead, Undo and
-  Redo, unit tests and Playwright checks in Chromium and WebKit.
+      Redo, unit tests and Playwright checks in Chromium and WebKit.
 - [ ] **Cloudflare**: deploy `main` and preview every pull request; remove the Vercel previews.
 - [ ] **Design system**: tokens (colour, type scale, spacing, radius, elevation, motion) and themes, seeded from
-  v1's tokens, Nunito and critters. The tokens live in the repo as the single source; the app reads them as CSS
-  custom properties, and a Claude Design System artifact shows them, refreshed from the repo. To decide: what the
-  themes are (light and dark, or the moods as themes). Do this before the UI slices below.
+      v1's tokens, Nunito and critters. The tokens live in the repo as the single source; the app reads them as CSS
+      custom properties, and a Claude Design System artifact shows them, refreshed from the repo. To decide: what the
+      themes are (light and dark, or the moods as themes). Do this before the UI slices below.
 - [ ] **Several critters**, and choosing which one the grid shows. Look critters up from openDAW's adapters
-  instead of passing a handle, and re-render per critter rather than on every edit
-  ([`ARCHITECTURE.md`](ARCHITECTURE.md)).
+      instead of passing a handle, and re-render per critter rather than on every edit
+      ([`ARCHITECTURE.md`](ARCHITECTURE.md)).
 - [ ] **Sounds from openDAW's instruments**: Korpus (bells, pluck), Cubed or Vaporisateur (bass), Vaporisateur or
-  Neon (cloud pads). Drums: Playfield with samples, or an Apparat script; try both.
+      Neon (cloud pads). Drums: Playfield with samples, or an Apparat script; try both.
 - [ ] **Moods and the key**, changing every tune critter at once.
 - [ ] **Charms**: Delay (echo), Dattorro Reverb (space), Revamp (dark ↔ bright).
 - [ ] **Sleep (mute), tempo, swing** (Zeitgeist).
