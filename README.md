@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/screenshot-laptop.png" alt="Itchy on a laptop, playing the Robot Disco example: a drum grid of green, pink, orange and blue pads, with a robot, a blob, a star and a sleeping bell critter down the side." width="860">
+  <img src="docs/images/screenshot-laptop.png" alt="Itchy on a laptop, playing the Robot Disco example: a glass play orb turned red for stop, a drum grid of glossy green, pink, orange and blue pads under a clear playhead, and glossy jelly critters (a robot, a blob, a star and a sleeping bell) down the side." width="860">
 </p>
 
 ## What is it?
@@ -52,11 +52,11 @@ and every design decision, is in [`docs/CONCEPT.md`](docs/CONCEPT.md).
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/screenshot-tablet.png" alt="Itchy on a tablet held upright, playing the Rainy Day example: a melody of bell notes on a colourful grid, with a drum, a cloud and a bell critter along the top."></td>
+    <td width="50%"><img src="docs/images/screenshot-tablet.png" alt="Itchy on a tablet held upright, playing the Rainy Day example: a melody of glossy bell notes on a colourful glass grid, with jelly drum, cloud and bell critters along the top."></td>
     <td width="50%">
-      <img src="docs/images/screenshot-songbook.png" alt="The songbook: your own songs at the top and five example songs, Robot Disco, Rainy Day, Spooky Clocks, Sunshine Reggae and Echo Cave Dub, below.">
+      <img src="docs/images/screenshot-songbook.png" alt="The songbook, a frosted glass sheet: your own songs at the top and five example songs, Robot Disco, Rainy Day, Spooky Clocks, Sunshine Reggae and Echo Cave Dub, below, each showing its critters.">
       <br><br>
-      <img src="docs/images/screenshot-phone.png" alt="Itchy on a phone on its side, showing the Spooky Clocks example with long held notes.">
+      <img src="docs/images/screenshot-phone.png" alt="Itchy on a phone on its side, showing the Spooky Clocks example with long held notes as glossy bars and an emerald glass play orb.">
     </td>
   </tr>
   <tr>

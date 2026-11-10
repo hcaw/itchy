@@ -214,10 +214,15 @@ async function interactions(label, { width, height, touch }) {
     });
     check(off < 1.5, 'playhead bar sits on the column being heard', `${off.toFixed(1)} px off`);
   }
+  // The orb morphs: the square shows while playing, the triangle when stopped (same drawing, no redraw).
+  const orbShows = () => page.evaluate(() => ['.i-play', '.i-stop'].map((s) => getComputedStyle(document.querySelector(`.btn.play ${s}`)).opacity).join());
+  check(await orbShows() === '0,1', 'play button shows stop while playing', await orbShows());
   await page.screenshot({ path: `${OUT}/${label}-2-playing.png` });
   await io.tap('.btn.play');
   await page.waitForTimeout(200);
   check(!(await page.evaluate(() => itchy.engine.playing)), 'stop button stops');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.btn.play .i-play')).opacity === '1', null, { timeout: 2000 }).catch(() => {});
+  check(await orbShows() === '1,0', 'play button shows play when stopped', await orbShows());
   check(await page.locator('.playhead.on').count() === 0, 'playhead bar goes away when stopped');
 
   await io.tap('.btn.book');

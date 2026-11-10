@@ -71,8 +71,8 @@ cloud saving, and richer song arrangement.
 
 - Runs entirely in a modern browser: no installation, no plugins. Audio uses the Web Audio API (or a
   well-established library built on it).
-- Works well on mid-range tablets and school Chromebooks. Audio timing is tight and dependable, because a wobbly beat
-  ruins the experience: use a lookahead scheduler on the audio clock, never plain `setTimeout`/`setInterval` timing.
+- Works well on typical modern tablets and laptops. Audio timing is tight and dependable, because a wobbly beat ruins
+  the experience: use a lookahead scheduler on the audio clock, never plain `setTimeout`/`setInterval` timing.
 - Responsive; works with both touch and mouse.
 - No accounts or sign-up for now, but that isn't permanent: keep project data in a clean, serialisable format and
   keep storage behind a simple interface, so accounts and cloud saving can be added without a rewrite.
@@ -107,9 +107,9 @@ The basic version is complete and merged. Against the original definition of don
 Decisions the owner made after the build:
 
 - **The iPhone/iPad silent switch may mute Itchy.** The owner is fine with this; an attempted workaround was reverted.
-- **Low-powered devices are a lower priority than the constraints below suggest.** The owner said the Chromebook
-  requirement was overstated: it should run smoothly on typical tablets and laptops, and stay usable on cheaper
-  machines, but polish need not be sacrificed for them. Tight, steady audio timing still matters everywhere.
+- **Low-end devices are not a target.** The owner dropped the requirement to support low-powered machines such as
+  older school Chromebooks: Itchy should run smoothly on typical modern tablets and laptops, and visual polish (glass,
+  blur, glow, light) comes first. Tight, steady audio timing still matters everywhere.
 - **Itchy is also published as a private Claude web page** (owner's account). Pages there can't use the microphone, so
   recording shows the friendly "no microphone" message. That page was last published with the reverted audio-unlock
   change, so it differs slightly from `main`.
