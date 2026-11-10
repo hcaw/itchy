@@ -203,7 +203,12 @@ async function playTo(page, step) {
     const ticks = [...document.querySelectorAll('.tick')];
     return ticks.findIndex((t) => t.classList.contains('now')) === s;
   }, step, { polling: 'raf', timeout: 15000 });
-  await page.evaluate(() => window.itchy.engine.ctx.suspend());
+  // Hold the play orb's glow steady too: it follows the live audio level, which differs from run to run.
+  await page.evaluate(() => {
+    const { engine } = window.itchy;
+    engine.level = () => 0.5;
+    return engine.ctx.suspend();
+  });
   await page.waitForTimeout(250);
 }
 
