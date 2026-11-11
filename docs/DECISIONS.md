@@ -18,6 +18,9 @@ Every choice the brief left open, with a one-line reason. Add new ones at the en
 - **Cloudflare Workers for hosting, serving static assets** — free, applies the isolation headers from
   `public/_headers`, and builds a preview of every branch. Workers rather than Pages, because Cloudflare now points new
   projects there. GitHub Pages can't send headers. Configured in `wrangler.jsonc`.
+- **`workers_dev` and `preview_urls` are set to `true` in `wrangler.jsonc`, not left to Cloudflare's defaults** —
+  `itchy.bolbos.workers.dev` is the only address, and a preview link per version lets a change be tried on a tablet
+  before merging. Previews are public but unlisted; Itchy stores no data, so that's acceptable.
 - **openDAW is upgraded by hand, one version per pull request** — its API changes often while it is at 0.0.x.
 - **The private Claude web page copy of Itchy is retired** — openDAW can't run there, because those pages can't be
   cross-origin isolated.
