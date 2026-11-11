@@ -4,8 +4,6 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "itchy",
   "compatibility_date": "2026-11-08",
-  // Set explicitly rather than left to Cloudflare's defaults: workers.dev is Itchy's only address, and each version
-  // gets its own preview URL so a change can be tried on a real tablet before it's merged.
   "workers_dev": true,
   "preview_urls": true,
   "assets": {
