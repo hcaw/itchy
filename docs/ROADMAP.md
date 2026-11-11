@@ -6,7 +6,7 @@ with screenshots, and which slice brings it back.
 
 - [x] **Walking skeleton**: one critter (Vaporisateur) on a 16 × 8 grid, Play and Stop with a playhead, Undo and
       Redo, unit tests and Playwright checks in Chromium and WebKit.
-- [ ] **Cloudflare**: deploy `main` and preview every pull request; remove the Vercel previews.
+- [x] **Cloudflare**: deploy `main` and preview every pull request; remove the Vercel previews.
 - [ ] **Design system**: tokens (colour, type scale, spacing, radius, elevation, motion) and themes, seeded from
       v1's tokens, Nunito and critters. The tokens live in the repo as the single source; the app reads them as CSS
       custom properties, and a Claude Design System artifact shows them, refreshed from the repo. To decide: what the
