@@ -25,4 +25,4 @@ body:
     id: why
     attributes:
       label: Why would it be fun?
-      description: Who is it for: a six-year-old's first five minutes, or an eleven-year-old's fiftieth hour?
+      description: "Who is it for: a six-year-old's first five minutes, or an eleven-year-old's fiftieth hour?"

@@ -1,4 +1,5 @@
-# Itchy has no npm dependencies, so only the GitHub Actions it uses need keeping up to date.
+# Keep GitHub Actions and the tooling up to date. openDAW is left out on purpose: it is upgraded by hand, one version
+# per pull request, after reading its migration notes (see CLAUDE.md).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -7,4 +8,13 @@ updates:
       interval: monthly
     groups:
       actions:
-        patterns: ["*"]
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: '@opendaw/*'
+    groups:
+      tooling:
+        patterns: ['*']

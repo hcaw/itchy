@@ -1,9 +1,0 @@
-# Vercel publishes previews of pull requests only (the live site is GitHub Pages).
-# Upload just the app, the same files the Pages workflow copies.
-/*
-!index.html
-!manifest.webmanifest
-!styles.css
-!src
-!assets
-!vercel.json

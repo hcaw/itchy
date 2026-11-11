@@ -1,8 +1,8 @@
 # Itchy — the brief
 
 This is the goal Itchy is built towards, condensed from the owner's original prompt. Read it before changing
-anything. `docs/CONCEPT.md` says *how* Itchy meets this brief and logs every decision; `README.md` covers running it,
-the architecture and the next steps.
+anything. `docs/CONCEPT.md` describes the building blocks that meet it, `docs/ARCHITECTURE.md` how the code works,
+`docs/ROADMAP.md` what's next and `docs/DECISIONS.md` every decision.
 
 ## Goal
 
@@ -41,8 +41,7 @@ while keeping it rewarding for an eleven-year-old who has been using it for mont
    lose work by accident.
 5. **Sounds good by default.** Sensible defaults (scales, quantisation, tempo, levels) make random experiments sound
    musical. Children can loosen these defaults as they grow.
-6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, never hidden behind a
-   "pro mode" or shown all at once.
+6. **Reveal depth gradually.** Advanced possibilities are there to discover through play, not all shown at once.
 7. **Make it joyful and alive.** Bright, friendly and animated, and the interface visibly reacts to the music. Calm
    enough to focus on: no clutter, no overload.
 8. **Accessible and inclusive.** Large touch targets, good contrast, colour never the only way to tell things apart,
@@ -53,14 +52,14 @@ while keeping it rewarding for an eleven-year-old who has been using it for mont
 Each is simple on the surface and deep underneath. The basic version of every one is built; the full vision is
 where the ceiling goes.
 
-| Feature | Full vision | Basic version (built) |
-| --- | --- | --- |
-| **Music sequencing** | Arrange notes and sounds over time in a visual way a child understands without notation: melodies, chords, bass lines, and small pieces arranged into whole songs. | Place and remove notes on a visual, scale-locked grid, with playback that clearly shows where the music is. |
-| **Looping** | Loops are the basic building block: make them, layer them, vary them, and switch them on and off live. | Patterns loop continuously, several can be layered, and each can be muted or unmuted while the music plays. |
-| **Beat creation** | Simple or intricate drum patterns: accents, swing, different loop lengths, polyrhythm. | A step-based drum pattern with a small, good-sounding kit and a tempo control. |
-| **Effects** | Expressive effects shown as playful objects, applied, combined and adjusted by direct manipulation, heard live. | Echo, Space (reverb) and Dark↔Bright (filter), each with one big control, applied to a critter while it plays. |
-| **Audio recording** | Record voice, claps or room sounds and use them as instruments: trim, pitch, loop, add effects. | Record a short clip from the microphone and play it on the grid at different pitches. |
-| **Sonic experimentation** | Shape and bend sounds; randomness and chance, generative patterns, unusual scales, textures and soundscapes. | The dice (a musical surprise pattern) and moods (six scales). |
+| Feature                   | Full vision                                                                                                                                                        | Basic version (built)                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Music sequencing**      | Arrange notes and sounds over time in a visual way a child understands without notation: melodies, chords, bass lines, and small pieces arranged into whole songs. | Place and remove notes on a visual, scale-locked grid, with playback that clearly shows where the music is.    |
+| **Looping**               | Loops are the basic building block: make them, layer them, vary them, and switch them on and off live.                                                             | Patterns loop continuously, several can be layered, and each can be muted or unmuted while the music plays.    |
+| **Beat creation**         | Simple or intricate drum patterns: accents, swing, different loop lengths, polyrhythm.                                                                             | A step-based drum pattern with a small, good-sounding kit and a tempo control.                                 |
+| **Effects**               | Expressive effects shown as playful objects, applied, combined and adjusted by direct manipulation, heard live.                                                    | Echo, Space (reverb) and Dark↔Bright (filter), each with one big control, applied to a critter while it plays. |
+| **Audio recording**       | Record voice, claps or room sounds and use them as instruments: trim, pitch, loop, add effects.                                                                    | Record a short clip from the microphone and play it on the grid at different pitches.                          |
+| **Sonic experimentation** | Shape and bend sounds; randomness and chance, generative patterns, unusual scales, textures and soundscapes.                                                       | The dice (a musical surprise pattern) and moods (six scales).                                                  |
 
 Also required: the current work is saved in the browser so a reload never loses it, and undo is always available.
 
@@ -110,8 +109,8 @@ Decisions the owner made after the build:
 - **Low-end devices are not a target.** The owner dropped the requirement to support low-powered machines such as
   older school Chromebooks: Itchy should run smoothly on typical modern tablets and laptops, and visual polish (glass,
   blur, glow, light) comes first. Tight, steady audio timing still matters everywhere.
-- **Itchy is also published as a private Claude web page** (owner's account). Pages there can't use the microphone, so
-  recording shows the friendly "no microphone" message. That page was last published with the reverted audio-unlock
-  change, so it differs slightly from `main`.
+- **Itchy moved to openDAW, React and TypeScript** (November 2026). The first version is the `v1` tag. How it's
+  built is in `docs/ARCHITECTURE.md`, what's left in `docs/ROADMAP.md`, and the decisions in `docs/DECISIONS.md`.
+  The private Claude web page copy of Itchy is retired, because openDAW can't run on those pages.
 
-The next steps for raising the ceiling are ranked in `README.md`.
+The ideas for raising the ceiling are in `docs/ROADMAP.md`.
