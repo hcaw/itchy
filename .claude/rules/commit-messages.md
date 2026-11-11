@@ -21,6 +21,7 @@ Required. One of:
 - `docs` — documentation only
 - `test` — adding or correcting tests
 - `ci` — CI/CD pipeline changes
+- `revert` — undoes an earlier commit; the description says what is undone (`revert: add the comments rule`)
 - `style` — formatting-only change with no code meaning change (rare; prefer `chore` for tooling-driven formatting)
 
 ## Scope
